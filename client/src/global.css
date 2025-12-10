@@ -1,0 +1,273 @@
+/** IMPORTS — must stay on top **/
+@import url("https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700;800&display=swap");
+@import "tw-animate-css";
+
+/* Dark variant handling */
+@custom-variant dark (&:is(.dark *));
+
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/* ====================================================================== */
+/* ------------------- ROOT THEME VARIABLES (MERGED) -------------------- */
+/* ====================================================================== */
+
+:root {
+  /* ⭐ YOUR ORIGINAL COLORS REMAIN, BUT UPDATED WITH NEW FILE COLORS */
+  --background: oklch(0.98 0 0);
+  --foreground: oklch(0.2 0 0); /* NEW */
+  --card: oklch(0.99 0 0); /* NEW */
+  --card-foreground: oklch(0.2 0 0); /* NEW */
+  --popover: oklch(0.99 0 0); /* NEW */
+  --popover-foreground: oklch(0.2 0 0); /* NEW */
+
+  /* PRIMARY SYSTEM (updated to warm terracotta palette) */
+  --primary: oklch(0.6 0.18 24.3); /* NEW */
+  --primary-foreground: oklch(0.99 0 0);
+
+  --secondary: oklch(0.65 0.12 30); /* NEW */
+  --secondary-foreground: oklch(0.99 0 0);
+
+  --muted: oklch(0.93 0 0); /* NEW */
+  --muted-foreground: oklch(0.5 0 0);
+
+  --accent: oklch(0.62 0.16 27); /* NEW */
+  --accent-foreground: oklch(0.99 0 0);
+
+  --destructive: oklch(0.577 0.245 27.325);
+  --destructive-foreground: oklch(0.577 0.245 27.325);
+
+  --border: oklch(0.92 0 0); /* NEW */
+  --input: oklch(0.96 0 0); /* NEW */
+  --ring: oklch(0.6 0.18 24.3); /* NEW */
+
+  /* CHART COLORS (NEW) */
+  --chart-1: oklch(0.6 0.18 24.3);
+  --chart-2: oklch(0.65 0.12 30);
+  --chart-3: oklch(0.62 0.16 27);
+  --chart-4: oklch(0.55 0.15 25);
+  --chart-5: oklch(0.68 0.14 28);
+
+  --radius: 0.625rem;
+
+  /* SIDEBAR (NEW UPDATED) */
+  --sidebar: oklch(0.985 0 0); /* NEW */
+  --sidebar-foreground: oklch(0.145 0 0); /* NEW */
+  --sidebar-primary: oklch(0.6 0.18 24.3); /* NEW */
+  --sidebar-primary-foreground: oklch(0.985 0 0);
+  --sidebar-accent: oklch(0.65 0.12 30); /* NEW */
+  --sidebar-accent-foreground: oklch(0.205 0 0);
+  --sidebar-border: oklch(0.922 0 0); /* NEW */
+  --sidebar-ring: oklch(0.708 0 0); /* NEW */
+
+  /* Radius tokens (already present) */
+  --radius-sm: calc(var(--radius) - 4px);
+  --radius-md: calc(var(--radius) - 2px);
+  --radius-lg: var(--radius);
+  --radius-xl: calc(var(--radius) + 4px);
+}
+
+/* ====================================================================== */
+/* ------------------------------- DARK MODE ---------------------------- */
+/* ====================================================================== */
+
+.dark {
+  /* NEW updated dark palette */
+  --background: oklch(0.15 0 0);
+  --foreground: oklch(0.95 0 0);
+  --card: oklch(0.2 0 0);
+  --card-foreground: oklch(0.95 0 0);
+  --popover: oklch(0.2 0 0);
+  --popover-foreground: oklch(0.95 0 0);
+
+  --primary: oklch(0.68 0.16 26); /* NEW */
+  --primary-foreground: oklch(0.15 0 0);
+
+  --secondary: oklch(0.72 0.12 32); /* NEW */
+  --secondary-foreground: oklch(0.15 0 0);
+
+  --muted: oklch(0.3 0 0);
+  --muted-foreground: oklch(0.7 0 0);
+
+  --accent: oklch(0.7 0.15 28); /* NEW */
+  --accent-foreground: oklch(0.15 0 0);
+
+  --destructive: oklch(0.396 0.141 25.723);
+  --destructive-foreground: oklch(0.637 0.237 25.331);
+
+  --border: oklch(0.3 0 0); /* NEW */
+  --input: oklch(0.25 0 0); /* NEW */
+  --ring: oklch(0.68 0.16 26); /* NEW */
+
+  /* CHARTS DARK (NEW) */
+  --chart-1: oklch(0.68 0.16 26);
+  --chart-2: oklch(0.72 0.12 32);
+  --chart-3: oklch(0.7 0.15 28);
+  --chart-4: oklch(0.65 0.14 27);
+  --chart-5: oklch(0.75 0.13 30);
+
+  /* SIDEBAR DARK (NEW) */
+  --sidebar: oklch(0.205 0 0);
+  --sidebar-foreground: oklch(0.985 0 0);
+  --sidebar-primary: oklch(0.68 0.16 26);
+  --sidebar-primary-foreground: oklch(0.985 0 0);
+  --sidebar-accent: oklch(0.72 0.12 32);
+  --sidebar-accent-foreground: oklch(0.985 0 0);
+  --sidebar-border: oklch(0.3 0 0);
+  --sidebar-ring: oklch(0.5 0 0);
+
+  /* Radius tokens preserved */
+  --radius-sm: calc(var(--radius) - 4px);
+  --radius-md: calc(var(--radius) - 2px);
+  --radius-lg: var(--radius);
+  --radius-xl: calc(var(--radius) + 4px);
+}
+
+/* ====================================================================== */
+/* ------------------------- THEME MAPPING (INLINE) ---------------------- */
+/* ====================================================================== */
+
+@theme inline {
+  --font-sans: "Inter", sans-serif;
+  --font-mono: "Geist Mono", monospace;
+
+  --color-background: var(--background);
+  --color-foreground: var(--foreground);
+  --color-card: var(--card);
+  --color-card-foreground: var(--card-foreground);
+  --color-popover: var(--popover);
+  --color-popover-foreground: var(--popover-foreground);
+  --color-primary: var(--primary);
+  --color-primary-foreground: var(--primary-foreground);
+  --color-secondary: var(--secondary);
+  --color-secondary-foreground: var(--secondary-foreground);
+  --color-muted: var(--muted);
+  --color-muted-foreground: var(--muted-foreground);
+  --color-accent: var(--accent);
+  --color-accent-foreground: var(--accent-foreground);
+  --color-destructive: var(--destructive);
+  --color-destructive-foreground: var(--destructive-foreground);
+  --color-border: var(--border);
+  --color-input: var(--input);
+  --color-ring: var(--ring);
+
+  /* CHARTS */
+  --color-chart-1: var(--chart-1);
+  --color-chart-2: var(--chart-2);
+  --color-chart-3: var(--chart-3);
+  --color-chart-4: var(--chart-4);
+  --color-chart-5: var(--chart-5);
+
+  /* Radius Tokens */
+  --radius-sm: var(--radius-sm);
+  --radius-md: var(--radius-md);
+  --radius-lg: var(--radius-lg);
+  --radius-xl: var(--radius-xl);
+
+  /* Sidebar Mapping */
+  --color-sidebar: var(--sidebar);
+  --color-sidebar-foreground: var(--sidebar-foreground);
+  --color-sidebar-primary: var(--sidebar-primary);
+  --color-sidebar-primary-foreground: var(--sidebar-primary-foreground);
+  --color-sidebar-accent: var(--sidebar-accent);
+  --color-sidebar-accent-foreground: var(--sidebar-accent-foreground);
+  --color-sidebar-border: var(--sidebar-border);
+  --color-sidebar-ring: var(--sidebar-ring);
+}
+
+/* ====================================================================== */
+/* ------------------------- BASE LAYER --------------------------------- */
+/* ====================================================================== */
+
+@layer base {
+  * {
+    @apply border-border outline-ring/50;
+  }
+  body {
+    @apply bg-background text-foreground;
+  }
+  :where(p, span, li, h1, h2, h3, h4, h5, h6, a, button, label, td, th) {
+    overflow-wrap: anywhere;
+    word-break: break-word;
+  }
+
+  pre,
+  code {
+    overflow-x: auto;
+    white-space: pre;
+  }
+}
+
+/* ====================================================================== */
+/* ----------------------- COMPONENT UTILITIES --------------------------- */
+/* ====================================================================== */
+
+@layer components {
+  .section-card {
+    @apply bg-card rounded-lg border border-border shadow-sm transition-all duration-300 hover:shadow-md;
+  }
+
+  .section-header {
+    @apply text-lg font-semibold text-foreground flex items-center justify-between cursor-pointer hover:text-primary transition-colors;
+  }
+
+  .section-content {
+    @apply text-sm text-muted-foreground space-y-2;
+  }
+
+  .badge-primary {
+    @apply inline-block bg-primary/10 text-primary px-3 py-1 rounded-full text-xs font-medium;
+  }
+
+  .badge-accent {
+    @apply inline-block bg-accent/10 text-accent px-3 py-1 rounded-full text-xs font-medium;
+  }
+}
+
+/* ====================================================================== */
+/* ----------------------------- ANIMATIONS ------------------------------ */
+/* ====================================================================== */
+
+@keyframes fade-in {
+  from {
+    opacity: 0;
+    transform: translateY(10px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+.animate-fade-in {
+  animation: fade-in 0.3s ease-out;
+}
+
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+    transform: translateY(-6px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+.animate-fadeIn {
+  animation: fadeIn 0.5s ease-out;
+}
+
+@keyframes scaleIn {
+  0% {
+    opacity: 0;
+    transform: scale(0.95);
+  }
+  100% {
+    opacity: 1;
+    transform: scale(1);
+  }
+}
+
+.animate-scaleIn {
+  animation: scaleIn 0.2s ease-out;
+}
