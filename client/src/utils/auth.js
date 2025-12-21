@@ -1,4 +1,11 @@
 import { jwtDecode } from 'jwt-decode';
+import {
+    logAuthenticationError,
+    logAuthenticationSuccess,
+    logTokenEvent,
+    AUTH_ERROR_CONTEXTS
+} from './authErrorLogger.js';
+import { disconnectSocket } from '../lib/socket';
 
 /**
  * Authentication Utility Functions
@@ -17,16 +24,38 @@ const STORAGE_KEYS = {
  * @returns {boolean} - True if token is expired or invalid
  */
 export const isTokenExpired = (token) => {
-    if (!token) return true;
+    if (!token) {
+        logTokenEvent('TOKEN_VALIDATION', {
+            hasToken: false,
+            result: 'expired'
+        });
+        return true;
+    }
 
     try {
         const decoded = jwtDecode(token);
         const currentTime = Date.now() / 1000; // Convert to seconds
+        const isExpired = decoded.exp < currentTime;
 
-        // Check if token has expired
-        return decoded.exp < currentTime;
+        // Log token validation result
+        logTokenEvent('TOKEN_VALIDATION', {
+            hasToken: true,
+            isExpired,
+            expiresAt: decoded.exp,
+            currentTime,
+            timeUntilExpiry: decoded.exp - currentTime,
+            result: isExpired ? 'expired' : 'valid'
+        });
+
+        return isExpired;
     } catch (error) {
-        console.error('Error decoding token:', error);
+        // Log token decode error
+        logAuthenticationError(error, AUTH_ERROR_CONTEXTS.TOKEN_VALIDATION, {
+            tokenLength: token.length,
+            tokenPrefix: token.substring(0, 10) + '...',
+            decodeError: true
+        });
+
         return true; // Consider invalid tokens as expired
     }
 };
@@ -145,8 +174,21 @@ export const isAuthenticated = () => {
  * Clear all authentication data
  */
 export const clearAuth = () => {
+    const hadToken = !!getToken();
+    const hadUser = !!getUser();
+
     removeToken();
     removeUser();
+
+    // Disconnect socket on auth cleanup (Requirement 4.2)
+    disconnectSocket();
+
+    // Log authentication cleanup
+    logTokenEvent('AUTH_CLEANUP', {
+        hadToken,
+        hadUser,
+        reason: 'clearAuth_called'
+    });
 };
 
 /**
@@ -154,12 +196,25 @@ export const clearAuth = () => {
  * @param {function} navigate - React Router navigate function (required)
  */
 export const logout = (navigate) => {
+    // Log logout event
+    logAuthenticationSuccess(AUTH_ERROR_CONTEXTS.LOGOUT, {
+        hasNavigate: !!navigate,
+        userInitiated: true
+    });
+
     clearAuth();
 
     if (navigate) {
         navigate('/login', { replace: true });
     } else {
-        console.warn('Navigate function not provided to logout. User will need to manually navigate to login.');
+        logAuthenticationError(
+            new Error('Navigate function not provided to logout'),
+            AUTH_ERROR_CONTEXTS.LOGOUT,
+            {
+                navigateProvided: false,
+                fallbackRequired: true
+            }
+        );
     }
 };
 

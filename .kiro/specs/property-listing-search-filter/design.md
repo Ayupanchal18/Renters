@@ -281,6 +281,22 @@ Based on the prework analysis, I'll consolidate related properties to eliminate 
 *For any* navigation between property-related pages, the system should maintain appropriate view state and scroll position where relevant
 **Validates: Requirements 6.5**
 
+### Property 15: Property Type Consistency
+*For any* property type selection across different search interfaces (homepage, listings page), the system should use the same property type values and mapping logic
+**Validates: Requirements 7.1, 7.2, 7.3**
+
+### Property 16: Location Handling Consistency
+*For any* location input or detection across different search components, the system should use the same geolocation service, validation, and formatting logic
+**Validates: Requirements 8.1, 8.2, 8.3, 8.5**
+
+### Property 17: Search Parameter Standardization
+*For any* search operation initiated from different interfaces, the system should use a consistent search payload structure and validation rules
+**Validates: Requirements 9.1, 9.2, 9.5**
+
+### Property 18: Filter State Synchronization
+*For any* filter state change or navigation between views, the system should maintain consistent filter values and properly synchronize state across components
+**Validates: Requirements 10.1, 10.2, 10.3, 10.4**
+
 ## Error Handling
 
 ### Client-Side Error Handling
@@ -336,6 +352,77 @@ The testing strategy combines unit testing for specific scenarios and property-b
 - Error scenarios must be explicitly tested
 - Performance characteristics must be validated
 
+## Search and Filter Consistency Strategy
+
+### Property Type Standardization
+To ensure consistency across all search interfaces, we need to standardize property types:
+
+**Standard Property Types:**
+- `apartment` - Modern apartments and flats
+- `house` - Independent houses and villas  
+- `room` - Single rooms in shared accommodations
+- `studio` - Studio apartments and 1RK units
+- `pg` - Paying guest accommodations
+- `shared` - Shared rooms and co-living spaces
+
+**Implementation:**
+- Create a centralized property type mapping service
+- Update homepage search to use standard property types
+- Ensure filter sidebar uses the same property type values
+- Add property type normalization in data processing
+
+### Location Handling Standardization
+Standardize location handling across all search components:
+
+**Standard Location Object:**
+```javascript
+{
+  city: string,
+  state: string,
+  country: string,
+  formatted: string, // "City, State"
+  coordinates: { lat: number, lng: number }
+}
+```
+
+**Implementation:**
+- Use consistent geolocation service (BigDataCloud API)
+- Standardize location autocomplete data source
+- Implement location validation and formatting utilities
+- Ensure consistent location display format
+
+### Search Parameter Standardization
+Standardize search payload structure across all components:
+
+**Standard Search Payload:**
+```javascript
+{
+  location: {
+    city: string,
+    state: string,
+    formatted: string
+  },
+  propertyType: string, // Using standard property types
+  keywords: string,
+  filters: {
+    priceRange: { min: number, max: number },
+    bedrooms: string[],
+    amenities: string[],
+    furnishing: string[],
+    verifiedOnly: boolean
+  }
+}
+```
+
+### Filter State Synchronization
+Implement consistent filter state management:
+
+**Centralized Filter State:**
+- Single source of truth for all filter values
+- Consistent validation across all components
+- URL synchronization for bookmarkable states
+- Proper state restoration on navigation
+
 ## Implementation Notes
 
 ### State Management Strategy
@@ -343,6 +430,13 @@ The testing strategy combines unit testing for specific scenarios and property-b
 - Add new filter slice for filter state management
 - Implement middleware for URL synchronization
 - Use RTK Query for efficient data fetching and caching
+- Add consistency validation middleware
+
+### Consistency Utilities
+- Create property type mapping utilities
+- Implement location standardization services
+- Add search parameter validation and normalization
+- Create filter state synchronization helpers
 
 ### Performance Considerations
 - Implement virtual scrolling for large property lists

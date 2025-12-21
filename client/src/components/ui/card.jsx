@@ -1,14 +1,44 @@
 import * as React from "react";
+import { cva } from "class-variance-authority";
 
 import { cn } from "../../lib/utils";
 
-const Card = React.forwardRef(({ className, ...props }, ref) => (
+/**
+ * Premium Card Component with enhanced variants
+ * Requirements: 7.3, 7.4, 7.5
+ */
+const cardVariants = cva(
+    // Base styles: soft rounded corners (8px/12px), 1px border, transition for hover effects
+    "rounded-xl border text-card-foreground transition-all duration-200",
+    {
+        variants: {
+            variant: {
+                // Default: soft corners, layered shadows, theme-aware border (Req 7.3)
+                default: "bg-card border-neutral-200 dark:border-neutral-800 shadow-sm",
+                
+                // Glass: backdrop-filter blur(8px), semi-transparent (Req 7.5)
+                glass: "bg-white/6 dark:bg-white/6 backdrop-blur-lg border-white/10 shadow-lg",
+                
+                // Elevated: larger shadow for prominent cards
+                elevated: "bg-card border-neutral-200 dark:border-neutral-800 shadow-lg",
+            },
+            hover: {
+                // Hover lift effect: shadow-md and translateY(-4px) (Req 7.4)
+                true: "hover:shadow-md hover:-translate-y-1",
+                false: "",
+            },
+        },
+        defaultVariants: {
+            variant: "default",
+            hover: false,
+        },
+    }
+);
+
+const Card = React.forwardRef(({ className, variant, hover, ...props }, ref) => (
     <div
         ref={ref}
-        className={cn(
-            "rounded-lg border bg-card text-card-foreground shadow-sm",
-            className
-        )}
+        className={cn(cardVariants({ variant, hover, className }))}
         {...props}
     />
 ));
@@ -65,4 +95,5 @@ export {
     CardTitle,
     CardDescription,
     CardContent,
+    cardVariants,
 };

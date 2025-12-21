@@ -5,6 +5,8 @@ import { Button } from "../components/ui/button";
 import { Input } from "../components/ui/input";
 import { Link, useNavigate } from "react-router-dom";
 import { authAPI } from "../lib/api";
+import { setToken, setUser } from "../utils/auth";
+import { useSocket } from "../contexts/SocketContext";
 
 export default function Login() {
     const [email, setEmail] = useState("");
@@ -13,6 +15,7 @@ export default function Login() {
     const [error, setError] = useState("");
 
     const navigate = useNavigate();
+    const { initializeSocket } = useSocket();
 
     const handleSubmit = async (e) => {
         e.preventDefault();
@@ -20,16 +23,25 @@ export default function Login() {
         setError("");
 
         try {
-            const result = await authAPI.login({ email, password });
+            const result = await authAPI.login({ email, password }, navigate);
 
             if (result.error) {
                 setError(result.error);
             } else {
+                // Use auth utilities for proper token storage
+                setToken(result.token);
+                setUser(result.user);
+                
+                // Keep userId for backward compatibility with existing code
                 localStorage.setItem("userId", result.user.id);
-                localStorage.setItem("token", result.token);
+                
+                // Initialize socket connection after successful login (Requirement 4.2)
+                initializeSocket();
+                
                 navigate("/dashboard");
             }
         } catch (err) {
+            console.error('Login error:', err);
             setError(err.message || "Login failed");
         } finally {
             setLoading(false);
@@ -48,7 +60,7 @@ export default function Login() {
                 </p>
 
                 {error && (
-                    <div className="mb-4 p-3 bg-red-100 text-red-700 rounded">
+                    <div className="mb-4 p-3 bg-destructive/10 text-destructive rounded border border-destructive/20">
                         {error}
                     </div>
                 )}
@@ -87,7 +99,7 @@ export default function Login() {
 
                         <Button
                             type="submit"
-                            className="bg-blue-600"
+                            className="bg-primary hover:bg-primary/90"
                             disabled={loading}
                         >
                             {loading ? "Logging in..." : "Sign In"}

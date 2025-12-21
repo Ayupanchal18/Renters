@@ -1,334 +1,338 @@
-import { useEffect, useState } from "react";
+import { useEffect, useState, useCallback } from "react";
 import { useParams, useNavigate } from "react-router-dom";
-import { ArrowLeft, Heart, Share2, ChevronDown, MapPin, Phone, Mail, Calendar, CheckCircle, MessageSquare } from 'lucide-react'
+import { useDispatch, useSelector } from "react-redux";
+import { ArrowLeft, Share2, Heart, Calendar, Home, Sparkles } from 'lucide-react';
 
 import { Button } from "../components/ui/button";
-import ImageCarousel from "../components/property/image-carousel";
-import PropertyDetails from "../components/property/property-details";
+import ImageGallery from "../components/property/image-gallery";
+import PropertyOverview from "../components/property/property-overview";
+import PropertySpecs from "../components/property/property-specs";
+import PricingCard from "../components/property/pricing-card";
+import OwnerCard from "../components/property/owner-card";
+import PropertyAmenities from "../components/property/property-amenities";
 import PropertyLocation from "../components/property/property-location";
-import OwnerContact from "../components/property/owner-contact";
-import NearbyRecommendations from "../components/property/nearby-recommendations";
+import NearbyPlaces from "../components/property/nearby-places";
 import Navbar from '../components/Navbar';
-import image from "../../public/property_image/luxury-apartment-living-room.png";
-import image1 from "../../public/property_image/modern-bedroom-with-city-view.jpg";
-import image2 from "../../public/property_image/spacious-kitchen-with-marble-counters.jpg";
-import image3 from "../../public/property_image/luxurious-bathroom.jpg";
-import profilePhoto from "../../public/property_image/professional-headshot.png";
-import livingroom from "../../public/property_image/cozy-eclectic-living-room.png";
-import bedroom from "../../public/property_image/cozy-bedroom.png";
-import kitchen from "../../public/property_image/modern-minimalist-kitchen.png";
-import { useDispatch } from "react-redux";
+import Footer from '../components/Footer';
 import { getPropertyByID } from "../redux/slices/propertySlice";
+import wishlistService from "../api/wishlistService";
+import { isAuthenticated } from "../utils/auth";
 
-// -------------------------------
-// MOCK PROPERTY DATA
-// -------------------------------
-const mockProperty = {
-    _id: "1",
-    title: "Luxurious Modern Apartment",
-    price: 125000,
-    address: {
-        line: "123 Premium Boulevard",
-        city: "San Francisco",
-        pincode: "94102",
-    },
-    images: [
-        image,
-        image1,
-        image2,
-        image3,
-    ],
-    description:
-        "Stunning modern apartment in the heart of downtown with panoramic city views, premium finishes, and state-of-the-art amenities.",
-    beds: 3,
-    baths: 2,
-    sqft: 2200,
-    type: "Apartment",
-    category: "Premium Residential",
-    furnishing: "Fully Furnished",
-    locality: "Downtown District",
-    landmark: "Near Central Park",
-    availability: "Immediate",
-    maintenanceCharges: 500,
-    securityDeposit: 25000,
-    postedDate: "2024-11-10",
-    verificationStatus: "Verified",
-    owner: {
-        _id: "owner1",
-        name: "Sarah Anderson",
-        email: "sarah@example.com",
-        phone: "+1 (555) 123-4567",
-        avatar: profilePhoto,
-    },
-    geolocation: {
-        lat: 37.7749,
-        lng: -122.4194,
-    },
-    roomPhotos: [
-        { name: "Living Room", image: livingroom },
-        { name: "Bedroom", image: bedroom },
-        { name: "Kitchen", image: kitchen },
-    ],
-};
+// Loading skeleton
+function PropertySkeleton() {
+    return (
+        <div className="min-h-screen bg-gradient-to-b from-slate-50 to-white dark:from-slate-950 dark:to-slate-900">
+            <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
+                <div className="animate-pulse space-y-6">
+                    {/* Back button skeleton */}
+                    <div className="h-10 w-24 bg-muted rounded-lg" />
+                    
+                    {/* Gallery skeleton */}
+                    <div className="aspect-[16/9] lg:aspect-[21/9] bg-muted rounded-2xl" />
+                    
+                    {/* Content grid skeleton */}
+                    <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+                        <div className="lg:col-span-2 space-y-6">
+                            <div className="h-32 bg-muted rounded-xl" />
+                            <div className="h-48 bg-muted rounded-xl" />
+                            <div className="h-64 bg-muted rounded-xl" />
+                        </div>
+                        <div className="space-y-6">
+                            <div className="h-64 bg-muted rounded-xl" />
+                            <div className="h-48 bg-muted rounded-xl" />
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    );
+}
 
-export default function PropertyPage({ params }) {
+// Error state
+function PropertyError({ error, onRetry, onGoBack }) {
+    return (
+        <div className="min-h-screen bg-gradient-to-b from-slate-50 to-white dark:from-slate-950 dark:to-slate-900 flex items-center justify-center p-4">
+            <div className="text-center max-w-md">
+                <div className="w-20 h-20 mx-auto mb-6 rounded-full bg-destructive/10 flex items-center justify-center">
+                    <Home className="w-10 h-10 text-destructive" />
+                </div>
+                <h2 className="text-2xl font-bold text-foreground mb-3">
+                    {error?.message || 'Property Not Found'}
+                </h2>
+                <p className="text-muted-foreground mb-8">
+                    We couldn't load this property. It may have been removed or the link might be incorrect.
+                </p>
+                <div className="flex flex-col sm:flex-row gap-3 justify-center">
+                    <Button onClick={onRetry} className="bg-primary hover:bg-primary/90">
+                        Try Again
+                    </Button>
+                    <Button onClick={onGoBack} variant="outline">
+                        Go Back
+                    </Button>
+                </div>
+            </div>
+        </div>
+    );
+}
+
+export default function PropertyPage() {
+    const [propertyData, setPropertyData] = useState(null);
+    const [loading, setLoading] = useState(true);
+    const [error, setError] = useState(null);
     const [isFavorited, setIsFavorited] = useState(false);
-    const [showImageModal, setShowImageModal] = useState(false);
-    const [propertyData, setPropertyData] = useState({});
-    const navigate = useNavigate()
+    const [favoriteLoading, setFavoriteLoading] = useState(false);
+    
+    const navigate = useNavigate();
+    const { slug } = useParams();
+    const dispatch = useDispatch();
+    const { propertyDataId } = useSelector(state => state.postproperty);
 
-
-    const { slug } = useParams()
-    const dispatch = useDispatch()
-
-    const obj = {
-        key: slug
-    }
-
-    const fetchPropertyData = async () => {
-
+    // Check wishlist status
+    const checkWishlistStatus = useCallback(async (propertyId) => {
+        if (!isAuthenticated() || !propertyId) return;
         try {
-            const response = await dispatch(getPropertyByID(obj))
-            const data = response?.payload
-            console.log(data)
-            setPropertyData(data)
-        } catch (error) {
-            console.log(error)
+            const inWishlist = await wishlistService.isInWishlist(propertyId);
+            setIsFavorited(inWishlist);
+        } catch (err) {
+            console.error('Wishlist check failed:', err);
         }
+    }, []);
 
-    }
+    // Toggle favorite
+    const handleToggleFavorite = async () => {
+        if (!isAuthenticated()) {
+            navigate('/login');
+            return;
+        }
+        if (favoriteLoading || !propertyData?._id) return;
 
-    useEffect(() => {
-        fetchPropertyData()
-    }, [])
-
-
-    const handleShare = () => {
-        if (navigator.share) {
-            navigator.share({
-                title: mockProperty.title,
-                text: `Check out this amazing property:${mockProperty.title}`,
-                url: window.location.href,
-            });
+        setFavoriteLoading(true);
+        try {
+            const result = await wishlistService.toggleWishlist(propertyData._id, isFavorited);
+            setIsFavorited(result.isFavorited);
+        } catch (err) {
+            console.error('Toggle favorite failed:', err);
+        } finally {
+            setFavoriteLoading(false);
         }
     };
 
-    const daysPosted = Math.floor(
-        (new Date().getTime() -
-            new Date(mockProperty.postedDate).getTime()) /
-        (1000 * 60 * 60 * 24)
-    );
+    // Share property
+    const handleShare = async () => {
+        const shareData = {
+            title: propertyData?.title || 'Property',
+            text: `Check out this property: ${propertyData?.title}`,
+            url: window.location.href,
+        };
+        
+        if (navigator.share) {
+            try {
+                await navigator.share(shareData);
+            } catch (err) {
+                if (err.name !== 'AbortError') {
+                    navigator.clipboard.writeText(window.location.href);
+                }
+            }
+        } else {
+            navigator.clipboard.writeText(window.location.href);
+        }
+    };
 
-    function formatDate(timestamp) {
-        const date = new Date(timestamp);
+    // Fetch property
+    const fetchProperty = useCallback(async () => {
+        if (!slug) return;
+        
+        setLoading(true);
+        setError(null);
+        
+        try {
+            const result = await dispatch(getPropertyByID({ key: slug })).unwrap();
+            if (result?.data) {
+                setPropertyData(result.data);
+                checkWishlistStatus(result.data._id);
+            } else {
+                setError(new Error('Property not found'));
+            }
+        } catch (err) {
+            console.error('Fetch error:', err);
+            setError(err);
+        } finally {
+            setLoading(false);
+        }
+    }, [slug, dispatch, checkWishlistStatus]);
 
-        const day = String(date.getDate()).padStart(2, '0');
-        const month = String(date.getMonth() + 1).padStart(2, '0');
-        const year = date.getFullYear();
+    useEffect(() => {
+        fetchProperty();
+    }, [fetchProperty]);
 
-        return `${day}/${month}/${year}`;
+    useEffect(() => {
+        if (propertyDataId?._id) {
+            setPropertyData(propertyDataId);
+            setLoading(false);
+        }
+    }, [propertyDataId]);
+
+    // Format date helper
+    const formatDate = (timestamp) => {
+        if (!timestamp) return null;
+        return new Date(timestamp).toLocaleDateString('en-IN', {
+            day: 'numeric',
+            month: 'short',
+            year: 'numeric'
+        });
+    };
+
+    if (loading) {
+        return (
+            <>
+                <Navbar />
+                <PropertySkeleton />
+            </>
+        );
     }
 
-    function capitalizeFirstLetter(text) {
-        if (!text) return "";
-        return text.charAt(0).toUpperCase() + text.slice(1).toLowerCase();
+    if (error || !propertyData) {
+        return (
+            <>
+                <Navbar />
+                <PropertyError 
+                    error={error || { message: 'Property not found' }} 
+                    onRetry={fetchProperty} 
+                    onGoBack={() => navigate(-1)} 
+                />
+            </>
+        );
     }
 
-
+    const isRoomType = ['room', 'pg', 'hostel'].includes(propertyData.category);
 
     return (
         <>
             <Navbar />
-            <div className="min-h-screen bg-gradient-to-br from-slate-50 via-white to-blue-50">
-                {/* Back Navigation */}
-                <div className="max-w-7xl mx-auto px-3 sm:px-4 pt-4 pb-2">
-                    <button className="inline-flex items-center gap-2 text-sm font-medium text-slate-600 hover:text-amber-700 transition-colors hover:bg-amber-50 px-3 py-2 rounded-lg">
-                        <ArrowLeft className="w-4 h-4" />
-                        <span>Back</span>
-                    </button>
-                </div>
-
-                <main className="max-w-7xl mx-auto px-3 sm:px-4 pb-8">
-                    {/* Main 2-Column Layout */}
-                    <div className="grid grid-cols-1 lg:grid-cols-5 gap-4 lg:gap-6">
-                        {/* LEFT: Gallery */}
-                        <div className="lg:col-span-3">
-                            <ImageCarousel
-                                images={mockProperty.images}
-                                propertyTitle={mockProperty.title}
-                            />
-                        </div>
-
-                        {/* RIGHT: Info */}
-                        <div className="lg:col-span-2 space-y-4">
-                            {/* Title Section */}
-                            <div className="bg-white rounded-xl p-4 border border-blue-100 shadow-sm">
-                                <div className="flex items-start justify-between gap-2 mb-3">
-                                    <div className="flex-1 min-w-0">
-                                        <h1 className="text-lg sm:text-xl font-bold text-slate-900 leading-tight">
-                                            {capitalizeFirstLetter(propertyData.title)}
-                                        </h1>
-                                    </div>
-
-                                    <div className="flex gap-2">
-                                        <button
-                                            onClick={handleShare}
-                                            className="p-2 hover:bg-amber-50 rounded-lg text-slate-600 hover:text-amber-700"
-                                        >
-                                            <Share2 className="w-4 h-4" />
-                                        </button>
-
-                                        <button
-                                            onClick={() => setIsFavorited(!isFavorited)}
-                                            className="p-2 hover:bg-red-50 rounded-lg"
-                                        >
-                                            <Heart
-                                                className={`w-4 h-4${isFavorited
-                                                    ? "fill-red-500 text-red-500"
-                                                    : "text-slate-600 hover:text-red-500"
-                                                    }`}
-                                            />
-                                        </button>
-                                    </div>
-                                </div>
-
-                                <div className="flex items-center gap-1 text-xs text-slate-600 mb-2">
-                                    <MapPin className="w-3 h-3" />
-                                    <span>{propertyData.address}</span>
-                                </div>
-
-                                <div className="flex flex-wrap gap-2">
-                                    <span className="badge-amber">{capitalizeFirstLetter(propertyData.category)}</span>
-                                    <span className="badge-blue">{capitalizeFirstLetter(propertyData.furnishing)}</span>
-
-                                    <span className="badge-gray flex items-center gap-1">
-                                        <Calendar className="w-3 h-3" />
-                                        {formatDate(propertyData.createdAt)}
-                                    </span>
-
-                                    {propertyData.verificationStatus === "Verified" && (
-                                        <span className="badge-green flex items-center gap-1">
-                                            <CheckCircle className="w-3 h-3" />
-                                            Verified
-                                        </span>
-                                    )}
-                                </div>
-                            </div>
-
-                            {/* Price Highlight */}
-                            <div className="bg-gradient-to-br from-amber-500 via-orange-500 to-red-500 text-white rounded-xl p-4 shadow-md">
-                                <p className="text-xs font-semibold opacity-90 mb-1 uppercase tracking-wide">
-                                    Monthly Rent
-                                </p>
-                                <p className="text-3xl font-bold">
-                                    ${propertyData.monthlyRent}
-                                </p>
-                                <p className="text-xs opacity-75 mt-2">
-                                    +${propertyData.maintenanceCharge}/month maintenance
-                                </p>
-                            </div>
-
-                            {/* Quick Facts */}
-                            <div className="bg-white rounded-xl p-4 border border-slate-200 shadow-sm">
-                                <h3 className="text-sm font-bold mb-3">Quick Facts</h3>
-
-                                <div className="grid grid-cols-2 gap-3">
-                                    <div className="fact-card blue">
-                                        <p className="fact-value">{propertyData.bedrooms}</p>
-                                        <p className="fact-label">Bedrooms</p>
-                                    </div>
-
-                                    <div className="fact-card green">
-                                        <p className="fact-value">{propertyData.bathrooms}</p>
-                                        <p className="fact-label">Bathrooms</p>
-                                    </div>
-
-                                    <div className="fact-card purple">
-                                        <p className="fact-value">
-                                            {propertyData.builtUpArea}
-                                        </p>
-                                        <p className="fact-label">Sq. Feet</p>
-                                    </div>
-
-                                    <div className="fact-card orange">
-                                        <p className="fact-value">{formatDate(propertyData.availableFrom)}</p>
-                                        <p className="fact-label">Status</p>
-                                    </div>
-                                </div>
-                            </div>
-
-                            {/* Action Buttons */}
-                            <div className="bg-white rounded-xl p-4 border border-slate-200 shadow-sm space-y-2">
-                                <Button className="w-full bg-gradient-to-r from-amber-500 to-orange-600 hover:from-amber-600 hover:to-orange-700 text-white font-semibold rounded-lg h-10 text-sm">
-                                    <MessageSquare className="w-4 h-4 mr-2" />
-                                    Request Viewing
-                                </Button>
-
-                                <Button className="w-full bg-blue-600 hover:bg-blue-700 text-white font-semibold rounded-lg h-10 text-sm">
-                                    Schedule Tour
-                                </Button>
-                            </div>
-
-                            {/* Owner Card */}
-                            <div className="bg-white rounded-xl p-4 border border-slate-200 shadow-sm">
-                                <h3 className="text-sm font-bold mb-3">Owner</h3>
-
-                                <div className="flex items-center gap-3 mb-3">
-                                    <img
-                                        src={mockProperty.owner.avatar}
-                                        alt={capitalizeFirstLetter(propertyData.ownerName)}
-                                        className="w-12 h-12 rounded-full object-cover border-2 border-amber-200"
-                                    />
-
-                                    <div className="min-w-0">
-                                        <p className="font-semibold">{capitalizeFirstLetter(propertyData.ownerName)}</p>
-                                        <p className="text-xs text-slate-600">Verified Owner</p>
-                                    </div>
-                                </div>
-
-                                <div className="space-y-2">
-                                    <a
-                                        href={`tel:${propertyData.ownerPhone}`}
-                                        className="contact-link blue"
-                                    >
-                                        <Phone className="icon-blue" />
-                                        <div>
-                                            {/* <p className="contact-small">Call</p> */}
-                                            <p className="contact-value">{capitalizeFirstLetter(propertyData.ownerPhone)}</p>
-                                        </div>
-                                    </a>
-
-                                    <a
-                                        href={`mailto:${capitalizeFirstLetter(propertyData.ownerEmail)}`}
-                                        className="contact-link amber"
-                                    >
-                                        <Mail className="icon-amber" />
-                                        <div>
-                                            {/* <p className="contact-small">Email</p> */}
-                                            <p className="contact-value truncate">
-                                                {capitalizeFirstLetter(propertyData.ownerEmail)}
-                                            </p>
-                                        </div>
-                                    </a>
-                                </div>
-                            </div>
+            <div className="min-h-screen bg-gradient-to-b from-slate-50 to-white dark:from-slate-950 dark:to-slate-900">
+                <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4 sm:py-6">
+                    
+                    {/* Top Navigation Bar */}
+                    <div className="flex items-center justify-between mb-4 sm:mb-6">
+                        <button 
+                            onClick={() => navigate(-1)}
+                            className="inline-flex items-center gap-2 px-3 py-2 text-sm font-medium text-muted-foreground hover:text-foreground hover:bg-muted rounded-lg transition-all"
+                        >
+                            <ArrowLeft className="w-4 h-4" />
+                            <span className="hidden sm:inline">Back to listings</span>
+                            <span className="sm:hidden">Back</span>
+                        </button>
+                        
+                        <div className="flex items-center gap-2">
+                            <button
+                                onClick={handleShare}
+                                className="p-2.5 rounded-full bg-card border border-border hover:bg-muted transition-all"
+                                title="Share"
+                            >
+                                <Share2 className="w-4 h-4 text-muted-foreground" />
+                            </button>
+                            <button
+                                onClick={handleToggleFavorite}
+                                disabled={favoriteLoading}
+                                className={`p-2.5 rounded-full border transition-all ${
+                                    isFavorited 
+                                        ? 'bg-red-50 border-red-200 dark:bg-red-950/50 dark:border-red-800' 
+                                        : 'bg-card border-border hover:bg-muted'
+                                }`}
+                                title={isFavorited ? "Remove from wishlist" : "Add to wishlist"}
+                            >
+                                <Heart className={`w-4 h-4 transition-all ${
+                                    isFavorited 
+                                        ? 'fill-red-500 text-red-500' 
+                                        : 'text-muted-foreground hover:text-red-500'
+                                }`} />
+                            </button>
                         </div>
                     </div>
 
-                    {/* Bottom sections */}
-                    <div className="mt-8 grid grid-cols-1 lg:grid-cols-5 gap-4 lg:gap-6">
-                        <div className="lg:col-span-3 space-y-4">
-                            <PropertyDetails property={propertyData} />
+                    {/* Image Gallery - Full Width */}
+                    <ImageGallery
+                        images={propertyData.photos || []}
+                        title={propertyData.title || 'Property'}
+                    />
+
+                    {/* Main Content Grid */}
+                    <div className="mt-6 sm:mt-8 grid grid-cols-1 lg:grid-cols-3 gap-6 lg:gap-8">
+                        
+                        {/* Left Column - Property Details */}
+                        <div className="lg:col-span-2 space-y-6">
+                            
+                            {/* Property Overview */}
+                            <PropertyOverview 
+                                property={propertyData}
+                                formatDate={formatDate}
+                            />
+
+                            {/* Property Specifications */}
+                            <PropertySpecs 
+                                property={propertyData}
+                                isRoomType={isRoomType}
+                            />
+
+                            {/* Amenities */}
+                            <PropertyAmenities property={propertyData} />
+
+                            {/* Location */}
                             <PropertyLocation property={propertyData} />
                         </div>
 
-                        <div className="lg:col-span-2">
-                            <NearbyRecommendations location={propertyData.locality} />
+                        {/* Right Column - Sticky Sidebar */}
+                        <div className="space-y-6">
+                            <div className="lg:sticky lg:top-6 space-y-6">
+                                
+                                {/* Pricing Card */}
+                                <PricingCard property={propertyData} />
+
+                                {/* Owner Card */}
+                                <OwnerCard 
+                                    owner={{
+                                        id: propertyData.ownerId || propertyData.owner?._id || propertyData.owner,
+                                        name: propertyData.ownerName,
+                                        phone: propertyData.ownerPhone,
+                                        email: propertyData.ownerEmail,
+                                        ownerType: propertyData.ownerType,
+                                        verificationStatus: propertyData.verificationStatus
+                                    }}
+                                    propertyId={propertyData._id}
+                                />
+
+                                {/* Nearby Places */}
+                                <NearbyPlaces 
+                                    property={propertyData}
+                                    location={propertyData.locality || propertyData.city}
+                                />
+                            </div>
                         </div>
                     </div>
-                </main>
-            </div>
-        </>
 
+                    {/* Listing Info Footer */}
+                    {propertyData.listingNumber && (
+                        <div className="mt-8 pt-6 border-t border-border">
+                            <div className="flex flex-wrap items-center justify-between gap-4 text-sm text-muted-foreground">
+                                <div className="flex items-center gap-4">
+                                    <span>Listing ID: <span className="font-mono text-foreground">{propertyData.listingNumber}</span></span>
+                                    {propertyData.createdAt && (
+                                        <span className="flex items-center gap-1.5">
+                                            <Calendar className="w-3.5 h-3.5" />
+                                            Posted {formatDate(propertyData.createdAt)}
+                                        </span>
+                                    )}
+                                </div>
+                                <div className="flex items-center gap-1.5 text-primary">
+                                    <Sparkles className="w-3.5 h-3.5" />
+                                    <span className="text-xs font-medium">Premium Listing</span>
+                                </div>
+                            </div>
+                        </div>
+                    )}
+                </div>
+            </div>
+            <Footer />
+        </>
     );
 }

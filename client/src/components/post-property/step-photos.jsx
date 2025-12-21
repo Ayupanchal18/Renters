@@ -1,5 +1,6 @@
 import { Upload, X, ImageIcon } from 'lucide-react';
 import { useState } from "react";
+import { Button } from "../ui/button";
 
 export default function StepPhotos({ formData, setFormData, validationErrors }) {
     const [dragActive, setDragActive] = useState(false);
@@ -29,29 +30,9 @@ export default function StepPhotos({ formData, setFormData, validationErrors }) 
         if (files) handleFiles(files);
     };
 
-    // const handleFiles = (files) => {
-    //     Array.from(files).forEach((file) => {
-    //         if (file.type.startsWith("image/")) {
-    //             const reader = new FileReader();
-    //             reader.onload = (e) => {
-    //                 const result = e.target?.result;
-
-    //                 if (!formData.photos.includes(result)) {
-    //                     setFormData({
-    //                         ...formData,
-    //                         photos: [...formData.photos, result],
-    //                     });
-    //                 }
-    //             };
-    //             reader.readAsDataURL(file);
-    //         }
-    //     });
-    // };
     const handleFiles = (files) => {
         Array.from(files).forEach((file) => {
             if (file.type.startsWith("image/")) {
-
-                // 1. Save preview (Base64)
                 const reader = new FileReader();
                 reader.onload = (e) => {
                     const preview = e.target?.result;
@@ -67,7 +48,6 @@ export default function StepPhotos({ formData, setFormData, validationErrors }) 
         });
     };
 
-
     const removePhoto = (index) => {
         setFormData({
             ...formData,
@@ -77,7 +57,10 @@ export default function StepPhotos({ formData, setFormData, validationErrors }) 
 
     return (
         <div className="space-y-6">
-            <h2 className="text-2xl font-bold text-slate-900 mb-6">Upload Property Photos</h2>
+            <div>
+                <h2 className="text-2xl font-bold text-foreground mb-2">Upload Property Photos</h2>
+                <p className="text-muted-foreground">Add high-quality photos to attract more tenants</p>
+            </div>
 
             {/* Upload Area */}
             <div
@@ -85,12 +68,12 @@ export default function StepPhotos({ formData, setFormData, validationErrors }) 
                 onDragLeave={handleDrag}
                 onDragOver={handleDrag}
                 onDrop={handleDrop}
-                className={`border-2 border-dashed rounded-lg p-12 text-center transition-all${dragActive ? "border-blue-600 bg-blue-50" : "border-slate-300 bg-slate-50"
+                className={`border-2 border-dashed rounded-lg p-12 text-center transition-all ${dragActive ? "border-primary bg-primary/5" : "border-border bg-muted/50"
                     }`}
             >
-                <Upload size={48} className="mx-auto mb-4 text-slate-400" />
-                <h3 className="text-lg font-semibold text-slate-900 mb-1">Drag and drop photos here</h3>
-                <p className="text-slate-600 mb-4">or</p>
+                <Upload size={48} className="mx-auto mb-4 text-muted-foreground" />
+                <h3 className="text-lg font-semibold text-foreground mb-1">Drag and drop photos here</h3>
+                <p className="text-muted-foreground mb-4">or</p>
 
                 <label className="inline-block">
                     <input
@@ -100,18 +83,18 @@ export default function StepPhotos({ formData, setFormData, validationErrors }) 
                         onChange={handleChange}
                         className="hidden"
                     />
-                    <span className="inline-block px-6 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 cursor-pointer font-medium">
-                        Select Files
-                    </span>
+                    <Button type="button" asChild>
+                        <span className="cursor-pointer">Select Files</span>
+                    </Button>
                 </label>
 
-                <p className="text-sm text-slate-600 mt-4">JPG, PNG up to 5MB per file</p>
+                <p className="text-sm text-muted-foreground mt-4">JPG, PNG up to 5MB per file</p>
             </div>
 
             {/* Photo Gallery */}
             {formData.photos.length > 0 && (
                 <div>
-                    <h3 className="text-sm font-semibold text-slate-900 mb-4">
+                    <h3 className="text-sm font-semibold text-foreground mb-4">
                         {formData.photos.length} Photo{formData.photos.length !== 1 ? "s" : ""} Uploaded
                     </h3>
 
@@ -119,17 +102,24 @@ export default function StepPhotos({ formData, setFormData, validationErrors }) 
                         {formData.photos.map((photo, index) => (
                             <div key={index} className="relative group">
                                 <img
-                                    src={photo || "/placeholder.svg"}
-                                    alt={`Property photo${index + 1}`}
-                                    className="w-full h-32 object-cover rounded-lg"
+                                    src={photo.preview || photo || "/placeholder.svg"}
+                                    alt={`Property photo ${index + 1}`}
+                                    className="w-full h-32 object-cover rounded-lg border border-border"
                                 />
 
                                 <button
+                                    type="button"
                                     onClick={() => removePhoto(index)}
-                                    className="absolute top-2 right-2 bg-red-500 text-white p-1 rounded opacity-0 group-hover:opacity-100 transition-opacity"
+                                    className="absolute top-2 right-2 bg-destructive text-destructive-foreground p-1 rounded opacity-0 group-hover:opacity-100 transition-opacity"
                                 >
                                     <X size={20} />
                                 </button>
+
+                                {index === 0 && (
+                                    <span className="absolute bottom-2 left-2 bg-primary text-primary-foreground text-xs px-2 py-1 rounded">
+                                        Cover
+                                    </span>
+                                )}
                             </div>
                         ))}
                     </div>
@@ -138,9 +128,9 @@ export default function StepPhotos({ formData, setFormData, validationErrors }) 
 
             {/* No Photos Placeholder */}
             {!formData.photos.length && (
-                <div className="text-center py-8 bg-slate-50 rounded-lg">
-                    <ImageIcon size={40} className="mx-auto text-slate-300 mb-2" />
-                    <p className="text-slate-600">No photos uploaded yet</p>
+                <div className="text-center py-8 bg-muted/50 rounded-lg border border-border">
+                    <ImageIcon size={40} className="mx-auto text-muted-foreground mb-2" />
+                    <p className="text-muted-foreground">No photos uploaded yet</p>
                 </div>
             )}
         </div>

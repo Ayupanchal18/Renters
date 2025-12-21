@@ -8,12 +8,25 @@ const propertyService = {
         });
     },
 
-    getAllProperties: () => {
-        return apiClient.get(PROPERTY_ENDPOINTS.GET_ALL_PROPERTIES)
+    getAllProperties: (params = {}) => {
+        return apiClient.get(PROPERTY_ENDPOINTS.GET_ALL_PROPERTIES, { params });
     },
 
     getPropertyByID: (payload) => {
-        return apiClient.post(PROPERTY_ENDPOINTS.GET_PROPERTY_BY_ID, payload)
+        return apiClient.post(PROPERTY_ENDPOINTS.GET_PROPERTY_BY_ID, payload);
+    },
+
+    // Enhanced endpoints for filtering and pagination
+    getPropertiesWithPagination: (params) => {
+        return apiClient.get(PROPERTY_ENDPOINTS.GET_ALL_PROPERTIES, { params });
+    },
+
+    getUserProperties: (userId, params = {}) => {
+        return apiClient.get(`${PROPERTY_ENDPOINTS.GET_ALL_PROPERTIES}/user/${userId}`, { params });
+    },
+
+    getPropertyAnalytics: (propertyId) => {
+        return apiClient.get(`${PROPERTY_ENDPOINTS.GET_ALL_PROPERTIES}/${propertyId}/analytics`);
     }
 
 };

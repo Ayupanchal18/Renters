@@ -1,0 +1,1532 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Premium Design System - Style Preview</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <style>
+        /* ====================================================================== */
+        /* Design Tokens - CSS Custom Properties */
+        /* ====================================================================== */
+        :root {
+            /* Color Tokens */
+            --primary: #2B50FF;
+            --secondary: #FF6B68;
+            --tertiary: #FFC857;
+            --success: #10B981;
+            --error: #EF4444;
+            --warning: #F59E0B;
+
+            /* Light Mode Neutral Palette */
+            --background: #F8FAFC;
+            --surface: #FFFFFF;
+            --text: #0F172A;
+            --text-muted: #64748B;
+            --border: #E2E8F0;
+
+            /* Glass Overlay */
+            --glass-overlay: rgba(8, 15, 30, 0.06);
+
+            /* Spacing Scale */
+            --spacing-xs: 4px;
+            --spacing-sm: 8px;
+            --spacing-md: 12px;
+            --spacing-lg: 16px;
+            --spacing-xl: 24px;
+            --spacing-2xl: 32px;
+
+            /* Border Radius */
+            --radius-sm: 4px;
+            --radius-md: 6px;
+            --radius-lg: 8px;
+            --radius-xl: 12px;
+            --radius-full: 9999px;
+
+            /* Shadows */
+            --shadow-sm: 0 1px 2px 0 rgba(0, 0, 0, 0.05);
+            --shadow-md: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
+            --shadow-lg: 0 10px 15px -3px rgba(0, 0, 0, 0.1);
+            --shadow-glow: 0 0 20px rgba(43, 80, 255, 0.3);
+
+            /* Transitions */
+            --duration-fast: 120ms;
+            --duration-normal: 180ms;
+            --duration-slow: 320ms;
+            --duration-slower: 420ms;
+
+            /* Typography */
+            --font-sans: "Inter", system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+            --font-mono: "Geist Mono", monospace;
+        }
+
+        /* Dark Mode */
+        .dark {
+            --primary: #4F6FFF;
+            --secondary: #FF8A87;
+            --tertiary: #FFD57A;
+            --success: #34D399;
+            --error: #F87171;
+            --warning: #FBBF24;
+            --background: #0B1220;
+            --surface: #0F172A;
+            --text: #E6EEF8;
+            --text-muted: #94A3B8;
+            --border: #1E293B;
+            --glass-overlay: rgba(255, 255, 255, 0.06);
+        }
+
+        /* ====================================================================== */
+        /* Base Styles */
+        /* ====================================================================== */
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: var(--font-sans);
+            background-color: var(--background);
+            color: var(--text);
+            line-height: 1.5;
+            transition: background-color 0.3s ease, color 0.3s ease;
+        }
+
+        /* ====================================================================== */
+        /* Layout */
+        /* ====================================================================== */
+        .container {
+            max-width: 1400px;
+            margin: 0 auto;
+            padding: var(--spacing-xl);
+        }
+
+        .header {
+            position: sticky;
+            top: 0;
+            z-index: 100;
+            background: var(--glass-overlay);
+            backdrop-filter: blur(10px);
+            -webkit-backdrop-filter: blur(10px);
+            border-bottom: 1px solid var(--border);
+            padding: var(--spacing-lg) var(--spacing-xl);
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            transition: background-color 0.3s ease, border-color 0.3s ease;
+        }
+
+        .header-title {
+            font-size: 1.5rem;
+            font-weight: 700;
+            color: var(--text);
+        }
+
+        .section {
+            margin-bottom: var(--spacing-2xl);
+            padding: var(--spacing-xl);
+            background: var(--surface);
+            border: 1px solid var(--border);
+            border-radius: var(--radius-xl);
+            transition: background-color 0.3s ease, border-color 0.3s ease;
+        }
+
+        .section-title {
+            font-size: 1.25rem;
+            font-weight: 600;
+            margin-bottom: var(--spacing-lg);
+            color: var(--text);
+            border-bottom: 2px solid var(--primary);
+            padding-bottom: var(--spacing-sm);
+            display: inline-block;
+        }
+
+        .grid {
+            display: grid;
+            gap: var(--spacing-lg);
+        }
+
+        .grid-2 {
+            grid-template-columns: repeat(2, 1fr);
+        }
+
+        .grid-3 {
+            grid-template-columns: repeat(3, 1fr);
+        }
+
+        .grid-4 {
+            grid-template-columns: repeat(4, 1fr);
+        }
+
+        .grid-6 {
+            grid-template-columns: repeat(6, 1fr);
+        }
+
+        @media (max-width: 768px) {
+
+            .grid-2,
+            .grid-3,
+            .grid-4,
+            .grid-6 {
+                grid-template-columns: 1fr;
+            }
+        }
+
+        .flex-row {
+            display: flex;
+            flex-wrap: wrap;
+            gap: var(--spacing-md);
+            align-items: center;
+        }
+
+        /* ====================================================================== */
+        /* Theme Toggle */
+        /* ====================================================================== */
+        .theme-toggle {
+            display: flex;
+            align-items: center;
+            gap: var(--spacing-sm);
+            padding: var(--spacing-sm) var(--spacing-md);
+            background: var(--surface);
+            border: 1px solid var(--border);
+            border-radius: var(--radius-full);
+            cursor: pointer;
+            transition: all var(--duration-normal) ease;
+        }
+
+        .theme-toggle:hover {
+            border-color: var(--primary);
+            box-shadow: var(--shadow-md);
+        }
+
+        .theme-toggle-icon {
+            width: 20px;
+            height: 20px;
+            fill: var(--text);
+        }
+
+        .theme-toggle-label {
+            font-size: 0.875rem;
+            font-weight: 500;
+            color: var(--text);
+        }
+
+        /* ====================================================================== */
+        /* Color Palette */
+        /* ====================================================================== */
+        .color-swatch {
+            display: flex;
+            flex-direction: column;
+            border-radius: var(--radius-lg);
+            overflow: hidden;
+            border: 1px solid var(--border);
+        }
+
+        .color-preview {
+            height: 80px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: white;
+            font-weight: 600;
+            font-size: 0.875rem;
+        }
+
+        .color-info {
+            padding: var(--spacing-sm);
+            background: var(--surface);
+            font-size: 0.75rem;
+        }
+
+        .color-name {
+            font-weight: 600;
+            color: var(--text);
+        }
+
+        .color-value {
+            color: var(--text-muted);
+            font-family: var(--font-mono);
+        }
+
+        /* ====================================================================== */
+        /* Buttons */
+        /* ====================================================================== */
+        .btn {
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            gap: var(--spacing-sm);
+            padding: var(--spacing-sm) var(--spacing-lg);
+            font-size: 0.875rem;
+            font-weight: 500;
+            border-radius: var(--radius-md);
+            border: none;
+            cursor: pointer;
+            transition: all var(--duration-normal) cubic-bezier(0.2, 0.9, 0.3, 1);
+            outline: none;
+        }
+
+        .btn:focus-visible {
+            outline: none;
+            box-shadow: 0 0 0 2px var(--background), 0 0 0 4px rgba(43, 80, 255, 0.3);
+        }
+
+        .btn:disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+            filter: saturate(0.5);
+        }
+
+        /* Primary Button */
+        .btn-primary {
+            background: linear-gradient(to bottom, var(--primary), rgba(43, 80, 255, 0.9));
+            color: white;
+            box-shadow: var(--shadow-md);
+        }
+
+        .btn-primary:hover:not(:disabled) {
+            transform: translateY(-2px) scale(1.01);
+            box-shadow: var(--shadow-lg);
+        }
+
+        .btn-primary:active:not(:disabled) {
+            transform: translateY(0) scale(1);
+        }
+
+        /* Secondary Button */
+        .btn-secondary {
+            background: var(--secondary);
+            color: white;
+            border: 1px solid rgba(255, 107, 104, 0.2);
+            box-shadow: var(--shadow-sm);
+        }
+
+        .btn-secondary:hover:not(:disabled) {
+            transform: translateY(-2px);
+            box-shadow: var(--shadow-md);
+        }
+
+        /* Ghost Button */
+        .btn-ghost {
+            background: transparent;
+            color: var(--primary);
+        }
+
+        .btn-ghost:hover:not(:disabled) {
+            background: rgba(43, 80, 255, 0.08);
+        }
+
+        /* Outline Button */
+        .btn-outline {
+            background: transparent;
+            color: var(--text);
+            border: 1px solid var(--border);
+        }
+
+        .btn-outline:hover:not(:disabled) {
+            background: var(--glass-overlay);
+            box-shadow: var(--shadow-sm);
+        }
+
+        /* Destructive Button */
+        .btn-destructive {
+            background: linear-gradient(to bottom, var(--error), rgba(239, 68, 68, 0.9));
+            color: white;
+            box-shadow: var(--shadow-md);
+        }
+
+        .btn-destructive:hover:not(:disabled) {
+            transform: translateY(-2px) scale(1.01);
+            box-shadow: var(--shadow-lg);
+        }
+
+        /* Button Sizes */
+        .btn-sm {
+            padding: var(--spacing-xs) var(--spacing-md);
+            font-size: 0.75rem;
+        }
+
+        .btn-lg {
+            padding: var(--spacing-md) var(--spacing-xl);
+            font-size: 1rem;
+        }
+
+        /* ====================================================================== */
+        /* Cards */
+        /* ====================================================================== */
+        .card {
+            background: var(--surface);
+            border: 1px solid var(--border);
+            border-radius: var(--radius-xl);
+            overflow: hidden;
+            transition: all var(--duration-normal) ease;
+        }
+
+        .card-hover:hover {
+            transform: translateY(-4px);
+            box-shadow: var(--shadow-md);
+        }
+
+        .card-glass {
+            background: var(--glass-overlay);
+            backdrop-filter: blur(8px);
+            -webkit-backdrop-filter: blur(8px);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            box-shadow: var(--shadow-lg);
+        }
+
+        .card-elevated {
+            box-shadow: var(--shadow-lg);
+        }
+
+        .card-header {
+            padding: var(--spacing-lg);
+            border-bottom: 1px solid var(--border);
+        }
+
+        .card-title {
+            font-size: 1.125rem;
+            font-weight: 600;
+            color: var(--text);
+        }
+
+        .card-description {
+            font-size: 0.875rem;
+            color: var(--text-muted);
+            margin-top: var(--spacing-xs);
+        }
+
+        .card-content {
+            padding: var(--spacing-lg);
+        }
+
+        .card-footer {
+            padding: var(--spacing-lg);
+            border-top: 1px solid var(--border);
+            display: flex;
+            gap: var(--spacing-sm);
+        }
+
+        /* ====================================================================== */
+        /* Toast Notifications */
+        /* ====================================================================== */
+        .toast {
+            display: flex;
+            align-items: flex-start;
+            gap: var(--spacing-md);
+            padding: var(--spacing-lg);
+            border-radius: var(--radius-lg);
+            border: 1px solid;
+            box-shadow: var(--shadow-lg);
+            position: relative;
+            overflow: hidden;
+        }
+
+        .toast-default {
+            background: var(--surface);
+            border-color: var(--border);
+            color: var(--text);
+        }
+
+        .toast-success {
+            background: rgba(16, 185, 129, 0.1);
+            border-color: rgba(16, 185, 129, 0.2);
+            color: var(--success);
+        }
+
+        .toast-error {
+            background: rgba(239, 68, 68, 0.1);
+            border-color: rgba(239, 68, 68, 0.2);
+            color: var(--error);
+        }
+
+        .toast-warning {
+            background: rgba(245, 158, 11, 0.1);
+            border-color: rgba(245, 158, 11, 0.2);
+            color: var(--warning);
+        }
+
+        .toast-info {
+            background: rgba(43, 80, 255, 0.1);
+            border-color: rgba(43, 80, 255, 0.2);
+            color: var(--primary);
+        }
+
+        .toast-icon {
+            width: 20px;
+            height: 20px;
+            flex-shrink: 0;
+        }
+
+        .toast-content {
+            flex: 1;
+        }
+
+        .toast-title {
+            font-weight: 600;
+            font-size: 0.875rem;
+        }
+
+        .toast-message {
+            font-size: 0.875rem;
+            opacity: 0.9;
+            margin-top: var(--spacing-xs);
+        }
+
+        .toast-progress {
+            position: absolute;
+            bottom: 0;
+            left: 0;
+            height: 3px;
+            width: 70%;
+            transition: width 0.1s linear;
+        }
+
+        .toast-success .toast-progress {
+            background: var(--success);
+        }
+
+        .toast-error .toast-progress {
+            background: var(--error);
+        }
+
+        .toast-warning .toast-progress {
+            background: var(--warning);
+        }
+
+        .toast-info .toast-progress {
+            background: var(--primary);
+        }
+
+        /* ====================================================================== */
+        /* Form Controls */
+        /* ====================================================================== */
+        .form-group {
+            display: flex;
+            flex-direction: column;
+            gap: var(--spacing-sm);
+        }
+
+        .form-label {
+            font-size: 0.875rem;
+            font-weight: 500;
+            color: var(--text);
+        }
+
+        .form-input {
+            padding: var(--spacing-sm) var(--spacing-md);
+            font-size: 0.875rem;
+            border: 1px solid var(--border);
+            border-radius: var(--radius-md);
+            background: var(--background);
+            color: var(--text);
+            transition: all var(--duration-normal) ease;
+            outline: none;
+        }
+
+        .form-input::placeholder {
+            color: var(--text-muted);
+        }
+
+        .form-input:focus {
+            border-color: var(--primary);
+            box-shadow: 0 0 0 2px var(--background), 0 0 0 4px rgba(43, 80, 255, 0.3);
+        }
+
+        .form-input-error {
+            border-color: var(--error);
+            animation: shake 0.5s ease-in-out;
+        }
+
+        .form-input-error:focus {
+            border-color: var(--error);
+            box-shadow: 0 0 0 2px var(--background), 0 0 0 4px rgba(239, 68, 68, 0.3);
+        }
+
+        .form-error-message {
+            font-size: 0.75rem;
+            color: var(--error);
+        }
+
+        @keyframes shake {
+
+            0%,
+            100% {
+                transform: translateX(0);
+            }
+
+            10%,
+            30%,
+            50%,
+            70%,
+            90% {
+                transform: translateX(-4px);
+            }
+
+            20%,
+            40%,
+            60%,
+            80% {
+                transform: translateX(4px);
+            }
+        }
+
+        /* Select/Dropdown */
+        .form-select {
+            padding: var(--spacing-sm) var(--spacing-md);
+            font-size: 0.875rem;
+            border: 1px solid var(--border);
+            border-radius: var(--radius-md);
+            background: var(--background);
+            color: var(--text);
+            cursor: pointer;
+            transition: all var(--duration-normal) ease;
+            outline: none;
+            appearance: none;
+            background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='16' height='16' viewBox='0 0 24 24' fill='none' stroke='%2364748B' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='m6 9 6 6 6-6'/%3E%3C/svg%3E");
+            background-repeat: no-repeat;
+            background-position: right 12px center;
+            padding-right: 40px;
+        }
+
+        .form-select:focus {
+            border-color: var(--primary);
+            box-shadow: 0 0 0 2px var(--background), 0 0 0 4px rgba(43, 80, 255, 0.3);
+        }
+
+        /* ====================================================================== */
+        /* Typography */
+        /* ====================================================================== */
+        .heading-1 {
+            font-size: 2.25rem;
+            font-weight: 700;
+            line-height: 1.1;
+            letter-spacing: -0.025em;
+            color: var(--text);
+        }
+
+        .heading-2 {
+            font-size: 1.875rem;
+            font-weight: 700;
+            line-height: 1.1;
+            letter-spacing: -0.02em;
+            color: var(--text);
+        }
+
+        .heading-3 {
+            font-size: 1.5rem;
+            font-weight: 600;
+            line-height: 1.1;
+            letter-spacing: -0.015em;
+            color: var(--text);
+        }
+
+        .heading-4 {
+            font-size: 1.25rem;
+            font-weight: 600;
+            line-height: 1.25;
+            color: var(--text);
+        }
+
+        .heading-5 {
+            font-size: 1.125rem;
+            font-weight: 600;
+            line-height: 1.25;
+            color: var(--text);
+        }
+
+        .heading-6 {
+            font-size: 1rem;
+            font-weight: 600;
+            line-height: 1.25;
+            color: var(--text);
+        }
+
+        .body-lg {
+            font-size: 1.125rem;
+            font-weight: 400;
+            line-height: 1.5;
+            color: var(--text);
+        }
+
+        .body-base {
+            font-size: 1rem;
+            font-weight: 400;
+            line-height: 1.5;
+            color: var(--text);
+        }
+
+        .body-sm {
+            font-size: 0.875rem;
+            font-weight: 400;
+            line-height: 1.5;
+            color: var(--text-muted);
+        }
+
+        .body-xs {
+            font-size: 0.75rem;
+            font-weight: 400;
+            line-height: 1.5;
+            color: var(--text-muted);
+        }
+
+        .text-highlight {
+            background-color: rgba(255, 200, 87, 0.14);
+            border-left: 3px solid var(--tertiary);
+            padding: var(--spacing-sm) var(--spacing-lg);
+            border-radius: 0 var(--radius-sm) var(--radius-sm) 0;
+        }
+
+        .text-highlight-secondary {
+            background-color: rgba(255, 107, 104, 0.14);
+            border-left: 3px solid var(--secondary);
+            padding: var(--spacing-sm) var(--spacing-lg);
+            border-radius: 0 var(--radius-sm) var(--radius-sm) 0;
+        }
+
+        .text-highlight-primary {
+            background-color: rgba(43, 80, 255, 0.14);
+            border-left: 3px solid var(--primary);
+            padding: var(--spacing-sm) var(--spacing-lg);
+            border-radius: 0 var(--radius-sm) var(--radius-sm) 0;
+        }
+
+        /* ====================================================================== */
+        /* Badges */
+        /* ====================================================================== */
+        .badge {
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            padding: 2px 10px;
+            font-size: 0.75rem;
+            font-weight: 500;
+            border-radius: var(--radius-full);
+            border: 1px solid;
+            transition: all var(--duration-fast) ease;
+        }
+
+        .badge-primary {
+            background: var(--primary);
+            color: white;
+            border-color: rgba(43, 80, 255, 0.8);
+        }
+
+        .badge-secondary {
+            background: var(--secondary);
+            color: white;
+            border-color: rgba(255, 107, 104, 0.8);
+        }
+
+        .badge-tertiary {
+            background: var(--tertiary);
+            color: #0F172A;
+            border-color: rgba(255, 200, 87, 0.8);
+        }
+
+        .badge-success {
+            background: var(--success);
+            color: white;
+            border-color: rgba(16, 185, 129, 0.8);
+        }
+
+        .badge-error {
+            background: var(--error);
+            color: white;
+            border-color: rgba(239, 68, 68, 0.8);
+        }
+
+        .badge-warning {
+            background: var(--warning);
+            color: #0F172A;
+            border-color: rgba(245, 158, 11, 0.8);
+        }
+
+        .badge-outline {
+            background: transparent;
+            color: var(--text);
+            border-color: var(--border);
+        }
+
+        /* ====================================================================== */
+        /* Visual Effects */
+        /* ====================================================================== */
+        .effect-box {
+            padding: var(--spacing-xl);
+            border-radius: var(--radius-lg);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            min-height: 100px;
+            font-weight: 500;
+        }
+
+        .effect-shadow-sm {
+            background: var(--surface);
+            box-shadow: var(--shadow-sm);
+        }
+
+        .effect-shadow-md {
+            background: var(--surface);
+            box-shadow: var(--shadow-md);
+        }
+
+        .effect-shadow-lg {
+            background: var(--surface);
+            box-shadow: var(--shadow-lg);
+        }
+
+        .effect-glow {
+            background: var(--surface);
+            box-shadow: var(--shadow-glow);
+        }
+
+        .effect-gradient {
+            background: linear-gradient(135deg, var(--primary), var(--tertiary));
+            color: white;
+        }
+
+        .effect-glass {
+            background: var(--glass-overlay);
+            backdrop-filter: blur(10px);
+            -webkit-backdrop-filter: blur(10px);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+        }
+
+        .effect-hover-lift {
+            background: var(--surface);
+            border: 1px solid var(--border);
+            cursor: pointer;
+            transition: all var(--duration-normal) ease;
+        }
+
+        .effect-hover-lift:hover {
+            transform: translateY(-4px);
+            box-shadow: var(--shadow-md);
+            filter: saturate(1.06);
+        }
+
+        /* ====================================================================== */
+        /* Spacing Demo */
+        /* ====================================================================== */
+        .spacing-demo {
+            display: flex;
+            align-items: flex-end;
+            gap: var(--spacing-md);
+            flex-wrap: wrap;
+        }
+
+        .spacing-box {
+            background: var(--primary);
+            border-radius: var(--radius-sm);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: white;
+            font-size: 0.75rem;
+            font-weight: 500;
+        }
+
+        /* ====================================================================== */
+        /* Reduced Motion */
+        /* ====================================================================== */
+        @media (prefers-reduced-motion: reduce) {
+
+            *,
+            *::before,
+            *::after {
+                animation-duration: 0.01ms !important;
+                animation-iteration-count: 1 !important;
+                transition-duration: 0.01ms !important;
+            }
+        }
+
+        /* ====================================================================== */
+        /* Utility Classes */
+        /* ====================================================================== */
+        .mt-sm {
+            margin-top: var(--spacing-sm);
+        }
+
+        .mt-md {
+            margin-top: var(--spacing-md);
+        }
+
+        .mt-lg {
+            margin-top: var(--spacing-lg);
+        }
+
+        .mb-sm {
+            margin-bottom: var(--spacing-sm);
+        }
+
+        .mb-md {
+            margin-bottom: var(--spacing-md);
+        }
+
+        .mb-lg {
+            margin-bottom: var(--spacing-lg);
+        }
+
+        .text-muted {
+            color: var(--text-muted);
+        }
+
+        .text-primary {
+            color: var(--primary);
+        }
+
+        .text-secondary {
+            color: var(--secondary);
+        }
+
+        .text-success {
+            color: var(--success);
+        }
+
+        .text-error {
+            color: var(--error);
+        }
+
+        .text-warning {
+            color: var(--warning);
+        }
+    </style>
+</head>
+
+<body>
+    <!-- Header with Theme Toggle -->
+    <header class="header">
+        <h1 class="header-title">Premium Design System</h1>
+        <button class="theme-toggle" onclick="toggleTheme()" aria-label="Toggle theme">
+            <svg class="theme-toggle-icon sun-icon" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none"
+                stroke="currentColor" stroke-width="2">
+                <circle cx="12" cy="12" r="4"></circle>
+                <path
+                    d="M12 2v2M12 20v2M4.93 4.93l1.41 1.41M17.66 17.66l1.41 1.41M2 12h2M20 12h2M6.34 17.66l-1.41 1.41M19.07 4.93l-1.41 1.41">
+                </path>
+            </svg>
+            <svg class="theme-toggle-icon moon-icon" style="display: none;" xmlns="http://www.w3.org/2000/svg"
+                viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"></path>
+            </svg>
+            <span class="theme-toggle-label">Light</span>
+        </button>
+    </header>
+
+    <div class="container">
+
+        <!-- Color Palette Section -->
+        <section class="section">
+            <h2 class="section-title">Color Palette</h2>
+            <div class="grid grid-6">
+                <div class="color-swatch">
+                    <div class="color-preview" style="background: var(--primary);">Primary</div>
+                    <div class="color-info">
+                        <div class="color-name">Royal Indigo</div>
+                        <div class="color-value">#2B50FF</div>
+                    </div>
+                </div>
+                <div class="color-swatch">
+                    <div class="color-preview" style="background: var(--secondary);">Secondary</div>
+                    <div class="color-info">
+                        <div class="color-name">Coral Accent</div>
+                        <div class="color-value">#FF6B68</div>
+                    </div>
+                </div>
+                <div class="color-swatch">
+                    <div class="color-preview" style="background: var(--tertiary); color: #0F172A;">Tertiary</div>
+                    <div class="color-info">
+                        <div class="color-name">Gold Amber</div>
+                        <div class="color-value">#FFC857</div>
+                    </div>
+                </div>
+                <div class="color-swatch">
+                    <div class="color-preview" style="background: var(--success);">Success</div>
+                    <div class="color-info">
+                        <div class="color-name">Emerald</div>
+                        <div class="color-value">#10B981</div>
+                    </div>
+                </div>
+                <div class="color-swatch">
+                    <div class="color-preview" style="background: var(--error);">Error</div>
+                    <div class="color-info">
+                        <div class="color-name">Tomato</div>
+                        <div class="color-value">#EF4444</div>
+                    </div>
+                </div>
+                <div class="color-swatch">
+                    <div class="color-preview" style="background: var(--warning); color: #0F172A;">Warning</div>
+                    <div class="color-info">
+                        <div class="color-name">Amber</div>
+                        <div class="color-value">#F59E0B</div>
+                    </div>
+                </div>
+            </div>
+
+            <h3 class="heading-5 mt-lg mb-md">Neutral Palette</h3>
+            <div class="grid grid-4">
+                <div class="color-swatch">
+                    <div class="color-preview"
+                        style="background: var(--background); color: var(--text); border: 1px solid var(--border);">
+                        Background</div>
+                    <div class="color-info">
+                        <div class="color-name">Background</div>
+                        <div class="color-value">#F8FAFC / #0B1220</div>
+                    </div>
+                </div>
+                <div class="color-swatch">
+                    <div class="color-preview"
+                        style="background: var(--surface); color: var(--text); border: 1px solid var(--border);">Surface
+                    </div>
+                    <div class="color-info">
+                        <div class="color-name">Surface</div>
+                        <div class="color-value">#FFFFFF / #0F172A</div>
+                    </div>
+                </div>
+                <div class="color-swatch">
+                    <div class="color-preview" style="background: var(--text); color: var(--background);">Text</div>
+                    <div class="color-info">
+                        <div class="color-name">Text</div>
+                        <div class="color-value">#0F172A / #E6EEF8</div>
+                    </div>
+                </div>
+                <div class="color-swatch">
+                    <div class="color-preview" style="background: var(--border); color: var(--text);">Border</div>
+                    <div class="color-info">
+                        <div class="color-name">Border</div>
+                        <div class="color-value">#E2E8F0 / #1E293B</div>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- Button Variants Section -->
+        <section class="section">
+            <h2 class="section-title">Button Variants</h2>
+
+            <h3 class="heading-5 mb-md">Default Sizes</h3>
+            <div class="flex-row mb-lg">
+                <button class="btn btn-primary">Primary Button</button>
+                <button class="btn btn-secondary">Secondary Button</button>
+                <button class="btn btn-ghost">Ghost Button</button>
+                <button class="btn btn-outline">Outline Button</button>
+                <button class="btn btn-destructive">Destructive</button>
+            </div>
+
+            <h3 class="heading-5 mb-md">Button Sizes</h3>
+            <div class="flex-row mb-lg">
+                <button class="btn btn-primary btn-sm">Small</button>
+                <button class="btn btn-primary">Default</button>
+                <button class="btn btn-primary btn-lg">Large</button>
+            </div>
+
+            <h3 class="heading-5 mb-md">Disabled States</h3>
+            <div class="flex-row mb-lg">
+                <button class="btn btn-primary" disabled>Primary Disabled</button>
+                <button class="btn btn-secondary" disabled>Secondary Disabled</button>
+                <button class="btn btn-outline" disabled>Outline Disabled</button>
+            </div>
+
+            <h3 class="heading-5 mb-md">With Icons</h3>
+            <div class="flex-row">
+                <button class="btn btn-primary">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none"
+                        stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                        <path d="M5 12h14" />
+                        <path d="M12 5v14" />
+                    </svg>
+                    Add Item
+                </button>
+                <button class="btn btn-secondary">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none"
+                        stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                        <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" />
+                        <polyline points="7 10 12 15 17 10" />
+                        <line x1="12" x2="12" y1="15" y2="3" />
+                    </svg>
+                    Download
+                </button>
+                <button class="btn btn-destructive">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none"
+                        stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                        <path d="M3 6h18" />
+                        <path d="M19 6v14c0 1-1 2-2 2H7c-1 0-2-1-2-2V6" />
+                        <path d="M8 6V4c0-1 1-2 2-2h4c1 0 2 1 2 2v2" />
+                    </svg>
+                    Delete
+                </button>
+            </div>
+        </section>
+
+        <!-- Card Variants Section -->
+        <section class="section">
+            <h2 class="section-title">Card Variants</h2>
+            <div class="grid grid-3">
+                <!-- Default Card -->
+                <div class="card">
+                    <div class="card-header">
+                        <h3 class="card-title">Default Card</h3>
+                        <p class="card-description">Standard card with soft corners and layered shadows</p>
+                    </div>
+                    <div class="card-content">
+                        <p class="body-sm">This is the default card variant with theme-aware borders using neutral-200
+                            in light mode and neutral-800 in dark mode.</p>
+                    </div>
+                    <div class="card-footer">
+                        <button class="btn btn-primary btn-sm">Action</button>
+                        <button class="btn btn-outline btn-sm">Cancel</button>
+                    </div>
+                </div>
+
+                <!-- Glass Card -->
+                <div class="card card-glass">
+                    <div class="card-header">
+                        <h3 class="card-title">Glass Card</h3>
+                        <p class="card-description">Frosted glass effect with backdrop blur</p>
+                    </div>
+                    <div class="card-content">
+                        <p class="body-sm">Uses backdrop-filter: blur(8px) with semi-transparent overlay for a premium
+                            frosted glass appearance.</p>
+                    </div>
+                    <div class="card-footer">
+                        <button class="btn btn-primary btn-sm">Action</button>
+                        <button class="btn btn-ghost btn-sm">Cancel</button>
+                    </div>
+                </div>
+
+                <!-- Elevated Card -->
+                <div class="card card-elevated card-hover">
+                    <div class="card-header">
+                        <h3 class="card-title">Elevated Card</h3>
+                        <p class="card-description">Larger shadow with hover lift effect</p>
+                    </div>
+                    <div class="card-content">
+                        <p class="body-sm">Features shadow-lg and hover lift effect with translateY(-4px) for
+                            interactive cards.</p>
+                    </div>
+                    <div class="card-footer">
+                        <button class="btn btn-secondary btn-sm">Learn More</button>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- Toast Variants Section -->
+        <section class="section">
+            <h2 class="section-title">Toast Notifications</h2>
+            <div class="grid grid-2">
+                <!-- Default Toast -->
+                <div class="toast toast-default">
+                    <svg class="toast-icon" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none"
+                        stroke="currentColor" stroke-width="2">
+                        <circle cx="12" cy="12" r="10" />
+                        <path d="M12 16v-4" />
+                        <path d="M12 8h.01" />
+                    </svg>
+                    <div class="toast-content">
+                        <div class="toast-title">Default Notification</div>
+                        <div class="toast-message">This is a default toast notification message.</div>
+                    </div>
+                </div>
+
+                <!-- Success Toast -->
+                <div class="toast toast-success">
+                    <svg class="toast-icon" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none"
+                        stroke="currentColor" stroke-width="2">
+                        <path d="M22 11.08V12a10 10 0 1 1-5.93-9.14" />
+                        <polyline points="22 4 12 14.01 9 11.01" />
+                    </svg>
+                    <div class="toast-content">
+                        <div class="toast-title">Success!</div>
+                        <div class="toast-message">Your changes have been saved successfully.</div>
+                    </div>
+                    <div class="toast-progress"></div>
+                </div>
+
+                <!-- Error Toast -->
+                <div class="toast toast-error">
+                    <svg class="toast-icon" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none"
+                        stroke="currentColor" stroke-width="2">
+                        <circle cx="12" cy="12" r="10" />
+                        <line x1="15" x2="9" y1="9" y2="15" />
+                        <line x1="9" x2="15" y1="9" y2="15" />
+                    </svg>
+                    <div class="toast-content">
+                        <div class="toast-title">Error</div>
+                        <div class="toast-message">Something went wrong. Please try again.</div>
+                    </div>
+                    <div class="toast-progress"></div>
+                </div>
+
+                <!-- Warning Toast -->
+                <div class="toast toast-warning">
+                    <svg class="toast-icon" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none"
+                        stroke="currentColor" stroke-width="2">
+                        <path d="m21.73 18-8-14a2 2 0 0 0-3.48 0l-8 14A2 2 0 0 0 4 21h16a2 2 0 0 0 1.73-3Z" />
+                        <line x1="12" x2="12" y1="9" y2="13" />
+                        <line x1="12" x2="12.01" y1="17" y2="17" />
+                    </svg>
+                    <div class="toast-content">
+                        <div class="toast-title">Warning</div>
+                        <div class="toast-message">Your session will expire in 5 minutes.</div>
+                    </div>
+                    <div class="toast-progress"></div>
+                </div>
+
+                <!-- Info Toast -->
+                <div class="toast toast-info">
+                    <svg class="toast-icon" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none"
+                        stroke="currentColor" stroke-width="2">
+                        <circle cx="12" cy="12" r="10" />
+                        <path d="M12 16v-4" />
+                        <path d="M12 8h.01" />
+                    </svg>
+                    <div class="toast-content">
+                        <div class="toast-title">Information</div>
+                        <div class="toast-message">A new version is available for download.</div>
+                    </div>
+                    <div class="toast-progress"></div>
+                </div>
+            </div>
+            <p class="body-sm mt-md text-muted">Toast positioning: Top-right on desktop (≥768px), bottom on mobile
+                (&lt;768px). Progress bars show auto-dismiss countdown.</p>
+        </section>
+
+
+        <!-- Form Controls Section -->
+        <section class="section">
+            <h2 class="section-title">Form Controls</h2>
+            <div class="grid grid-2">
+                <!-- Normal Input -->
+                <div class="form-group">
+                    <label class="form-label" for="input-normal">Normal Input</label>
+                    <input type="text" id="input-normal" class="form-input" placeholder="Enter your name...">
+                    <span class="body-xs text-muted">Focus to see the primary ring effect with 2px offset</span>
+                </div>
+
+                <!-- Focused Input (simulated) -->
+                <div class="form-group">
+                    <label class="form-label" for="input-focused">Input with Focus Ring</label>
+                    <input type="text" id="input-focused" class="form-input" placeholder="Click to focus..."
+                        style="border-color: var(--primary); box-shadow: 0 0 0 2px var(--background), 0 0 0 4px rgba(43, 80, 255, 0.3);">
+                    <span class="body-xs text-muted">Shows primary color ring at 30% opacity</span>
+                </div>
+
+                <!-- Error Input -->
+                <div class="form-group">
+                    <label class="form-label" for="input-error">Error State Input</label>
+                    <input type="text" id="input-error" class="form-input form-input-error" value="Invalid email"
+                        aria-invalid="true" aria-describedby="error-message">
+                    <span id="error-message" class="form-error-message">Please enter a valid email address</span>
+                </div>
+
+                <!-- Disabled Input -->
+                <div class="form-group">
+                    <label class="form-label" for="input-disabled">Disabled Input</label>
+                    <input type="text" id="input-disabled" class="form-input" placeholder="Cannot edit..." disabled>
+                    <span class="body-xs text-muted">Disabled state with reduced opacity</span>
+                </div>
+
+                <!-- Select/Dropdown -->
+                <div class="form-group">
+                    <label class="form-label" for="select-normal">Select Dropdown</label>
+                    <select id="select-normal" class="form-select">
+                        <option value="">Select an option...</option>
+                        <option value="1">Option 1</option>
+                        <option value="2">Option 2</option>
+                        <option value="3">Option 3</option>
+                    </select>
+                    <span class="body-xs text-muted">Animated dropdown with scale, opacity, and y-translate</span>
+                </div>
+
+                <!-- Password Input -->
+                <div class="form-group">
+                    <label class="form-label" for="input-password">Password Input</label>
+                    <input type="password" id="input-password" class="form-input" placeholder="Enter password...">
+                    <span class="body-xs text-muted">Standard password field with focus states</span>
+                </div>
+            </div>
+        </section>
+
+        <!-- Typography Section -->
+        <section class="section">
+            <h2 class="section-title">Typography Scale</h2>
+
+            <h3 class="heading-5 mb-md">Headings</h3>
+            <div class="mb-lg">
+                <h1 class="heading-1 mb-sm">Heading 1 - 2.25rem / 700</h1>
+                <h2 class="heading-2 mb-sm">Heading 2 - 1.875rem / 700</h2>
+                <h3 class="heading-3 mb-sm">Heading 3 - 1.5rem / 600</h3>
+                <h4 class="heading-4 mb-sm">Heading 4 - 1.25rem / 600</h4>
+                <h5 class="heading-5 mb-sm">Heading 5 - 1.125rem / 600</h5>
+                <h6 class="heading-6">Heading 6 - 1rem / 600</h6>
+            </div>
+
+            <h3 class="heading-5 mb-md">Body Text</h3>
+            <div class="mb-lg">
+                <p class="body-lg mb-sm">Body Large (1.125rem) - Used for intro paragraphs and lead text. Line-height
+                    1.5 for optimal readability.</p>
+                <p class="body-base mb-sm">Body Base (1rem) - Standard paragraph text for general content. Uses
+                    font-weight 400 with line-height 1.5.</p>
+                <p class="body-sm mb-sm">Body Small (0.875rem) - Secondary text, captions, and supporting information.
+                    Muted color for visual hierarchy.</p>
+                <p class="body-xs">Body Extra Small (0.75rem) - Fine print, labels, and metadata. Smallest readable
+                    size.</p>
+            </div>
+
+            <h3 class="heading-5 mb-md">Text Highlights</h3>
+            <div class="mb-lg">
+                <div class="text-highlight mb-md">
+                    <p class="body-base">Tertiary Highlight - Gold Amber accent with rgba(255, 200, 87, 0.14) background
+                        and border-left accent.</p>
+                </div>
+                <div class="text-highlight-secondary mb-md">
+                    <p class="body-base">Secondary Highlight - Coral Accent with rgba(255, 107, 104, 0.14) background
+                        and border-left accent.</p>
+                </div>
+                <div class="text-highlight-primary">
+                    <p class="body-base">Primary Highlight - Royal Indigo with rgba(43, 80, 255, 0.14) background and
+                        border-left accent.</p>
+                </div>
+            </div>
+        </section>
+
+        <!-- Badges Section -->
+        <section class="section">
+            <h2 class="section-title">Badges</h2>
+            <div class="flex-row">
+                <span class="badge badge-primary">Primary</span>
+                <span class="badge badge-secondary">Secondary</span>
+                <span class="badge badge-tertiary">Tertiary</span>
+                <span class="badge badge-success">Success</span>
+                <span class="badge badge-error">Error</span>
+                <span class="badge badge-warning">Warning</span>
+                <span class="badge badge-outline">Outline</span>
+            </div>
+            <p class="body-sm mt-md text-muted">Badges use pill shape (border-radius: 9999px) with 1px border slightly
+                darker than fill color.</p>
+        </section>
+
+        <!-- Visual Effects Section -->
+        <section class="section">
+            <h2 class="section-title">Visual Effects</h2>
+            <div class="grid grid-3">
+                <div class="effect-box effect-shadow-sm">
+                    <span>Shadow SM</span>
+                </div>
+                <div class="effect-box effect-shadow-md">
+                    <span>Shadow MD</span>
+                </div>
+                <div class="effect-box effect-shadow-lg">
+                    <span>Shadow LG</span>
+                </div>
+                <div class="effect-box effect-glow">
+                    <span>Primary Glow</span>
+                </div>
+                <div class="effect-box effect-gradient">
+                    <span>Gradient (Primary → Tertiary)</span>
+                </div>
+                <div class="effect-box effect-glass">
+                    <span>Glass Effect</span>
+                </div>
+            </div>
+
+            <h3 class="heading-5 mt-lg mb-md">Hover Effects</h3>
+            <div class="grid grid-3">
+                <div class="effect-box effect-hover-lift">
+                    <span>Hover Lift Effect</span>
+                </div>
+                <div class="effect-box effect-hover-lift">
+                    <span>Hover for Shadow</span>
+                </div>
+                <div class="effect-box effect-hover-lift">
+                    <span>Saturate on Hover</span>
+                </div>
+            </div>
+        </section>
+
+        <!-- Spacing Scale Section -->
+        <section class="section">
+            <h2 class="section-title">Spacing Scale</h2>
+            <div class="spacing-demo">
+                <div>
+                    <div class="spacing-box" style="width: 4px; height: 4px;"></div>
+                    <p class="body-xs text-muted mt-sm">4px (xs)</p>
+                </div>
+                <div>
+                    <div class="spacing-box" style="width: 8px; height: 8px;"></div>
+                    <p class="body-xs text-muted mt-sm">8px (sm)</p>
+                </div>
+                <div>
+                    <div class="spacing-box" style="width: 12px; height: 12px;"></div>
+                    <p class="body-xs text-muted mt-sm">12px (md)</p>
+                </div>
+                <div>
+                    <div class="spacing-box" style="width: 16px; height: 16px;"></div>
+                    <p class="body-xs text-muted mt-sm">16px (lg)</p>
+                </div>
+                <div>
+                    <div class="spacing-box" style="width: 24px; height: 24px;"></div>
+                    <p class="body-xs text-muted mt-sm">24px (xl)</p>
+                </div>
+                <div>
+                    <div class="spacing-box" style="width: 32px; height: 32px;"></div>
+                    <p class="body-xs text-muted mt-sm">32px (2xl)</p>
+                </div>
+            </div>
+        </section>
+
+        <!-- Border Radius Section -->
+        <section class="section">
+            <h2 class="section-title">Border Radius</h2>
+            <div class="flex-row">
+                <div
+                    style="width: 60px; height: 60px; background: var(--primary); border-radius: var(--radius-sm); display: flex; align-items: center; justify-content: center; color: white; font-size: 0.75rem;">
+                    SM</div>
+                <div
+                    style="width: 60px; height: 60px; background: var(--primary); border-radius: var(--radius-md); display: flex; align-items: center; justify-content: center; color: white; font-size: 0.75rem;">
+                    MD</div>
+                <div
+                    style="width: 60px; height: 60px; background: var(--primary); border-radius: var(--radius-lg); display: flex; align-items: center; justify-content: center; color: white; font-size: 0.75rem;">
+                    LG</div>
+                <div
+                    style="width: 60px; height: 60px; background: var(--primary); border-radius: var(--radius-xl); display: flex; align-items: center; justify-content: center; color: white; font-size: 0.75rem;">
+                    XL</div>
+                <div
+                    style="width: 60px; height: 60px; background: var(--primary); border-radius: var(--radius-full); display: flex; align-items: center; justify-content: center; color: white; font-size: 0.75rem;">
+                    Full</div>
+            </div>
+            <p class="body-sm mt-md text-muted">Radius tokens: SM (4px), MD (6px), LG (8px), XL (12px), Full (9999px)
+            </p>
+        </section>
+
+        <!-- Transition Durations Section -->
+        <section class="section">
+            <h2 class="section-title">Transition Durations</h2>
+            <div class="grid grid-4">
+                <div class="card card-hover" style="transition-duration: var(--duration-fast);">
+                    <div class="card-content">
+                        <p class="heading-6">Fast</p>
+                        <p class="body-sm text-muted">120ms</p>
+                    </div>
+                </div>
+                <div class="card card-hover" style="transition-duration: var(--duration-normal);">
+                    <div class="card-content">
+                        <p class="heading-6">Normal</p>
+                        <p class="body-sm text-muted">180ms</p>
+                    </div>
+                </div>
+                <div class="card card-hover" style="transition-duration: var(--duration-slow);">
+                    <div class="card-content">
+                        <p class="heading-6">Slow</p>
+                        <p class="body-sm text-muted">320ms</p>
+                    </div>
+                </div>
+                <div class="card card-hover" style="transition-duration: var(--duration-slower);">
+                    <div class="card-content">
+                        <p class="heading-6">Slower</p>
+                        <p class="body-sm text-muted">420ms</p>
+                    </div>
+                </div>
+            </div>
+            <p class="body-sm mt-md text-muted">Hover over each card to see the different transition speeds.</p>
+        </section>
+
+        <!-- Accessibility Section -->
+        <section class="section">
+            <h2 class="section-title">Accessibility Features</h2>
+            <div class="grid grid-2">
+                <div>
+                    <h3 class="heading-5 mb-md">Focus States</h3>
+                    <p class="body-sm mb-md">All interactive elements have visible focus indicators using outline-offset
+                        and box-shadow with primary color at 30% opacity.</p>
+                    <div class="flex-row">
+                        <button class="btn btn-primary"
+                            style="box-shadow: 0 0 0 2px var(--background), 0 0 0 4px rgba(43, 80, 255, 0.3);">Focused
+                            Button</button>
+                        <button class="btn btn-outline"
+                            style="box-shadow: 0 0 0 2px var(--background), 0 0 0 4px rgba(43, 80, 255, 0.3);">Focused
+                            Outline</button>
+                    </div>
+                </div>
+                <div>
+                    <h3 class="heading-5 mb-md">WCAG AA Contrast</h3>
+                    <p class="body-sm mb-md">All text/background color pairs maintain WCAG AA contrast ratio (4.5:1 for
+                        normal text, 3:1 for large text).</p>
+                    <div class="flex-row">
+                        <span class="badge badge-primary">4.5:1+ Contrast</span>
+                        <span class="badge badge-success">AA Compliant</span>
+                    </div>
+                </div>
+            </div>
+            <div class="mt-lg">
+                <h3 class="heading-5 mb-md">Reduced Motion Support</h3>
+                <p class="body-sm">When <code
+                        style="background: var(--glass-overlay); padding: 2px 6px; border-radius: 4px;">prefers-reduced-motion: reduce</code>
+                    is enabled, all animations and transitions are disabled or reduced to simple opacity changes.</p>
+            </div>
+        </section>
+
+    </div>
+
+    <script>
+        // Theme Toggle Functionality
+        function toggleTheme() {
+            const body = document.body;
+            const sunIcon = document.querySelector('.sun-icon');
+            const moonIcon = document.querySelector('.moon-icon');
+            const label = document.querySelector('.theme-toggle-label');
+
+            body.classList.toggle('dark');
+
+            if (body.classList.contains('dark')) {
+                sunIcon.style.display = 'none';
+                moonIcon.style.display = 'block';
+                label.textContent = 'Dark';
+                localStorage.setItem('theme', 'dark');
+            } else {
+                sunIcon.style.display = 'block';
+                moonIcon.style.display = 'none';
+                label.textContent = 'Light';
+                localStorage.setItem('theme', 'light');
+            }
+        }
+
+        // Initialize theme from localStorage or system preference
+        function initTheme() {
+            const savedTheme = localStorage.getItem('theme');
+            const prefersDark = window.matchMedia('(prefers-color-scheme: dark)').matches;
+
+            if (savedTheme === 'dark' || (!savedTheme && prefersDark)) {
+                document.body.classList.add('dark');
+                document.querySelector('.sun-icon').style.display = 'none';
+                document.querySelector('.moon-icon').style.display = 'block';
+                document.querySelector('.theme-toggle-label').textContent = 'Dark';
+            }
+        }
+
+        // Run on page load
+        initTheme();
+
+        // Animate toast progress bars
+        document.querySelectorAll('.toast-progress').forEach(progress => {
+            let width = 100;
+            const interval = setInterval(() => {
+                width -= 0.5;
+                progress.style.width = width + '%';
+                if (width <= 0) {
+                    clearInterval(interval);
+                    width = 100;
+                    progress.style.width = '100%';
+                }
+            }, 50);
+        });
+    </script>
+</body>
+
+</html>

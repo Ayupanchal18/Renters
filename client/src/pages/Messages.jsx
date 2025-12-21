@@ -1,391 +1,239 @@
-import { useState } from "react";
+import { useState, useEffect, useMemo, useCallback } from "react";
 import { ConversationList } from "../components/chatComponents/ConversationList";
 import { ChatWindow } from "../components/chatComponents/ChatWindow.jsx";
 import { EmptyChatState } from "../components/chatComponents/EmptyChatState.jsx";
-import { ChevronLeft } from "lucide-react";
+import { ChevronLeft, AlertCircle, RefreshCw } from "lucide-react";
 import Navbar from './../components/Navbar';
 import Footer from './../components/Footer';
-
-// Mock data - static for now, will be connected to backend later
-const MOCK_CONVERSATIONS = [
-    {
-        id: "1",
-        participants: [
-            {
-                id: "user-2",
-                name: "Sarah Johnson",
-                email: "sarah@example.com",
-                avatar:
-                    "https://images.unsplash.com/photo-1494790108377-be9c29b29330?w=150&h=150&fit=crop",
-                isOnline: true,
-            },
-        ],
-        lastMessage: {
-            id: "msg-7",
-            senderId: "user-2",
-            senderName: "Sarah Johnson",
-            senderAvatar:
-                "https://images.unsplash.com/photo-1494790108377-be9c29b29330?w=150&h=150&fit=crop",
-            text: "Is the apartment still available for rent next month?",
-            timestamp: new Date(Date.now() - 5 * 60000).toISOString(),
-            read: false,
-        },
-        lastMessageTime: new Date(Date.now() - 5 * 60000).toISOString(),
-        unreadCount: 1,
-        messages: [
-            {
-                id: "msg-1",
-                senderId: "user-2",
-                senderName: "Sarah Johnson",
-                senderAvatar:
-                    "https://images.unsplash.com/photo-1494790108377-be9c29b29330?w=150&h=150&fit=crop",
-                text: "Hi! I'm interested in the 2-bedroom apartment you listed.",
-                timestamp: new Date(Date.now() - 45 * 60000).toISOString(),
-                read: true,
-            },
-            {
-                id: "msg-2",
-                senderId: "current-user",
-                senderName: "You",
-                senderAvatar:
-                    "https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=150&h=150&fit=crop",
-                text: "Hi Sarah! Yes, it's available. Would you like to schedule a viewing?",
-                timestamp: new Date(Date.now() - 40 * 60000).toISOString(),
-                read: true,
-            },
-            {
-                id: "msg-3",
-                senderId: "user-2",
-                senderName: "Sarah Johnson",
-                senderAvatar:
-                    "https://images.unsplash.com/photo-1494790108377-be9c29b29330?w=150&h=150&fit=crop",
-                text: "That would be great! Can you do this weekend?",
-                timestamp: new Date(Date.now() - 35 * 60000).toISOString(),
-                read: true,
-            },
-            {
-                id: "msg-4",
-                senderId: "current-user",
-                senderName: "You",
-                senderAvatar:
-                    "https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=150&h=150&fit=crop",
-                image:
-                    "https://images.unsplash.com/photo-1566073771259-6a8506099945?w=400&h=300&fit=crop",
-                timestamp: new Date(Date.now() - 30 * 60000).toISOString(),
-                read: true,
-            },
-            {
-                id: "msg-5",
-                senderId: "user-2",
-                senderName: "Sarah Johnson",
-                senderAvatar:
-                    "https://images.unsplash.com/photo-1494790108377-be9c29b29330?w=150&h=150&fit=crop",
-                text: "Wow, it looks amazing! The living room is perfect.",
-                timestamp: new Date(Date.now() - 25 * 60000).toISOString(),
-                read: true,
-            },
-            {
-                id: "msg-6",
-                senderId: "current-user",
-                senderName: "You",
-                senderAvatar:
-                    "https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=150&h=150&fit=crop",
-                text: "Thanks! It just got renovated last month. Are you free Saturday at 2 PM?",
-                timestamp: new Date(Date.now() - 20 * 60000).toISOString(),
-                read: true,
-            },
-            {
-                id: "msg-7",
-                senderId: "user-2",
-                senderName: "Sarah Johnson",
-                senderAvatar:
-                    "https://images.unsplash.com/photo-1494790108377-be9c29b29330?w=150&h=150&fit=crop",
-                text: "Is the apartment still available for rent next month?",
-                timestamp: new Date(Date.now() - 5 * 60000).toISOString(),
-                read: false,
-            },
-        ],
-    },
-    {
-        id: "2",
-        participants: [
-            {
-                id: "user-3",
-                name: "Michael Chen",
-                email: "michael.chen@example.com",
-                avatar:
-                    "https://images.unsplash.com/photo-1506794778202-cad84cf45f1d?w=150&h=150&fit=crop",
-                isOnline: false,
-            },
-        ],
-        lastMessage: {
-            id: "msg-14",
-            senderId: "current-user",
-            senderName: "You",
-            senderAvatar:
-                "https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=150&h=150&fit=crop",
-            text: "Perfect! I'll send you the contract details by tomorrow.",
-            timestamp: new Date(Date.now() - 2 * 3600000).toISOString(),
-            read: true,
-        },
-        lastMessageTime: new Date(Date.now() - 2 * 3600000).toISOString(),
-        unreadCount: 0,
-        messages: [
-            {
-                id: "msg-8",
-                senderId: "user-3",
-                senderName: "Michael Chen",
-                senderAvatar:
-                    "https://images.unsplash.com/photo-1506794778202-cad84cf45f1d?w=150&h=150&fit=crop",
-                text: "Hey! I saw your listing for the office space downtown.",
-                timestamp: new Date(Date.now() - 5 * 3600000).toISOString(),
-                read: true,
-            },
-            {
-                id: "msg-9",
-                senderId: "current-user",
-                senderName: "You",
-                senderAvatar:
-                    "https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=150&h=150&fit=crop",
-                text: "Hello Michael! Yes, it's a great space for small businesses. What kind of business are you running?",
-                timestamp: new Date(Date.now() - 4.5 * 3600000).toISOString(),
-                read: true,
-            },
-            {
-                id: "msg-10",
-                senderId: "user-3",
-                senderName: "Michael Chen",
-                senderAvatar:
-                    "https://images.unsplash.com/photo-1506794778202-cad84cf45f1d?w=150&h=150&fit=crop",
-                text: "I'm starting a tech startup. We're a team of 5 people. Does the space have good internet?",
-                timestamp: new Date(Date.now() - 4 * 3600000).toISOString(),
-                read: true,
-            },
-            {
-                id: "msg-11",
-                senderId: "current-user",
-                senderName: "You",
-                senderAvatar:
-                    "https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=150&h=150&fit=crop",
-                text: "Absolutely! Fiber optic connection, 1Gbps. Plus there's a conference room and kitchen area.",
-                timestamp: new Date(Date.now() - 3.5 * 3600000).toISOString(),
-                read: true,
-            },
-            {
-                id: "msg-12",
-                senderId: "user-3",
-                senderName: "Michael Chen",
-                senderAvatar:
-                    "https://images.unsplash.com/photo-1506794778202-cad84cf45f1d?w=150&h=150&fit=crop",
-                text: "That sounds perfect! What's the monthly rate?",
-                timestamp: new Date(Date.now() - 3 * 3600000).toISOString(),
-                read: true,
-            },
-            {
-                id: "msg-13",
-                senderId: "user-3",
-                senderName: "Michael Chen",
-                senderAvatar:
-                    "https://images.unsplash.com/photo-1506794778202-cad84cf45f1d?w=150&h=150&fit=crop",
-                text: "Also, is parking included?",
-                timestamp: new Date(Date.now() - 2.8 * 3600000).toISOString(),
-                read: true,
-            },
-            {
-                id: "msg-14",
-                senderId: "current-user",
-                senderName: "You",
-                senderAvatar:
-                    "https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=150&h=150&fit=crop",
-                text: "Perfect! I'll send you the contract details by tomorrow.",
-                timestamp: new Date(Date.now() - 2 * 3600000).toISOString(),
-                read: true,
-            },
-        ],
-    },
-    {
-        id: "3",
-        participants: [
-            {
-                id: "user-4",
-                name: "Emma Williams",
-                email: "emma.w@example.com",
-                avatar:
-                    "https://images.unsplash.com/photo-1438761681033-6461ffad8d80?w=150&h=150&fit=crop",
-                isOnline: true,
-            },
-        ],
-        lastMessage: {
-            id: "msg-19",
-            senderId: "user-4",
-            senderName: "Emma Williams",
-            senderAvatar:
-                "https://images.unsplash.com/photo-1438761681033-6461ffad8d80?w=150&h=150&fit=crop",
-            text: "Thanks so much! Talk soon 😊",
-            timestamp: new Date(Date.now() - 30 * 60000).toISOString(),
-            read: true,
-        },
-        lastMessageTime: new Date(Date.now() - 30 * 60000).toISOString(),
-        unreadCount: 0,
-        messages: [
-            {
-                id: "msg-15",
-                senderId: "user-4",
-                senderName: "Emma Williams",
-                senderAvatar:
-                    "https://images.unsplash.com/photo-1438761681033-6461ffad8d80?w=150&h=150&fit=crop",
-                text: "Hi there! Quick question about the studio apartment.",
-                timestamp: new Date(Date.now() - 90 * 60000).toISOString(),
-                read: true,
-            },
-            {
-                id: "msg-16",
-                senderId: "current-user",
-                senderName: "You",
-                senderAvatar:
-                    "https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=150&h=150&fit=crop",
-                text: "Hi Emma! Sure, what would you like to know?",
-                timestamp: new Date(Date.now() - 85 * 60000).toISOString(),
-                read: true,
-            },
-            {
-                id: "msg-17",
-                senderId: "user-4",
-                senderName: "Emma Williams",
-                senderAvatar:
-                    "https://images.unsplash.com/photo-1438761681033-6461ffad8d80?w=150&h=150&fit=crop",
-                text: "Are pets allowed? I have a small cat.",
-                timestamp: new Date(Date.now() - 80 * 60000).toISOString(),
-                read: true,
-            },
-            {
-                id: "msg-18",
-                senderId: "current-user",
-                senderName: "You",
-                senderAvatar:
-                    "https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=150&h=150&fit=crop",
-                text: "Yes! We're pet-friendly. There's a small pet deposit of$200, fully refundable.",
-                timestamp: new Date(Date.now() - 75 * 60000).toISOString(),
-                read: true,
-            },
-            {
-                id: "msg-19",
-                senderId: "user-4",
-                senderName: "Emma Williams",
-                senderAvatar:
-                    "https://images.unsplash.com/photo-1438761681033-6461ffad8d80?w=150&h=150&fit=crop",
-                text: "Thanks so much! Talk soon 😊",
-                timestamp: new Date(Date.now() - 30 * 60000).toISOString(),
-                read: true,
-            },
-        ],
-    },
-];
+import { useMessages } from "../hooks/useMessages";
+import { getUser } from "../utils/auth";
 
 export default function Messages() {
-    const [conversations, setConversations] = useState(MOCK_CONVERSATIONS);
-    const [selectedConversation, setSelectedConversation] = useState(
-        MOCK_CONVERSATIONS[0]
-    );
     const [showMobileChat, setShowMobileChat] = useState(false);
-    const [sending, setSending] = useState(false);
+    
+    // Get current user
+    const user = getUser();
+    const currentUserId = user?._id || user?.id || "current-user";
 
-    const currentUserId = "current-user";
+    // Use the useMessages hook for real data and socket connection
+    const {
+        conversations,
+        selectedConversation,
+        messages,
+        conversationsLoading,
+        messagesLoading,
+        sending,
+        error,
+        selectConversation,
+        sendMessage,
+        markAsRead,
+        fetchConversations,
+        setError
+    } = useMessages({ autoConnect: true });
 
-    const handleSelectConversation = (conversation) => {
-        setSelectedConversation(conversation);
+    // Handle selecting a conversation
+    const handleSelectConversation = async (conversation) => {
+        await selectConversation(conversation);
         setShowMobileChat(true);
-    };
-
-    const handleSendMessage = async (messageText) => {
-        if (!selectedConversation || !messageText.trim()) return;
-
-        try {
-            setSending(true);
-
-            const newMessage = {
-                id: `msg-${Date.now()}`,
-                senderId: currentUserId,
-                senderName: "You",
-                senderAvatar:
-                    "https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=150&h=150&fit=crop",
-                text: messageText,
-                timestamp: new Date().toISOString(),
-                read: true,
-            };
-
-            const updatedConversations = conversations.map((conv) => {
-                if (conv.id === selectedConversation.id) {
-                    return {
-                        ...conv,
-                        messages: [...conv.messages, newMessage],
-                        lastMessage: newMessage,
-                        lastMessageTime: newMessage.timestamp,
-                    };
-                }
-                return conv;
-            });
-
-            setConversations(updatedConversations);
-
-            const updated = updatedConversations.find(
-                (conv) => conv.id === selectedConversation.id
-            );
-
-            if (updated) setSelectedConversation(updated);
-
-            await new Promise((r) => setTimeout(r, 300));
-        } catch (error) {
-            console.error("Failed to send message:", error);
-        } finally {
-            setSending(false);
+        
+        // Mark messages as read when opening conversation
+        const conversationId = conversation._id || conversation.id;
+        if (conversationId) {
+            await markAsRead(conversationId);
         }
     };
+
+    // Handle sending a message
+    const handleSendMessage = async (messageText, file = null) => {
+        if (!selectedConversation || (!messageText.trim() && !file)) return;
+        
+        const result = await sendMessage(messageText, file);
+        
+        if (!result.success) {
+            console.error("Failed to send message:", result.error);
+        }
+        
+        return result;
+    };
+
+    // Handle retry on error
+    const handleRetry = () => {
+        setError(null);
+        fetchConversations();
+    };
+
+    // Transform conversation data for components that expect the old format
+    const transformConversationForUI = useCallback((conv) => {
+        if (!conv) return null;
+        
+        const convId = conv._id || conv.id;
+        
+        // Get participant info (the other user in the conversation)
+        const participants = conv.participants?.map(p => {
+            // Handle both populated and non-populated participant data
+            if (typeof p === 'object') {
+                return {
+                    id: p._id || p.id,
+                    name: p.name || p.fullName || 'Unknown User',
+                    email: p.email || '',
+                    avatar: p.avatar || p.profileImage || null, // Remove external avatar service
+                    isOnline: p.isOnline || false
+                };
+            }
+            // If participant is just an ID string
+            return {
+                id: p,
+                name: 'User',
+                email: '',
+                avatar: null, // Remove external avatar service
+                isOnline: false
+            };
+        }).filter(p => p.id !== currentUserId) || [];
+
+        // Transform messages to expected format
+        // For selected conversation, use messages from hook state, otherwise use conv.messages
+        const messagesToTransform = conv._id === selectedConversation?._id ? messages : (conv.messages || []);
+        
+        const transformedMessages = messagesToTransform.map(msg => {
+            // If message is already transformed (has all required fields), return as-is
+            if (msg.text !== undefined && msg.senderId !== undefined && msg.id !== undefined) {
+                return msg;
+            }
+            
+            // Otherwise, transform it
+            const transformed = {
+                id: msg._id || msg.id,
+                senderId: msg.sender?._id || msg.sender?.id || msg.sender,
+                senderName: msg.sender?.name || (msg.sender === currentUserId ? 'You' : 'User'),
+                senderAvatar: msg.sender?.avatar || null, // Remove external avatar service
+                text: msg.text || msg.content || '',
+                image: msg.image,
+                timestamp: msg.createdAt || msg.timestamp,
+                read: msg.read || false,
+                pending: msg.pending || false
+            };
+            return transformed;
+        });
+
+        // Get unread count for current user
+        let unreadCount = 0;
+        if (conv.unreadCount) {
+            if (typeof conv.unreadCount === 'object') {
+                unreadCount = conv.unreadCount[currentUserId] || 0;
+            } else if (typeof conv.unreadCount === 'number') {
+                unreadCount = conv.unreadCount;
+            }
+        }
+
+        return {
+            id: convId,
+            _id: convId,
+            participants: participants.length > 0 ? participants : [{
+                id: 'unknown',
+                name: 'Unknown User',
+                email: '',
+                avatar: null, // Remove external avatar service
+                isOnline: false
+            }],
+            lastMessage: conv.lastMessage ? {
+                id: conv.lastMessage._id || conv.lastMessage.id,
+                senderId: conv.lastMessage.sender?._id || conv.lastMessage.sender?.id || conv.lastMessage.sender,
+                senderName: conv.lastMessage.sender?.name || 'User',
+                text: conv.lastMessage.text || '',
+                timestamp: conv.lastMessage.createdAt || conv.lastMessage.timestamp
+            } : null,
+            lastMessageTime: conv.lastActivityAt || conv.lastMessage?.createdAt || conv.updatedAt,
+            unreadCount,
+            messages: transformedMessages,
+            property: conv.property
+        };
+    }, [currentUserId, selectedConversation, messages]); // Add dependencies to prevent infinite loops
+
+    // Transform all conversations for the list
+    const transformedConversations = useMemo(() => 
+        conversations.map(transformConversationForUI).filter(Boolean),
+        [conversations, transformConversationForUI]
+    );
+    
+    // Transform selected conversation
+    const transformedSelectedConversation = useMemo(() => 
+        selectedConversation 
+            ? transformConversationForUI({
+                ...selectedConversation,
+                messages: messages // Use messages from hook state
+            })
+            : null,
+        [selectedConversation, messages, transformConversationForUI]
+    );
 
     return (
         <>
             <Navbar />
-            <div className="h-[90vh] bg-gray-100 flex flex-col ">
+            <div className="h-[90vh] bg-background flex flex-col">
                 {/* Mobile header */}
-                <div className="md:hidden bg-white border-b px-4 py-3 flex items-center ">
-                    {showMobileChat && selectedConversation && (
+                <div className="md:hidden bg-card border-b border-border px-4 py-3 flex items-center rounded-t-xl mx-4 mt-4">
+                    {showMobileChat && transformedSelectedConversation && (
                         <button
                             onClick={() => setShowMobileChat(false)}
-                            className="mr-3 p-1"
+                            className="mr-3 p-1 text-foreground hover:text-primary transition-colors"
                         >
                             <ChevronLeft className="w-6 h-6" />
                         </button>
                     )}
-                    <h1 className="text-lg font-bold">
-                        {showMobileChat && selectedConversation
-                            ? selectedConversation.participants[0].name
+                    <h1 className="text-lg font-bold text-foreground">
+                        {showMobileChat && transformedSelectedConversation
+                            ? transformedSelectedConversation.participants[0]?.name
                             : "Messages"}
                     </h1>
                 </div>
 
+                {/* Error Banner */}
+                {error && (
+                    <div className="mx-4 mt-2 p-3 bg-destructive/10 border border-destructive/20 rounded-lg flex items-center justify-between">
+                        <div className="flex items-center gap-2 text-destructive">
+                            <AlertCircle className="w-5 h-5" />
+                            <span className="text-sm">{error}</span>
+                        </div>
+                        <button
+                            onClick={handleRetry}
+                            className="flex items-center gap-1 text-sm text-destructive hover:text-destructive/80 transition-colors"
+                        >
+                            <RefreshCw className="w-4 h-4" />
+                            Retry
+                        </button>
+                    </div>
+                )}
+
                 {/* Layout */}
-                <div className="flex flex-1 overflow-hidden p-5 ">
-                    {/* Left panel */}
+                <div className="flex flex-1 overflow-hidden p-4 md:p-5 gap-0">
+                    {/* Left panel - Conversation List */}
                     <div
-                        className={`w-full md:w-[30rem] p-5 rounded-tl-[25px] rounded-bl-[25px] bg-white border-r flex flex-col${showMobileChat ? "hidden md:flex" : "flex"
+                        className={`w-full md:w-[380px] lg:w-[420px] md:rounded-l-xl bg-card border md:border-r-0 border-border flex flex-col rounded-xl md:rounded-r-none shadow-sm ${showMobileChat ? "hidden md:flex" : "flex"
                             }`}
                     >
                         <ConversationList
-                            conversations={conversations}
-                            selectedConversationId={selectedConversation?.id}
+                            conversations={transformedConversations}
+                            selectedConversationId={transformedSelectedConversation?.id}
                             onSelectConversation={handleSelectConversation}
-                            loading={false}
+                            loading={conversationsLoading}
                         />
                     </div>
 
-                    {/* Right panel */}
+                    {/* Right panel - Chat Window */}
                     <div
-                        className={`flex-1 flex rounded-tr-[25px] rounded-br-[25px] flex-col ${showMobileChat ? "flex" : "hidden md:flex"
+                        className={`flex-1 flex md:rounded-r-xl flex-col border md:border-l-0 border-border rounded-xl md:rounded-l-none shadow-sm ${showMobileChat ? "flex" : "hidden md:flex"
                             }`}
                     >
-                        {selectedConversation ? (
+                        {messagesLoading ? (
+                            <div className="flex-1 flex items-center justify-center bg-card rounded-r-xl">
+                                <div className="text-center text-muted-foreground">
+                                    <div className="animate-spin w-8 h-8 border-2 border-primary border-t-transparent rounded-full mx-auto mb-3"></div>
+                                    <p>Loading messages...</p>
+                                </div>
+                            </div>
+                        ) : transformedSelectedConversation ? (
                             <ChatWindow
-                                conversation={selectedConversation}
+                                conversation={transformedSelectedConversation}
                                 currentUserId={currentUserId}
                                 onSendMessage={handleSendMessage}
                                 sending={sending}
@@ -398,6 +246,5 @@ export default function Messages() {
             </div>
             <Footer />
         </>
-
     );
 }

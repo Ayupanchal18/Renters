@@ -88,3 +88,51 @@ This specification defines the enhancement of the property rental application's 
 3. WHEN filters or search are applied, THE Property_System SHALL debounce user input to prevent excessive API calls
 4. WHEN property data is cached, THE Property_System SHALL use cached data when appropriate to improve response times
 5. WHEN the user navigates between pages, THE Property_System SHALL maintain scroll position and view state where appropriate
+
+### Requirement 7
+
+**User Story:** As a user, I want consistent property type options across all search interfaces, so that I can search for the same property types regardless of where I start my search.
+
+#### Acceptance Criteria
+
+1. WHEN property types are displayed on the homepage search, THE Property_System SHALL use the same property type values as the listings page filter sidebar
+2. WHEN a user selects a property type on the homepage, THE Property_System SHALL map it to the corresponding filter value on the listings page
+3. WHEN property type filters are applied, THE Property_System SHALL use consistent property type matching logic across all components
+4. WHEN property data is stored or retrieved, THE Property_System SHALL normalize property type values to a standard format
+5. WHEN displaying property types in any interface, THE Property_System SHALL use consistent labeling and categorization
+
+### Requirement 8
+
+**User Story:** As a user, I want consistent location handling across all search interfaces, so that I can reliably search for properties in the same locations regardless of which search component I use.
+
+#### Acceptance Criteria
+
+1. WHEN location detection is used on the homepage, THE Property_System SHALL use the same geolocation service and format as the listings page
+2. WHEN location autocomplete suggestions are provided, THE Property_System SHALL use consistent location data sources across all search components
+3. WHEN a user enters a location on the homepage, THE Property_System SHALL validate and format it using the same logic as the listings page
+4. WHEN location data is passed between components, THE Property_System SHALL use a standardized location object structure
+5. WHEN displaying location information, THE Property_System SHALL use consistent formatting and display patterns
+
+### Requirement 9
+
+**User Story:** As a user, I want consistent search parameter handling across all search interfaces, so that my search criteria are properly interpreted regardless of where I initiate the search.
+
+#### Acceptance Criteria
+
+1. WHEN search parameters are passed from the homepage to listings page, THE Property_System SHALL use a standardized search payload structure
+2. WHEN search validation is performed, THE Property_System SHALL apply the same validation rules across all search components
+3. WHEN search errors occur, THE Property_System SHALL display consistent error messages and handling across all interfaces
+4. WHEN search history is maintained, THE Property_System SHALL store search parameters in a consistent format
+5. WHEN search suggestions are generated, THE Property_System SHALL use the same suggestion logic and data sources across all components
+
+### Requirement 10
+
+**User Story:** As a user, I want filter state to be properly synchronized between different views, so that my filter selections are maintained when I navigate between pages or change view modes.
+
+#### Acceptance Criteria
+
+1. WHEN filters are applied on the listings page, THE Property_System SHALL maintain filter state when switching between grid and list views
+2. WHEN a user navigates from homepage search to listings, THE Property_System SHALL properly initialize filters based on the search parameters
+3. WHEN filter state changes, THE Property_System SHALL update the URL parameters to maintain bookmarkable filter states
+4. WHEN the browser back/forward buttons are used, THE Property_System SHALL restore the appropriate filter state
+5. WHEN filter validation fails, THE Property_System SHALL provide clear feedback and maintain valid filter states

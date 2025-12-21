@@ -1,9 +1,8 @@
 /** IMPORTS — must stay on top **/
-@import url("https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700;800&display=swap");
 @import "tw-animate-css";
 
-/* Dark variant handling */
-@custom-variant dark (&:is(.dark *));
+/* Dark variant handling - commented out as it may not be supported */
+/* @custom-variant dark (&:is(.dark *)); */
 
 @tailwind base;
 @tailwind components;
@@ -14,33 +13,56 @@
 /* ====================================================================== */
 
 :root {
-  /* ⭐ YOUR ORIGINAL COLORS REMAIN, BUT UPDATED WITH NEW FILE COLORS */
-  --background: oklch(0.98 0 0);
-  --foreground: oklch(0.2 0 0); /* NEW */
-  --card: oklch(0.99 0 0); /* NEW */
-  --card-foreground: oklch(0.2 0 0); /* NEW */
-  --popover: oklch(0.99 0 0); /* NEW */
-  --popover-foreground: oklch(0.2 0 0); /* NEW */
+  /* Premium Design System - Light Mode Palette (HSL format for Tailwind opacity support) */
+  --background: 210 40% 98%; /* Light background #F8FAFC */
+  --foreground: 222 47% 11%; /* Dark text #0F172A */
+  --card: 0 0% 100%; /* White surface #FFFFFF */
+  --card-foreground: 222 47% 11%; /* Dark text on cards #0F172A */
+  --popover: 0 0% 100%; /* White popover #FFFFFF */
+  --popover-foreground: 222 47% 11%; /* Dark text on popovers #0F172A */
 
-  /* PRIMARY SYSTEM (updated to warm terracotta palette) */
-  --primary: oklch(0.6 0.18 24.3); /* NEW */
-  --primary-foreground: oklch(0.99 0 0);
+  /* PRIMARY SYSTEM - Premium Royal Indigo Palette */
+  --primary: 228 100% 58%; /* Royal Indigo #2B50FF */
+  --primary-foreground: 0 0% 100%; /* White text on primary #FFFFFF */
 
-  --secondary: oklch(0.65 0.12 30); /* NEW */
-  --secondary-foreground: oklch(0.99 0 0);
+  --secondary: 1 100% 70%; /* Coral Accent #FF6B68 */
+  --secondary-foreground: 0 0% 100%; /* White text on secondary #FFFFFF */
 
-  --muted: oklch(0.93 0 0); /* NEW */
-  --muted-foreground: oklch(0.5 0 0);
+  --tertiary: 41 100% 67%; /* Gold Amber #FFC857 */
+  --tertiary-foreground: 222 47% 11%; /* Dark text on tertiary #0F172A */
 
-  --accent: oklch(0.62 0.16 27); /* NEW */
-  --accent-foreground: oklch(0.99 0 0);
+  --muted: 210 40% 96%; /* Light muted background #F1F5F9 */
+  --muted-foreground: 215 16% 47%; /* Muted text #64748B */
 
-  --destructive: oklch(0.577 0.245 27.325);
-  --destructive-foreground: oklch(0.577 0.245 27.325);
+  --accent: 41 100% 67%; /* Gold Amber accent #FFC857 */
+  --accent-foreground: 222 47% 11%; /* Dark text on accent #0F172A */
 
-  --border: oklch(0.92 0 0); /* NEW */
-  --input: oklch(0.96 0 0); /* NEW */
-  --ring: oklch(0.6 0.18 24.3); /* NEW */
+  /* STATUS COLORS */
+  --success: 160 84% 39%; /* Emerald #10B981 */
+  --success-foreground: 0 0% 100%; /* White text on success #FFFFFF */
+
+  --destructive: 0 84% 60%; /* Tomato #EF4444 */
+  --destructive-foreground: 0 0% 100%; /* White text on destructive #FFFFFF */
+
+  --warning: 38 92% 50%; /* Amber #F59E0B */
+  --warning-foreground: 222 47% 11%; /* Dark text on warning #0F172A */
+
+  --orange: 25 95% 53%; /* Orange #F97316 */
+  --orange-foreground: 0 0% 100%; /* White text on orange #FFFFFF */
+
+  /* NEUTRAL PALETTE */
+  --border: 214 32% 91%; /* Light border #E2E8F0 */
+  --input: 210 40% 98%; /* Light input background #F8FAFC */
+  --ring: 228 100% 58%; /* Primary ring color #2B50FF */
+
+  /* GLASS OVERLAY */
+  --glass-overlay: rgba(8, 15, 30, 0.06); /* Light mode glass tint */
+
+  /* ANIMATION DURATION TOKENS */
+  --duration-fast: 120ms;
+  --duration-normal: 180ms;
+  --duration-slow: 320ms;
+  --duration-slower: 420ms;
 
   /* CHART COLORS (NEW) */
   --chart-1: oklch(0.6 0.18 24.3);
@@ -66,72 +88,12 @@
   --radius-md: calc(var(--radius) - 2px);
   --radius-lg: var(--radius);
   --radius-xl: calc(var(--radius) + 4px);
-}
 
-/* ====================================================================== */
-/* ------------------------------- DARK MODE ---------------------------- */
-/* ====================================================================== */
-
-.dark {
-  /* NEW updated dark palette */
-  --background: oklch(0.15 0 0);
-  --foreground: oklch(0.95 0 0);
-  --card: oklch(0.2 0 0);
-  --card-foreground: oklch(0.95 0 0);
-  --popover: oklch(0.2 0 0);
-  --popover-foreground: oklch(0.95 0 0);
-
-  --primary: oklch(0.68 0.16 26); /* NEW */
-  --primary-foreground: oklch(0.15 0 0);
-
-  --secondary: oklch(0.72 0.12 32); /* NEW */
-  --secondary-foreground: oklch(0.15 0 0);
-
-  --muted: oklch(0.3 0 0);
-  --muted-foreground: oklch(0.7 0 0);
-
-  --accent: oklch(0.7 0.15 28); /* NEW */
-  --accent-foreground: oklch(0.15 0 0);
-
-  --destructive: oklch(0.396 0.141 25.723);
-  --destructive-foreground: oklch(0.637 0.237 25.331);
-
-  --border: oklch(0.3 0 0); /* NEW */
-  --input: oklch(0.25 0 0); /* NEW */
-  --ring: oklch(0.68 0.16 26); /* NEW */
-
-  /* CHARTS DARK (NEW) */
-  --chart-1: oklch(0.68 0.16 26);
-  --chart-2: oklch(0.72 0.12 32);
-  --chart-3: oklch(0.7 0.15 28);
-  --chart-4: oklch(0.65 0.14 27);
-  --chart-5: oklch(0.75 0.13 30);
-
-  /* SIDEBAR DARK (NEW) */
-  --sidebar: oklch(0.205 0 0);
-  --sidebar-foreground: oklch(0.985 0 0);
-  --sidebar-primary: oklch(0.68 0.16 26);
-  --sidebar-primary-foreground: oklch(0.985 0 0);
-  --sidebar-accent: oklch(0.72 0.12 32);
-  --sidebar-accent-foreground: oklch(0.985 0 0);
-  --sidebar-border: oklch(0.3 0 0);
-  --sidebar-ring: oklch(0.5 0 0);
-
-  /* Radius tokens preserved */
-  --radius-sm: calc(var(--radius) - 4px);
-  --radius-md: calc(var(--radius) - 2px);
-  --radius-lg: var(--radius);
-  --radius-xl: calc(var(--radius) + 4px);
-}
-
-/* ====================================================================== */
-/* ------------------------- THEME MAPPING (INLINE) ---------------------- */
-/* ====================================================================== */
-
-@theme inline {
+  /* Font families */
   --font-sans: "Inter", sans-serif;
   --font-mono: "Geist Mono", monospace;
 
+  /* Color mappings for compatibility */
   --color-background: var(--background);
   --color-foreground: var(--foreground);
   --color-card: var(--card);
@@ -152,20 +114,14 @@
   --color-input: var(--input);
   --color-ring: var(--ring);
 
-  /* CHARTS */
+  /* Chart colors */
   --color-chart-1: var(--chart-1);
   --color-chart-2: var(--chart-2);
   --color-chart-3: var(--chart-3);
   --color-chart-4: var(--chart-4);
   --color-chart-5: var(--chart-5);
 
-  /* Radius Tokens */
-  --radius-sm: var(--radius-sm);
-  --radius-md: var(--radius-md);
-  --radius-lg: var(--radius-lg);
-  --radius-xl: var(--radius-xl);
-
-  /* Sidebar Mapping */
+  /* Sidebar mappings */
   --color-sidebar: var(--sidebar);
   --color-sidebar-foreground: var(--sidebar-foreground);
   --color-sidebar-primary: var(--sidebar-primary);
@@ -177,16 +133,185 @@
 }
 
 /* ====================================================================== */
+/* ------------------------------- DARK MODE ---------------------------- */
+/* ====================================================================== */
+
+.dark {
+  /* Premium Design System - Dark Mode Palette (HSL format for Tailwind opacity support) */
+  --background: 220 50% 8%; /* Dark background #0B1220 */
+  --foreground: 213 50% 93%; /* Light text #E6EEF8 */
+  --card: 222 47% 11%; /* Dark surface #0F172A */
+  --card-foreground: 213 50% 93%; /* Light text on cards #E6EEF8 */
+  --popover: 222 47% 11%; /* Dark popover #0F172A */
+  --popover-foreground: 213 50% 93%; /* Light text on popovers #E6EEF8 */
+
+  /* PRIMARY SYSTEM - Adjusted for dark mode visibility */
+  --primary: 228 100% 65%; /* Brighter Royal Indigo for dark mode #4F6FFF */
+  --primary-foreground: 0 0% 100%; /* White text on primary #FFFFFF */
+
+  --secondary: 1 100% 77%; /* Brighter Coral Accent for dark mode #FF8A87 */
+  --secondary-foreground: 0 0% 100%; /* White text on secondary #FFFFFF */
+
+  --tertiary: 43 100% 74%; /* Brighter Gold Amber for dark mode #FFD57A */
+  --tertiary-foreground: 220 50% 8%; /* Dark text on tertiary #0B1220 */
+
+  --muted: 217 33% 17%; /* Dark muted background #1E293B */
+  --muted-foreground: 215 20% 65%; /* Muted text #94A3B8 */
+
+  --accent: 43 100% 74%; /* Brighter Gold Amber accent #FFD57A */
+  --accent-foreground: 220 50% 8%; /* Dark text on accent #0B1220 */
+
+  /* STATUS COLORS - Adjusted for dark mode */
+  --success: 160 64% 52%; /* Brighter Emerald #34D399 */
+  --success-foreground: 0 0% 100%; /* White text on success #FFFFFF */
+
+  --destructive: 0 91% 71%; /* Brighter Tomato #F87171 */
+  --destructive-foreground: 0 0% 100%; /* White text on destructive #FFFFFF */
+
+  --warning: 45 93% 56%; /* Brighter Amber #FBBF24 */
+  --warning-foreground: 220 50% 8%; /* Dark text on warning #0B1220 */
+
+  --orange: 27 96% 61%; /* Brighter Orange #FB923C */
+  --orange-foreground: 0 0% 100%; /* White text on orange #FFFFFF */
+
+  /* NEUTRAL PALETTE - Dark mode */
+  --border: 217 33% 17%; /* Dark border #1E293B */
+  --input: 222 47% 11%; /* Dark input background #0F172A */
+  --ring: 228 100% 65%; /* Primary ring color #4F6FFF */
+
+  /* GLASS OVERLAY - Dark mode */
+  --glass-overlay: rgba(255, 255, 255, 0.06); /* Dark mode glass tint */
+
+  /* CHARTS DARK - Enhanced for maximum visibility */
+  --chart-1: oklch(0.76 0.18 26);      /* Brighter chart colors for better contrast */
+  --chart-2: oklch(0.78 0.14 32);
+  --chart-3: oklch(0.77 0.17 28);
+  --chart-4: oklch(0.74 0.16 27);
+  --chart-5: oklch(0.82 0.15 30);
+
+  /* SIDEBAR DARK - Enhanced contrast */
+  --sidebar: oklch(0.07 0 0);           /* Darker sidebar background */
+  --sidebar-foreground: oklch(0.98 0 0); /* Bright sidebar text */
+  --sidebar-primary: oklch(0.76 0.18 26); /* Match optimized primary */
+  --sidebar-primary-foreground: oklch(0.98 0 0); /* Bright text */
+  --sidebar-accent: oklch(0.78 0.14 32); /* Match optimized secondary */
+  --sidebar-accent-foreground: oklch(0.98 0 0); /* Bright text */
+  --sidebar-border: oklch(0.20 0 0);    /* Match optimized border */
+  --sidebar-ring: oklch(0.60 0 0);      /* Enhanced ring visibility */
+
+  /* Radius tokens preserved */
+  --radius-sm: calc(var(--radius) - 4px);
+  --radius-md: calc(var(--radius) - 2px);
+  --radius-lg: var(--radius);
+  --radius-xl: calc(var(--radius) + 4px);
+
+  /* Font families */
+  --font-sans: "Inter", sans-serif;
+  --font-mono: "Geist Mono", monospace;
+
+  /* Color mappings for compatibility */
+  --color-background: var(--background);
+  --color-foreground: var(--foreground);
+  --color-card: var(--card);
+  --color-card-foreground: var(--card-foreground);
+  --color-popover: var(--popover);
+  --color-popover-foreground: var(--popover-foreground);
+  --color-primary: var(--primary);
+  --color-primary-foreground: var(--primary-foreground);
+  --color-secondary: var(--secondary);
+  --color-secondary-foreground: var(--secondary-foreground);
+  --color-muted: var(--muted);
+  --color-muted-foreground: var(--muted-foreground);
+  --color-accent: var(--accent);
+  --color-accent-foreground: var(--accent-foreground);
+  --color-destructive: var(--destructive);
+  --color-destructive-foreground: var(--destructive-foreground);
+  --color-border: var(--border);
+  --color-input: var(--input);
+  --color-ring: var(--ring);
+
+  /* Chart colors */
+  --color-chart-1: var(--chart-1);
+  --color-chart-2: var(--chart-2);
+  --color-chart-3: var(--chart-3);
+  --color-chart-4: var(--chart-4);
+  --color-chart-5: var(--chart-5);
+
+  /* Sidebar mappings */
+  --color-sidebar: var(--sidebar);
+  --color-sidebar-foreground: var(--sidebar-foreground);
+  --color-sidebar-primary: var(--sidebar-primary);
+  --color-sidebar-primary-foreground: var(--sidebar-primary-foreground);
+  --color-sidebar-accent: var(--sidebar-accent);
+  --color-sidebar-accent-foreground: var(--sidebar-accent-foreground);
+  --color-sidebar-border: var(--sidebar-border);
+  --color-sidebar-ring: var(--sidebar-ring);
+}
+
+/* ====================================================================== */
+/* ------------------------- THEME MAPPING (INLINE) ---------------------- */
+/* ====================================================================== */
+
+/* Theme mapping variables - moved to existing :root for compatibility */
+
+/* ====================================================================== */
 /* ------------------------- BASE LAYER --------------------------------- */
 /* ====================================================================== */
 
 @layer base {
-  * {
+  /* Enhanced smooth theme transitions for all elements */
+  *,
+  *::before,
+  *::after {
     @apply border-border outline-ring/50;
+    /* Comprehensive smooth transitions for theme switching */
+    transition: 
+      background-color 0.3s cubic-bezier(0.4, 0, 0.2, 1), 
+      color 0.3s cubic-bezier(0.4, 0, 0.2, 1), 
+      border-color 0.3s cubic-bezier(0.4, 0, 0.2, 1),
+      box-shadow 0.3s cubic-bezier(0.4, 0, 0.2, 1),
+      opacity 0.3s cubic-bezier(0.4, 0, 0.2, 1),
+      fill 0.3s cubic-bezier(0.4, 0, 0.2, 1),
+      stroke 0.3s cubic-bezier(0.4, 0, 0.2, 1),
+      outline-color 0.3s cubic-bezier(0.4, 0, 0.2, 1),
+      backdrop-filter 0.3s cubic-bezier(0.4, 0, 0.2, 1),
+      filter 0.3s cubic-bezier(0.4, 0, 0.2, 1);
   }
+
+  /* Smooth transitions for the root element and html/body */
+  html {
+    transition: background-color 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  }
+
   body {
     @apply bg-background text-foreground;
+    transition: 
+      background-color 0.3s cubic-bezier(0.4, 0, 0.2, 1),
+      color 0.3s cubic-bezier(0.4, 0, 0.2, 1);
   }
+
+  /* Enhanced transitions for interactive elements */
+  button,
+  input,
+  textarea,
+  select,
+  a {
+    transition: 
+      background-color 0.2s cubic-bezier(0.4, 0, 0.2, 1), 
+      color 0.2s cubic-bezier(0.4, 0, 0.2, 1), 
+      border-color 0.2s cubic-bezier(0.4, 0, 0.2, 1),
+      box-shadow 0.2s cubic-bezier(0.4, 0, 0.2, 1),
+      transform 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+  }
+
+  /* Smooth transitions for SVG elements (icons) */
+  svg {
+    transition: 
+      fill 0.3s cubic-bezier(0.4, 0, 0.2, 1),
+      stroke 0.3s cubic-bezier(0.4, 0, 0.2, 1),
+      color 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  }
+
   :where(p, span, li, h1, h2, h3, h4, h5, h6, a, button, label, td, th) {
     overflow-wrap: anywhere;
     word-break: break-word;
@@ -197,6 +322,11 @@
     overflow-x: auto;
     white-space: pre;
   }
+
+  /* Prevent flash of unstyled content during theme transitions */
+  .theme-transition-disable * {
+    transition: none !important;
+  }
 }
 
 /* ====================================================================== */
@@ -204,12 +334,40 @@
 /* ====================================================================== */
 
 @layer components {
+  /* Enhanced theme transition utilities */
+  .theme-transition-fast {
+    transition: 
+      background-color 0.15s cubic-bezier(0.4, 0, 0.2, 1),
+      color 0.15s cubic-bezier(0.4, 0, 0.2, 1),
+      border-color 0.15s cubic-bezier(0.4, 0, 0.2, 1);
+  }
+
+  .theme-transition-smooth {
+    transition: 
+      background-color 0.3s cubic-bezier(0.4, 0, 0.2, 1),
+      color 0.3s cubic-bezier(0.4, 0, 0.2, 1),
+      border-color 0.3s cubic-bezier(0.4, 0, 0.2, 1),
+      box-shadow 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  }
+
+  .theme-transition-slow {
+    transition: 
+      background-color 0.5s cubic-bezier(0.4, 0, 0.2, 1),
+      color 0.5s cubic-bezier(0.4, 0, 0.2, 1),
+      border-color 0.5s cubic-bezier(0.4, 0, 0.2, 1);
+  }
+
   .section-card {
-    @apply bg-card rounded-lg border border-border shadow-sm transition-all duration-300 hover:shadow-md;
+    @apply bg-card rounded-lg border border-border shadow-sm hover:shadow-md;
+    transition: 
+      background-color 0.3s cubic-bezier(0.4, 0, 0.2, 1),
+      border-color 0.3s cubic-bezier(0.4, 0, 0.2, 1),
+      box-shadow 0.2s cubic-bezier(0.4, 0, 0.2, 1);
   }
 
   .section-header {
-    @apply text-lg font-semibold text-foreground flex items-center justify-between cursor-pointer hover:text-primary transition-colors;
+    @apply text-lg font-semibold text-foreground flex items-center justify-between cursor-pointer hover:text-primary;
+    transition: color 0.2s cubic-bezier(0.4, 0, 0.2, 1);
   }
 
   .section-content {
@@ -218,10 +376,941 @@
 
   .badge-primary {
     @apply inline-block bg-primary/10 text-primary px-3 py-1 rounded-full text-xs font-medium;
+    transition: 
+      background-color 0.3s cubic-bezier(0.4, 0, 0.2, 1),
+      color 0.3s cubic-bezier(0.4, 0, 0.2, 1);
   }
 
   .badge-accent {
     @apply inline-block bg-accent/10 text-accent px-3 py-1 rounded-full text-xs font-medium;
+    transition: 
+      background-color 0.3s cubic-bezier(0.4, 0, 0.2, 1),
+      color 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  }
+
+  /* ====================================================================== */
+  /* ----------------------- PROPERTY PAGE COMPONENTS -------------------- */
+  /* ====================================================================== */
+
+  /* Property Card Base - Theme-aware with enhanced transitions */
+  .property-card {
+    @apply bg-card rounded-xl border border-border shadow-sm overflow-hidden hover:shadow-md hover:border-border/80;
+    transition: 
+      background-color 0.3s cubic-bezier(0.4, 0, 0.2, 1),
+      border-color 0.3s cubic-bezier(0.4, 0, 0.2, 1),
+      box-shadow 0.2s cubic-bezier(0.4, 0, 0.2, 1),
+      transform 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+  }
+
+  .property-card-header {
+    @apply px-4 sm:px-6 py-3 sm:py-4 border-b border-border bg-muted/50;
+    transition: 
+      background-color 0.3s cubic-bezier(0.4, 0, 0.2, 1),
+      border-color 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  }
+
+  .property-card-content {
+    @apply p-4 sm:p-6 space-y-4;
+    transition: background-color 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  }
+
+  /* Error States - Theme-aware with smooth transitions */
+  .error-state {
+    @apply bg-destructive/10 border border-destructive/20 rounded-lg p-4 sm:p-6 text-center;
+    transition: 
+      background-color 0.3s cubic-bezier(0.4, 0, 0.2, 1),
+      border-color 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  }
+
+  .error-state-icon {
+    @apply w-12 h-12 sm:w-16 sm:h-16 text-destructive/70 mx-auto mb-3 sm:mb-4;
+    transition: color 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  }
+
+  .error-state-title {
+    @apply text-lg sm:text-xl font-semibold text-destructive mb-2;
+    transition: color 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  }
+
+  .error-state-message {
+    @apply text-sm sm:text-base text-destructive/80 mb-4 max-w-md mx-auto;
+    transition: color 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  }
+
+  .error-state-actions {
+    @apply flex flex-col sm:flex-row gap-2 sm:gap-3 justify-center;
+  }
+
+  /* Warning States - Theme-aware with smooth transitions */
+  .warning-state {
+    @apply bg-accent/10 border border-accent/20 rounded-lg p-3 sm:p-4;
+    transition: 
+      background-color 0.3s cubic-bezier(0.4, 0, 0.2, 1),
+      border-color 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  }
+
+  .warning-state-content {
+    @apply flex items-start gap-2 sm:gap-3;
+  }
+
+  .warning-state-icon {
+    @apply w-4 h-4 sm:w-5 sm:h-5 text-accent mt-0.5 flex-shrink-0;
+    transition: color 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  }
+
+  .warning-state-text {
+    @apply text-sm text-accent/90 flex-1;
+    transition: color 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  }
+
+  /* Loading States - Theme-aware with smooth transitions */
+  .loading-state {
+    @apply bg-muted border border-border rounded-lg p-6 sm:p-8 text-center;
+    transition: 
+      background-color 0.3s cubic-bezier(0.4, 0, 0.2, 1),
+      border-color 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  }
+
+  .loading-state-spinner {
+    @apply w-8 h-8 sm:w-12 sm:h-12 mx-auto mb-3 sm:mb-4;
+    transition: color 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  }
+
+  .loading-state-text {
+    @apply text-sm sm:text-base text-muted-foreground;
+    transition: color 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  }
+
+  /* Fallback Content - Theme-aware with smooth transitions */
+  .fallback-content {
+    @apply bg-muted/50 border-2 border-dashed border-border rounded-lg p-6 sm:p-8 text-center;
+    transition: 
+      background-color 0.3s cubic-bezier(0.4, 0, 0.2, 1),
+      border-color 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  }
+
+  .fallback-content-icon {
+    @apply w-12 h-12 sm:w-16 sm:h-16 text-muted-foreground mx-auto mb-3 sm:mb-4;
+    transition: color 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  }
+
+  .fallback-content-title {
+    @apply text-base sm:text-lg font-medium text-foreground mb-2;
+    transition: color 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  }
+
+  .fallback-content-message {
+    @apply text-sm text-muted-foreground mb-4;
+    transition: color 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  }
+
+  /* Quick Facts Grid - Theme-aware */
+  .fact-card {
+    @apply bg-gradient-to-br rounded-lg p-3 sm:p-4 text-center transition-all duration-200 hover:scale-105;
+  }
+
+  .fact-card.blue {
+    @apply from-blue-50 to-blue-100 border border-blue-200 dark:from-blue-950/50 dark:to-blue-900/50 dark:border-blue-800;
+  }
+
+  .fact-card.green {
+    @apply from-green-50 to-green-100 border border-green-200 dark:from-green-950/50 dark:to-green-900/50 dark:border-green-800;
+  }
+
+  .fact-card.purple {
+    @apply from-purple-50 to-purple-100 border border-purple-200 dark:from-purple-950/50 dark:to-purple-900/50 dark:border-purple-800;
+  }
+
+  .fact-card.orange {
+    @apply from-orange-50 to-orange-100 border border-orange-200 dark:from-orange-950/50 dark:to-orange-900/50 dark:border-orange-800;
+  }
+
+  .fact-value {
+    @apply text-lg sm:text-xl font-bold text-foreground mb-1;
+  }
+
+  .fact-label {
+    @apply text-xs sm:text-sm font-medium text-muted-foreground uppercase tracking-wide;
+  }
+
+  /* Responsive Image Container */
+  .responsive-image-container {
+    @apply relative overflow-hidden rounded-lg bg-slate-100;
+  }
+
+  .responsive-image {
+    @apply w-full h-full object-cover transition-transform duration-300 hover:scale-105;
+  }
+
+  /* Contact Cards - Theme-aware with enhanced transitions */
+  .contact-card {
+    @apply flex items-center gap-3 p-3 rounded-lg hover:bg-muted/50 cursor-pointer;
+    transition: 
+      background-color 0.2s cubic-bezier(0.4, 0, 0.2, 1),
+      transform 0.2s cubic-bezier(0.4, 0, 0.2, 1),
+      box-shadow 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+  }
+
+  .contact-card:hover {
+    transform: translateY(-1px);
+  }
+
+  .contact-card-icon {
+    @apply w-10 h-10 rounded-lg flex items-center justify-center;
+    transition: 
+      background-color 0.2s cubic-bezier(0.4, 0, 0.2, 1),
+      color 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+  }
+
+  .contact-card-content {
+    @apply flex-1 min-w-0;
+  }
+
+  .contact-card-label {
+    @apply text-xs text-muted-foreground font-medium uppercase tracking-wide;
+    transition: color 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  }
+
+  .contact-card-value {
+    @apply text-sm font-medium text-foreground truncate;
+    transition: color 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  }
+
+  /* Verification Badges - Theme-aware */
+  .verification-badge {
+    @apply inline-flex items-center gap-2 px-3 py-2 rounded-lg text-sm font-medium;
+  }
+
+  .verification-badge.verified {
+    @apply bg-green-50 text-green-700 border border-green-200 dark:bg-green-950/50 dark:text-green-300 dark:border-green-800;
+  }
+
+  .verification-badge.pending {
+    @apply bg-yellow-50 text-yellow-700 border border-yellow-200 dark:bg-yellow-950/50 dark:text-yellow-300 dark:border-yellow-800;
+  }
+
+  .verification-badge.unverified {
+    @apply bg-muted text-muted-foreground border border-border;
+  }
+
+  /* Financial Highlight Cards - Theme-aware */
+  .financial-card {
+    @apply rounded-lg p-4 border transition-all duration-200 hover:shadow-sm;
+  }
+
+  .financial-card.primary {
+    @apply bg-gradient-to-br from-green-50 to-emerald-50 border-green-200 dark:from-green-950/30 dark:to-emerald-950/30 dark:border-green-800;
+  }
+
+  .financial-card.secondary {
+    @apply bg-muted border-border;
+  }
+
+  .financial-card.accent {
+    @apply bg-blue-50 border-blue-200 dark:bg-blue-950/30 dark:border-blue-800;
+  }
+
+  /* Amenity Grid - Theme-aware */
+  .amenity-item {
+    @apply flex items-center gap-2 p-2.5 rounded-lg bg-muted hover:bg-accent/10 transition-colors;
+  }
+
+  .amenity-icon {
+    @apply text-sm group-hover:scale-110 transition-transform;
+  }
+
+  .amenity-text {
+    @apply text-sm font-medium text-foreground;
+  }
+}
+
+/* ====================================================================== */
+/* ----------------------- TYPOGRAPHY SYSTEM ----------------------------- */
+/* ====================================================================== */
+
+/* Type Scale Tokens (CSS Custom Properties) */
+:root {
+  --font-size-xs: 0.75rem;    /* 12px */
+  --font-size-sm: 0.875rem;   /* 14px */
+  --font-size-base: 1rem;     /* 16px */
+  --font-size-lg: 1.125rem;   /* 18px */
+  --font-size-xl: 1.25rem;    /* 20px */
+  --font-size-2xl: 1.5rem;    /* 24px */
+  --font-size-3xl: 1.875rem;  /* 30px */
+  --font-size-4xl: 2.25rem;   /* 36px */
+  
+  /* Line height tokens */
+  --line-height-tight: 1.1;
+  --line-height-snug: 1.25;
+  --line-height-normal: 1.5;
+  --line-height-relaxed: 1.625;
+  
+  /* Font weight tokens */
+  --font-weight-normal: 400;
+  --font-weight-medium: 500;
+  --font-weight-semibold: 600;
+  --font-weight-bold: 700;
+}
+
+@layer components {
+  /* ====================================================================== */
+  /* ----------------------- HEADING CLASSES ----------------------------- */
+  /* ====================================================================== */
+  
+  /* H1 - Primary page headings */
+  .heading-1 {
+    font-family: var(--font-sans, "Inter", sans-serif);
+    font-size: var(--font-size-4xl, 2.25rem);
+    font-weight: var(--font-weight-bold, 700);
+    line-height: var(--line-height-tight, 1.1);
+    letter-spacing: -0.025em;
+    @apply text-foreground;
+  }
+  
+  /* H2 - Section headings */
+  .heading-2 {
+    font-family: var(--font-sans, "Inter", sans-serif);
+    font-size: var(--font-size-3xl, 1.875rem);
+    font-weight: var(--font-weight-bold, 700);
+    line-height: var(--line-height-tight, 1.1);
+    letter-spacing: -0.02em;
+    @apply text-foreground;
+  }
+  
+  /* H3 - Subsection headings */
+  .heading-3 {
+    font-family: var(--font-sans, "Inter", sans-serif);
+    font-size: var(--font-size-2xl, 1.5rem);
+    font-weight: var(--font-weight-semibold, 600);
+    line-height: var(--line-height-tight, 1.1);
+    letter-spacing: -0.015em;
+    @apply text-foreground;
+  }
+  
+  /* H4 - Card/component headings */
+  .heading-4 {
+    font-family: var(--font-sans, "Inter", sans-serif);
+    font-size: var(--font-size-xl, 1.25rem);
+    font-weight: var(--font-weight-semibold, 600);
+    line-height: var(--line-height-snug, 1.25);
+    @apply text-foreground;
+  }
+  
+  /* H5 - Small headings */
+  .heading-5 {
+    font-family: var(--font-sans, "Inter", sans-serif);
+    font-size: var(--font-size-lg, 1.125rem);
+    font-weight: var(--font-weight-semibold, 600);
+    line-height: var(--line-height-snug, 1.25);
+    @apply text-foreground;
+  }
+  
+  /* H6 - Smallest headings */
+  .heading-6 {
+    font-family: var(--font-sans, "Inter", sans-serif);
+    font-size: var(--font-size-base, 1rem);
+    font-weight: var(--font-weight-semibold, 600);
+    line-height: var(--line-height-snug, 1.25);
+    @apply text-foreground;
+  }
+  
+  /* ====================================================================== */
+  /* ----------------------- BODY TEXT CLASSES --------------------------- */
+  /* ====================================================================== */
+  
+  /* Body large - Intro paragraphs, lead text */
+  .body-lg {
+    font-family: var(--font-sans, "Inter", sans-serif);
+    font-size: var(--font-size-lg, 1.125rem);
+    font-weight: var(--font-weight-normal, 400);
+    line-height: var(--line-height-normal, 1.5);
+    @apply text-foreground;
+  }
+  
+  /* Body base - Standard paragraph text */
+  .body-base {
+    font-family: var(--font-sans, "Inter", sans-serif);
+    font-size: var(--font-size-base, 1rem);
+    font-weight: var(--font-weight-normal, 400);
+    line-height: var(--line-height-normal, 1.5);
+    @apply text-foreground;
+  }
+  
+  /* Body medium - Slightly emphasized body text */
+  .body-medium {
+    font-family: var(--font-sans, "Inter", sans-serif);
+    font-size: var(--font-size-base, 1rem);
+    font-weight: var(--font-weight-medium, 500);
+    line-height: var(--line-height-normal, 1.5);
+    @apply text-foreground;
+  }
+  
+  /* Body small - Secondary text, captions */
+  .body-sm {
+    font-family: var(--font-sans, "Inter", sans-serif);
+    font-size: var(--font-size-sm, 0.875rem);
+    font-weight: var(--font-weight-normal, 400);
+    line-height: var(--line-height-normal, 1.5);
+    @apply text-muted-foreground;
+  }
+  
+  /* Body extra small - Fine print, labels */
+  .body-xs {
+    font-family: var(--font-sans, "Inter", sans-serif);
+    font-size: var(--font-size-xs, 0.75rem);
+    font-weight: var(--font-weight-normal, 400);
+    line-height: var(--line-height-normal, 1.5);
+    @apply text-muted-foreground;
+  }
+  
+  /* ====================================================================== */
+  /* ----------------------- TYPE SCALE UTILITIES ------------------------ */
+  /* ====================================================================== */
+  
+  /* Font size utilities */
+  .text-size-xs {
+    font-size: var(--font-size-xs, 0.75rem);
+  }
+  
+  .text-size-sm {
+    font-size: var(--font-size-sm, 0.875rem);
+  }
+  
+  .text-size-base {
+    font-size: var(--font-size-base, 1rem);
+  }
+  
+  .text-size-lg {
+    font-size: var(--font-size-lg, 1.125rem);
+  }
+  
+  .text-size-xl {
+    font-size: var(--font-size-xl, 1.25rem);
+  }
+  
+  .text-size-2xl {
+    font-size: var(--font-size-2xl, 1.5rem);
+  }
+  
+  /* Line height utilities */
+  .leading-tight {
+    line-height: var(--line-height-tight, 1.1);
+  }
+  
+  .leading-snug {
+    line-height: var(--line-height-snug, 1.25);
+  }
+  
+  .leading-normal {
+    line-height: var(--line-height-normal, 1.5);
+  }
+  
+  .leading-relaxed {
+    line-height: var(--line-height-relaxed, 1.625);
+  }
+  
+  /* Font weight utilities */
+  .font-weight-normal {
+    font-weight: var(--font-weight-normal, 400);
+  }
+  
+  .font-weight-medium {
+    font-weight: var(--font-weight-medium, 500);
+  }
+  
+  .font-weight-semibold {
+    font-weight: var(--font-weight-semibold, 600);
+  }
+  
+  .font-weight-bold {
+    font-weight: var(--font-weight-bold, 700);
+  }
+  
+  /* ====================================================================== */
+  /* ----------------------- TEXT HIGHLIGHT UTILITY ---------------------- */
+  /* ====================================================================== */
+  
+  /* Text highlight with tertiary color (Gold Amber) */
+  .text-highlight {
+    background-color: rgba(255, 200, 87, 0.14); /* tertiary at 0.14 opacity */
+    border-left: 3px solid var(--tertiary, #FFC857);
+    padding: 0.5rem 1rem;
+    border-radius: 0 0.25rem 0.25rem 0;
+    @apply text-foreground;
+  }
+  
+  /* Text highlight with secondary color (Coral Accent) */
+  .text-highlight-secondary {
+    background-color: rgba(255, 107, 104, 0.14); /* secondary at 0.14 opacity */
+    border-left: 3px solid var(--secondary, #FF6B68);
+    padding: 0.5rem 1rem;
+    border-radius: 0 0.25rem 0.25rem 0;
+    @apply text-foreground;
+  }
+  
+  /* Text highlight with primary color (Royal Indigo) */
+  .text-highlight-primary {
+    background-color: rgba(43, 80, 255, 0.14); /* primary at 0.14 opacity */
+    border-left: 3px solid var(--primary, #2B50FF);
+    padding: 0.5rem 1rem;
+    border-radius: 0 0.25rem 0.25rem 0;
+    @apply text-foreground;
+  }
+  
+  /* Inline text highlight (no border, just background) */
+  .text-highlight-inline {
+    background-color: rgba(255, 200, 87, 0.14);
+    padding: 0.125rem 0.375rem;
+    border-radius: 0.25rem;
+  }
+  
+  /* Dark mode adjustments for text highlights */
+  .dark .text-highlight {
+    background-color: rgba(255, 213, 122, 0.14); /* brighter tertiary for dark mode */
+  }
+  
+  .dark .text-highlight-secondary {
+    background-color: rgba(255, 138, 135, 0.14); /* brighter secondary for dark mode */
+  }
+  
+  .dark .text-highlight-primary {
+    background-color: rgba(79, 111, 255, 0.14); /* brighter primary for dark mode */
+  }
+  
+  .dark .text-highlight-inline {
+    background-color: rgba(255, 213, 122, 0.14);
+  }
+}
+
+/* ====================================================================== */
+/* ----------------------- VISUAL EFFECTS UTILITIES ---------------------- */
+/* ====================================================================== */
+
+@layer components {
+  /* ====================================================================== */
+  /* ----------------------- SHADOW & GLOW UTILITIES --------------------- */
+  /* ====================================================================== */
+  
+  /* Layered Shadow Classes - Creates depth through multiple shadow layers */
+  .shadow-layered-sm {
+    box-shadow: 
+      0 1px 2px rgba(0, 0, 0, 0.04),
+      0 2px 4px rgba(0, 0, 0, 0.04),
+      0 4px 8px rgba(0, 0, 0, 0.04);
+  }
+  
+  .shadow-layered {
+    box-shadow: 
+      0 1px 3px rgba(0, 0, 0, 0.05),
+      0 4px 6px rgba(0, 0, 0, 0.05),
+      0 8px 12px rgba(0, 0, 0, 0.05),
+      0 16px 24px rgba(0, 0, 0, 0.05);
+  }
+  
+  .shadow-layered-lg {
+    box-shadow: 
+      0 2px 4px rgba(0, 0, 0, 0.04),
+      0 4px 8px rgba(0, 0, 0, 0.04),
+      0 8px 16px rgba(0, 0, 0, 0.04),
+      0 16px 32px rgba(0, 0, 0, 0.06),
+      0 32px 64px rgba(0, 0, 0, 0.08);
+  }
+  
+  /* Dark mode layered shadows - adjusted for dark backgrounds */
+  .dark .shadow-layered-sm {
+    box-shadow: 
+      0 1px 2px rgba(0, 0, 0, 0.2),
+      0 2px 4px rgba(0, 0, 0, 0.15),
+      0 4px 8px rgba(0, 0, 0, 0.1);
+  }
+  
+  .dark .shadow-layered {
+    box-shadow: 
+      0 1px 3px rgba(0, 0, 0, 0.25),
+      0 4px 6px rgba(0, 0, 0, 0.2),
+      0 8px 12px rgba(0, 0, 0, 0.15),
+      0 16px 24px rgba(0, 0, 0, 0.1);
+  }
+  
+  .dark .shadow-layered-lg {
+    box-shadow: 
+      0 2px 4px rgba(0, 0, 0, 0.25),
+      0 4px 8px rgba(0, 0, 0, 0.2),
+      0 8px 16px rgba(0, 0, 0, 0.15),
+      0 16px 32px rgba(0, 0, 0, 0.12),
+      0 32px 64px rgba(0, 0, 0, 0.1);
+  }
+  
+  /* Micro-glow using primary color tint */
+  .glow-primary-sm {
+    box-shadow: 0 0 8px rgba(43, 80, 255, 0.15);
+  }
+  
+  .glow-primary {
+    box-shadow: 0 0 16px rgba(43, 80, 255, 0.2);
+  }
+  
+  .glow-primary-lg {
+    box-shadow: 0 0 24px rgba(43, 80, 255, 0.25);
+  }
+  
+  /* Dark mode primary glow - brighter for visibility */
+  .dark .glow-primary-sm {
+    box-shadow: 0 0 8px rgba(79, 111, 255, 0.2);
+  }
+  
+  .dark .glow-primary {
+    box-shadow: 0 0 16px rgba(79, 111, 255, 0.25);
+  }
+  
+  .dark .glow-primary-lg {
+    box-shadow: 0 0 24px rgba(79, 111, 255, 0.3);
+  }
+  
+  /* Secondary color glow (Coral Accent) */
+  .glow-secondary-sm {
+    box-shadow: 0 0 8px rgba(255, 107, 104, 0.15);
+  }
+  
+  .glow-secondary {
+    box-shadow: 0 0 16px rgba(255, 107, 104, 0.2);
+  }
+  
+  .glow-secondary-lg {
+    box-shadow: 0 0 24px rgba(255, 107, 104, 0.25);
+  }
+  
+  /* Dark mode secondary glow */
+  .dark .glow-secondary-sm {
+    box-shadow: 0 0 8px rgba(255, 138, 135, 0.2);
+  }
+  
+  .dark .glow-secondary {
+    box-shadow: 0 0 16px rgba(255, 138, 135, 0.25);
+  }
+  
+  .dark .glow-secondary-lg {
+    box-shadow: 0 0 24px rgba(255, 138, 135, 0.3);
+  }
+  
+  /* Tertiary color glow (Gold Amber) */
+  .glow-tertiary-sm {
+    box-shadow: 0 0 8px rgba(255, 200, 87, 0.15);
+  }
+  
+  .glow-tertiary {
+    box-shadow: 0 0 16px rgba(255, 200, 87, 0.2);
+  }
+  
+  .glow-tertiary-lg {
+    box-shadow: 0 0 24px rgba(255, 200, 87, 0.25);
+  }
+  
+  /* Dark mode tertiary glow */
+  .dark .glow-tertiary-sm {
+    box-shadow: 0 0 8px rgba(255, 213, 122, 0.2);
+  }
+  
+  .dark .glow-tertiary {
+    box-shadow: 0 0 16px rgba(255, 213, 122, 0.25);
+  }
+  
+  .dark .glow-tertiary-lg {
+    box-shadow: 0 0 24px rgba(255, 213, 122, 0.3);
+  }
+  
+  /* Combined shadow + glow for premium depth effect */
+  .shadow-glow-primary {
+    box-shadow: 
+      0 4px 6px rgba(0, 0, 0, 0.05),
+      0 10px 15px rgba(0, 0, 0, 0.1),
+      0 0 20px rgba(43, 80, 255, 0.15);
+  }
+  
+  .dark .shadow-glow-primary {
+    box-shadow: 
+      0 4px 6px rgba(0, 0, 0, 0.2),
+      0 10px 15px rgba(0, 0, 0, 0.15),
+      0 0 20px rgba(79, 111, 255, 0.2);
+  }
+  
+  /* ====================================================================== */
+  /* ----------------------- GRADIENT UTILITIES -------------------------- */
+  /* ====================================================================== */
+  
+  /* Diagonal gradient from primary to tertiary */
+  .gradient-primary-tertiary {
+    background: linear-gradient(135deg, var(--primary, #2B50FF) 0%, var(--tertiary, #FFC857) 100%);
+  }
+  
+  /* Diagonal gradient from primary to secondary */
+  .gradient-primary-secondary {
+    background: linear-gradient(135deg, var(--primary, #2B50FF) 0%, var(--secondary, #FF6B68) 100%);
+  }
+  
+  /* Hero background gradient - subtle diagonal */
+  .gradient-hero {
+    background: linear-gradient(
+      135deg, 
+      var(--primary, #2B50FF) 0%, 
+      rgba(43, 80, 255, 0.8) 25%,
+      rgba(255, 200, 87, 0.6) 75%,
+      var(--tertiary, #FFC857) 100%
+    );
+  }
+  
+  /* Subtle hero gradient for light backgrounds */
+  .gradient-hero-subtle {
+    background: linear-gradient(
+      135deg, 
+      rgba(43, 80, 255, 0.08) 0%, 
+      rgba(255, 200, 87, 0.08) 100%
+    );
+  }
+  
+  /* Dark mode hero gradient - adjusted for visibility */
+  .dark .gradient-hero-subtle {
+    background: linear-gradient(
+      135deg, 
+      rgba(79, 111, 255, 0.12) 0%, 
+      rgba(255, 213, 122, 0.12) 100%
+    );
+  }
+  
+  /* Radial gradient for spotlight effects */
+  .gradient-radial-primary {
+    background: radial-gradient(
+      circle at center,
+      rgba(43, 80, 255, 0.15) 0%,
+      transparent 70%
+    );
+  }
+  
+  .dark .gradient-radial-primary {
+    background: radial-gradient(
+      circle at center,
+      rgba(79, 111, 255, 0.2) 0%,
+      transparent 70%
+    );
+  }
+  
+  /* Text gradient utility */
+  .text-gradient-primary-tertiary {
+    background: linear-gradient(135deg, var(--primary, #2B50FF) 0%, var(--tertiary, #FFC857) 100%);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+  }
+  
+  .text-gradient-primary-secondary {
+    background: linear-gradient(135deg, var(--primary, #2B50FF) 0%, var(--secondary, #FF6B68) 100%);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+  }
+  
+  /* ====================================================================== */
+  /* ----------------------- GLASS/FROST EFFECT UTILITIES ---------------- */
+  /* ====================================================================== */
+  
+  /* Glass effect with backdrop blur */
+  .glass {
+    backdrop-filter: blur(10px);
+    -webkit-backdrop-filter: blur(10px);
+  }
+  
+  .glass-sm {
+    backdrop-filter: blur(6px);
+    -webkit-backdrop-filter: blur(6px);
+  }
+  
+  .glass-lg {
+    backdrop-filter: blur(16px);
+    -webkit-backdrop-filter: blur(16px);
+  }
+  
+  /* Glass with semi-transparent overlay - light mode */
+  .glass-light {
+    backdrop-filter: blur(10px);
+    -webkit-backdrop-filter: blur(10px);
+    background-color: rgba(255, 255, 255, 0.7);
+    border: 1px solid rgba(255, 255, 255, 0.3);
+  }
+  
+  /* Glass with semi-transparent overlay - dark mode */
+  .glass-dark {
+    backdrop-filter: blur(10px);
+    -webkit-backdrop-filter: blur(10px);
+    background-color: rgba(11, 18, 32, 0.7);
+    border: 1px solid rgba(255, 255, 255, 0.1);
+  }
+  
+  /* Theme-aware glass overlay */
+  .glass-overlay {
+    backdrop-filter: blur(10px);
+    -webkit-backdrop-filter: blur(10px);
+    background-color: rgba(8, 15, 30, 0.06); /* Light mode: --glass-overlay */
+    border: 1px solid rgba(0, 0, 0, 0.05);
+  }
+  
+  .dark .glass-overlay {
+    background-color: rgba(255, 255, 255, 0.06); /* Dark mode: --glass-overlay */
+    border: 1px solid rgba(255, 255, 255, 0.08);
+  }
+  
+  /* Frosted card effect */
+  .glass-card {
+    backdrop-filter: blur(10px);
+    -webkit-backdrop-filter: blur(10px);
+    background-color: rgba(255, 255, 255, 0.8);
+    border: 1px solid rgba(255, 255, 255, 0.5);
+    box-shadow: 
+      0 4px 6px rgba(0, 0, 0, 0.05),
+      0 10px 15px rgba(0, 0, 0, 0.05);
+  }
+  
+  .dark .glass-card {
+    background-color: rgba(15, 23, 42, 0.8);
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    box-shadow: 
+      0 4px 6px rgba(0, 0, 0, 0.2),
+      0 10px 15px rgba(0, 0, 0, 0.15);
+  }
+  
+  /* Fallback for browsers that don't support backdrop-filter */
+  @supports not (backdrop-filter: blur(10px)) {
+    .glass,
+    .glass-sm,
+    .glass-lg,
+    .glass-light,
+    .glass-dark,
+    .glass-overlay,
+    .glass-card {
+      background-color: rgba(255, 255, 255, 0.95);
+    }
+    
+    .dark .glass,
+    .dark .glass-sm,
+    .dark .glass-lg,
+    .dark .glass-dark,
+    .dark .glass-overlay,
+    .dark .glass-card {
+      background-color: rgba(15, 23, 42, 0.95);
+    }
+  }
+  
+  /* ====================================================================== */
+  /* ----------------------- HOVER EFFECT UTILITIES ---------------------- */
+  /* ====================================================================== */
+  
+  /* Color shift on hover */
+  .hover-color-shift {
+    transition: filter var(--duration-normal, 180ms) cubic-bezier(0.4, 0, 0.2, 1);
+  }
+  
+  .hover-color-shift:hover {
+    filter: hue-rotate(10deg);
+  }
+  
+  /* Saturation boost on hover */
+  .hover-saturate {
+    transition: filter var(--duration-normal, 180ms) cubic-bezier(0.4, 0, 0.2, 1);
+  }
+  
+  .hover-saturate:hover {
+    filter: saturate(1.06);
+  }
+  
+  /* Combined color shift + saturation */
+  .hover-vibrant {
+    transition: filter var(--duration-normal, 180ms) cubic-bezier(0.4, 0, 0.2, 1);
+  }
+  
+  .hover-vibrant:hover {
+    filter: saturate(1.06) brightness(1.02);
+  }
+  
+  /* Soft border glow on hover using box-shadow */
+  .hover-glow {
+    transition: box-shadow var(--duration-normal, 180ms) cubic-bezier(0.4, 0, 0.2, 1);
+  }
+  
+  .hover-glow:hover {
+    box-shadow: 0 0 12px rgba(43, 80, 255, 0.2);
+  }
+  
+  .dark .hover-glow:hover {
+    box-shadow: 0 0 12px rgba(79, 111, 255, 0.25);
+  }
+  
+  /* Soft border glow with secondary color */
+  .hover-glow-secondary {
+    transition: box-shadow var(--duration-normal, 180ms) cubic-bezier(0.4, 0, 0.2, 1);
+  }
+  
+  .hover-glow-secondary:hover {
+    box-shadow: 0 0 12px rgba(255, 107, 104, 0.2);
+  }
+  
+  .dark .hover-glow-secondary:hover {
+    box-shadow: 0 0 12px rgba(255, 138, 135, 0.25);
+  }
+  
+  /* Soft border glow with tertiary color */
+  .hover-glow-tertiary {
+    transition: box-shadow var(--duration-normal, 180ms) cubic-bezier(0.4, 0, 0.2, 1);
+  }
+  
+  .hover-glow-tertiary:hover {
+    box-shadow: 0 0 12px rgba(255, 200, 87, 0.2);
+  }
+  
+  .dark .hover-glow-tertiary:hover {
+    box-shadow: 0 0 12px rgba(255, 213, 122, 0.25);
+  }
+  
+  /* Lift effect on hover (combines transform + shadow) */
+  .hover-lift {
+    transition: 
+      transform var(--duration-normal, 180ms) cubic-bezier(0.4, 0, 0.2, 1),
+      box-shadow var(--duration-normal, 180ms) cubic-bezier(0.4, 0, 0.2, 1);
+  }
+  
+  .hover-lift:hover {
+    transform: translateY(-2px);
+    box-shadow: 
+      0 4px 6px rgba(0, 0, 0, 0.05),
+      0 10px 15px rgba(0, 0, 0, 0.1);
+  }
+  
+  .dark .hover-lift:hover {
+    box-shadow: 
+      0 4px 6px rgba(0, 0, 0, 0.2),
+      0 10px 15px rgba(0, 0, 0, 0.15);
+  }
+  
+  /* Premium hover effect (lift + glow + saturate) */
+  .hover-premium {
+    transition: 
+      transform var(--duration-normal, 180ms) cubic-bezier(0.4, 0, 0.2, 1),
+      box-shadow var(--duration-normal, 180ms) cubic-bezier(0.4, 0, 0.2, 1),
+      filter var(--duration-normal, 180ms) cubic-bezier(0.4, 0, 0.2, 1);
+  }
+  
+  .hover-premium:hover {
+    transform: translateY(-2px);
+    filter: saturate(1.06);
+    box-shadow: 
+      0 4px 6px rgba(0, 0, 0, 0.05),
+      0 10px 15px rgba(0, 0, 0, 0.1),
+      0 0 20px rgba(43, 80, 255, 0.1);
+  }
+  
+  .dark .hover-premium:hover {
+    box-shadow: 
+      0 4px 6px rgba(0, 0, 0, 0.2),
+      0 10px 15px rgba(0, 0, 0, 0.15),
+      0 0 20px rgba(79, 111, 255, 0.15);
   }
 }
 
@@ -229,6 +1318,95 @@
 /* ----------------------------- ANIMATIONS ------------------------------ */
 /* ====================================================================== */
 
+/* Premium Animation Keyframes */
+@keyframes fade-slide {
+  from {
+    opacity: 0;
+    transform: translateY(10px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes scale-pop {
+  0% {
+    opacity: 0;
+    transform: scale(0.95);
+  }
+  50% {
+    transform: scale(1.02);
+  }
+  100% {
+    opacity: 1;
+    transform: scale(1);
+  }
+}
+
+@keyframes shake {
+  0%, 100% {
+    transform: translateX(0);
+  }
+  10%, 30%, 50%, 70%, 90% {
+    transform: translateX(-2px);
+  }
+  20%, 40%, 60%, 80% {
+    transform: translateX(2px);
+  }
+}
+
+/* Premium Animation Classes */
+.animate-fade-slide {
+  animation: fade-slide var(--duration-normal, 180ms) cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.animate-scale-pop {
+  animation: scale-pop var(--duration-normal, 180ms) cubic-bezier(0.2, 0.9, 0.3, 1);
+}
+
+.animate-shake {
+  animation: shake var(--duration-slow, 320ms) cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+/* Duration Utility Classes */
+.duration-fast {
+  animation-duration: var(--duration-fast, 120ms);
+  transition-duration: var(--duration-fast, 120ms);
+}
+
+.duration-normal {
+  animation-duration: var(--duration-normal, 180ms);
+  transition-duration: var(--duration-normal, 180ms);
+}
+
+.duration-slow {
+  animation-duration: var(--duration-slow, 320ms);
+  transition-duration: var(--duration-slow, 320ms);
+}
+
+.duration-slower {
+  animation-duration: var(--duration-slower, 420ms);
+  transition-duration: var(--duration-slower, 420ms);
+}
+
+/* Easing Utility Classes */
+.ease-smooth {
+  animation-timing-function: cubic-bezier(0.4, 0, 0.2, 1);
+  transition-timing-function: cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.ease-bounce {
+  animation-timing-function: cubic-bezier(0.2, 0.9, 0.3, 1);
+  transition-timing-function: cubic-bezier(0.2, 0.9, 0.3, 1);
+}
+
+.ease-gentle {
+  animation-timing-function: cubic-bezier(0.4, 0, 0.6, 1);
+  transition-timing-function: cubic-bezier(0.4, 0, 0.6, 1);
+}
+
+/* Legacy animation for compatibility */
 @keyframes fade-in {
   from {
     opacity: 0;
@@ -270,4 +1448,444 @@
 
 .animate-scaleIn {
   animation: scaleIn 0.2s ease-out;
+}
+
+/* Enhanced Loading Animations */
+@keyframes pulse-gentle {
+  0%, 100% {
+    opacity: 1;
+  }
+  50% {
+    opacity: 0.7;
+  }
+}
+
+.animate-pulse-gentle {
+  animation: pulse-gentle 2s cubic-bezier(0.4, 0, 0.6, 1) infinite;
+}
+
+@keyframes shimmer {
+  0% {
+    background-position: -200px 0;
+  }
+  100% {
+    background-position: calc(200px + 100%) 0;
+  }
+}
+
+.animate-shimmer {
+  background: linear-gradient(90deg, #f0f0f0 0px, #e0e0e0 40px, #f0f0f0 80px);
+  background-size: 200px 100%;
+  animation: shimmer 1.5s ease-in-out infinite;
+}
+
+@keyframes slide-up {
+  from {
+    opacity: 0;
+    transform: translateY(20px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.animate-slide-up {
+  animation: slide-up 0.4s ease-out;
+}
+
+@keyframes slide-down {
+  from {
+    opacity: 0;
+    transform: translateY(-20px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.animate-slide-down {
+  animation: slide-down 0.4s ease-out;
+}
+
+@keyframes bounce-gentle {
+  0%, 20%, 53%, 80%, 100% {
+    transform: translate3d(0, 0, 0);
+  }
+  40%, 43% {
+    transform: translate3d(0, -8px, 0);
+  }
+  70% {
+    transform: translate3d(0, -4px, 0);
+  }
+  90% {
+    transform: translate3d(0, -2px, 0);
+  }
+}
+
+.animate-bounce-gentle {
+  animation: bounce-gentle 1s ease-in-out;
+}
+
+@keyframes rotate-slow {
+  from {
+    transform: rotate(0deg);
+  }
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+.animate-rotate-slow {
+  animation: rotate-slow 3s linear infinite;
+}
+
+/* Staggered Animation Delays */
+.animate-stagger-1 {
+  animation-delay: 0.1s;
+}
+
+.animate-stagger-2 {
+  animation-delay: 0.2s;
+}
+
+.animate-stagger-3 {
+  animation-delay: 0.3s;
+}
+
+.animate-stagger-4 {
+  animation-delay: 0.4s;
+}
+
+.animate-stagger-5 {
+  animation-delay: 0.5s;
+}
+
+/* ====================================================================== */
+/* ------------------------- RESPONSIVE UTILITIES ----------------------- */
+/* ====================================================================== */
+
+/* Mobile-first responsive containers */
+.container-responsive {
+  @apply w-full max-w-7xl mx-auto px-3 sm:px-4 lg:px-6;
+}
+
+.container-narrow {
+  @apply w-full max-w-4xl mx-auto px-3 sm:px-4 lg:px-6;
+}
+
+/* Responsive grid layouts */
+.grid-responsive-2 {
+  @apply grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-4 lg:gap-6;
+}
+
+.grid-responsive-3 {
+  @apply grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3 sm:gap-4 lg:gap-6;
+}
+
+.grid-responsive-4 {
+  @apply grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-2 sm:gap-3 lg:gap-4;
+}
+
+/* Responsive spacing */
+.space-responsive {
+  @apply space-y-3 sm:space-y-4 lg:space-y-6;
+}
+
+.gap-responsive {
+  @apply gap-3 sm:gap-4 lg:gap-6;
+}
+
+/* Responsive text sizing */
+.text-responsive-xs {
+  @apply text-xs sm:text-sm;
+}
+
+.text-responsive-sm {
+  @apply text-sm sm:text-base;
+}
+
+.text-responsive-base {
+  @apply text-base sm:text-lg;
+}
+
+.text-responsive-lg {
+  @apply text-lg sm:text-xl lg:text-2xl;
+}
+
+.text-responsive-xl {
+  @apply text-xl sm:text-2xl lg:text-3xl;
+}
+
+/* Responsive padding */
+.p-responsive {
+  @apply p-3 sm:p-4 lg:p-6;
+}
+
+.px-responsive {
+  @apply px-3 sm:px-4 lg:px-6;
+}
+
+.py-responsive {
+  @apply py-3 sm:py-4 lg:py-6;
+}
+
+/* ====================================================================== */
+/* ------------------------- ACCESSIBILITY UTILITIES -------------------- */
+/* ====================================================================== */
+
+/* Screen reader only content */
+.sr-only {
+  @apply absolute w-px h-px p-0 -m-px overflow-hidden whitespace-nowrap border-0;
+  clip: rect(0, 0, 0, 0);
+}
+
+/* Focus visible improvements */
+.focus-visible-enhanced {
+  @apply focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2 focus-visible:ring-offset-background;
+}
+
+/* High contrast mode support - Theme-aware */
+@media (prefers-contrast: high) {
+  .property-card {
+    @apply border-2 border-border;
+  }
+  
+  .error-state {
+    @apply border-2 border-destructive;
+  }
+  
+  .warning-state {
+    @apply border-2 border-accent;
+  }
+}
+
+/* Reduced motion support - Respect user preferences */
+@media (prefers-reduced-motion: reduce) {
+  /* Disable all premium animations */
+  .animate-fade-slide,
+  .animate-scale-pop,
+  .animate-shake,
+  .animate-fade-in,
+  .animate-fadeIn,
+  .animate-scaleIn,
+  .animate-slide-up,
+  .animate-slide-down,
+  .animate-bounce-gentle,
+  .animate-pulse-gentle,
+  .animate-shimmer,
+  .animate-rotate-slow {
+    animation: none !important;
+  }
+  
+  /* Disable all transitions and animations for users who prefer reduced motion */
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
+  
+  /* Reduce transitions to simple opacity changes only */
+  .transition-all,
+  .transition-colors,
+  .transition-transform,
+  .transition-shadow,
+  .theme-transition-fast,
+  .theme-transition-smooth,
+  .theme-transition-slow,
+  .duration-fast,
+  .duration-normal,
+  .duration-slow,
+  .duration-slower {
+    transition-property: opacity !important;
+    transition-duration: 0.01ms !important;
+  }
+  
+  /* Preserve essential opacity transitions for accessibility */
+  button:hover,
+  a:hover,
+  .hover\:opacity-80:hover {
+    transition: opacity 150ms ease-in-out;
+  }
+}
+
+/* Enhanced theme transition performance */
+@media (prefers-reduced-motion: no-preference) {
+  /* Optimize transitions for better performance */
+  .theme-optimized {
+    will-change: background-color, color, border-color;
+  }
+  
+  /* Smooth theme toggle animation */
+  .theme-toggle-smooth {
+    transition: 
+      background-color 0.25s cubic-bezier(0.4, 0, 0.2, 1),
+      color 0.25s cubic-bezier(0.4, 0, 0.2, 1),
+      transform 0.15s cubic-bezier(0.4, 0, 0.2, 1);
+  }
+  
+  .theme-toggle-smooth:hover {
+    transform: scale(1.05);
+  }
+}
+
+/* ====================================================================== */
+/* ------------------------- MOBILE OPTIMIZATIONS ---------------------- */
+/* ====================================================================== */
+
+/* Touch-friendly interactive elements */
+.touch-target {
+  @apply min-h-[44px] min-w-[44px] flex items-center justify-center;
+}
+
+/* Scrollbar utilities */
+.scrollbar-hide {
+  -ms-overflow-style: none;
+  scrollbar-width: none;
+}
+
+.scrollbar-hide::-webkit-scrollbar {
+  display: none;
+}
+
+.scrollbar-thin {
+  scrollbar-width: thin;
+}
+
+.scrollbar-thin::-webkit-scrollbar {
+  width: 4px;
+  height: 4px;
+}
+
+.scrollbar-thin::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+.scrollbar-thin::-webkit-scrollbar-thumb {
+  background: rgba(0, 0, 0, 0.2);
+  border-radius: 2px;
+}
+
+.scrollbar-thin::-webkit-scrollbar-thumb:hover {
+  background: rgba(0, 0, 0, 0.3);
+}
+
+/* Mobile-specific layouts */
+@media (max-width: 640px) {
+  .mobile-stack {
+    @apply flex-col space-y-3;
+  }
+  
+  .mobile-full-width {
+    @apply w-full;
+  }
+  
+  .mobile-center {
+    @apply text-center;
+  }
+  
+  .mobile-hide {
+    @apply hidden;
+  }
+  
+  .mobile-show {
+    @apply block;
+  }
+}
+
+/* Tablet-specific layouts */
+@media (min-width: 641px) and (max-width: 1024px) {
+  .tablet-grid-2 {
+    @apply grid-cols-2;
+  }
+  
+  .tablet-hide {
+    @apply hidden;
+  }
+  
+  .tablet-show {
+    @apply block;
+  }
+}
+
+/* Desktop-specific layouts */
+@media (min-width: 1025px) {
+  .desktop-grid-3 {
+    @apply grid-cols-3;
+  }
+  
+  .desktop-grid-4 {
+    @apply grid-cols-4;
+  }
+  
+  .desktop-hide {
+    @apply hidden;
+  }
+  
+  .desktop-show {
+    @apply block;
+  }
+}
+
+/* ====================================================================== */
+/* ----------------------- LEAFLET MAP STYLES --------------------------- */
+/* ====================================================================== */
+
+/* Custom marker styles */
+.custom-marker,
+.price-marker {
+  background: transparent !important;
+  border: none !important;
+}
+
+/* Leaflet popup customization */
+.leaflet-popup-content-wrapper {
+  @apply bg-card border border-border rounded-xl shadow-xl p-0 overflow-hidden;
+}
+
+.leaflet-popup-content {
+  margin: 0 !important;
+  width: auto !important;
+}
+
+.leaflet-popup-tip {
+  @apply bg-card border-l border-b border-border;
+}
+
+.leaflet-popup-close-button {
+  @apply text-muted-foreground hover:text-foreground w-6 h-6 text-lg;
+  top: 8px !important;
+  right: 8px !important;
+}
+
+/* Map container dark mode support */
+.dark .leaflet-tile-pane {
+  filter: brightness(0.85) contrast(1.1) saturate(0.9);
+}
+
+.dark .leaflet-control-zoom a {
+  @apply bg-card text-foreground border-border hover:bg-muted;
+}
+
+.dark .leaflet-control-attribution {
+  @apply bg-card/80 text-muted-foreground;
+}
+
+/* Price marker hover effect */
+.price-marker > div:hover {
+  transform: scale(1.1);
+  z-index: 1000 !important;
+}
+
+/* Smooth transitions for markers */
+.leaflet-marker-icon {
+  transition: transform 0.2s ease;
+}
+
+.leaflet-marker-icon:hover {
+  z-index: 1000 !important;
 }
