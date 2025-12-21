@@ -13,10 +13,10 @@
   },
   "scripts": {
     "dev": "vite",
-    "build": "npm run build:client && npm run build:server",
+    "build": "vite build",
     "build:client": "vite build",
     "build:server": "vite build --config vite.config.server.js",
-    "start": "node dist/server/node-build.mjs",
+    "start": "node server/start.js",
     "test": "vitest --run",
     "test:chunked": "node scripts/test-chunked.js",
     "format.fix": "prettier --write .",
