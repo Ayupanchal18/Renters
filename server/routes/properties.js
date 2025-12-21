@@ -3,18 +3,9 @@ import { Property } from "../models/Property.js";
 import { User } from "../models/User.js";
 import { Favorite } from "../models/Favorite.js";
 import mongoose from "mongoose";
-import multer from "multer";
 import { connectDB } from "../src/config/db.js";
 import { authenticateToken } from "../src/middleware/security.js";
-
-const storage = multer.diskStorage({
-    destination: "uploads/properties",
-    filename: (req, file, cb) => {
-        const unique = Date.now() + "-" + Math.round(Math.random() * 1e9);
-        cb(null, unique + "-" + file.originalname);
-    }
-});
-const upload = multer({ storage });
+import { propertyUpload, uploadPropertyPhotos } from "../src/middleware/cloudinaryUpload.js";
 
 const router = Router();
 
@@ -49,7 +40,7 @@ function makeListingNumber() {
 }
 
 // Create property
-router.post("/", upload.array("photos", 10), async (req, res) => {
+router.post("/", propertyUpload.array("photos", 10), async (req, res) => {
     try {
         const userId = req.headers["x-user-id"];
         if (!userId) return res.status(401).json({ error: "Unauthorized - provide x-user-id header (dev)" });
@@ -72,7 +63,9 @@ router.post("/", upload.array("photos", 10), async (req, res) => {
         const baseSlug = slugify(`${body.title}-${body.city || ""}`.slice(0, 120));
         const slug = await makeUniqueSlug(baseSlug);
         const listingNumber = makeListingNumber();
-        const photoPaths = req.files?.map(f => `/uploads/properties/${f.filename}`) || [];
+
+        // Upload photos to Cloudinary instead of local storage
+        const photoPaths = await uploadPropertyPhotos(req.files);
 
         const doc = new Property({
             ...body,

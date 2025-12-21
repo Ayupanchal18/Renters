@@ -1,9 +1,5 @@
 import { Router } from "express";
 import { z } from "zod";
-import multer from "multer";
-import path from "path";
-import { fileURLToPath } from "url";
-import fs from "fs";
 import { Conversation } from "../models/Conversation.js";
 import messageService from "../src/services/messageService.js";
 import messageNotificationService from "../src/services/messageNotificationService.js";
@@ -13,62 +9,9 @@ import {
     validateInput,
     sendSuccess
 } from "../src/middleware/security.js";
-
-const __filename = fileURLToPath(import.meta.url);
-const __dirname = path.dirname(__filename);
+import { messageUpload, uploadMessageFile } from "../src/middleware/cloudinaryUpload.js";
 
 const router = Router();
-
-// =====================================================
-// FILE UPLOAD CONFIGURATION
-// =====================================================
-
-// Ensure uploads directory exists
-const uploadsDir = path.join(__dirname, '../uploads/messages');
-if (!fs.existsSync(uploadsDir)) {
-    fs.mkdirSync(uploadsDir, { recursive: true });
-}
-
-// Configure multer for file uploads
-const storage = multer.diskStorage({
-    destination: (req, file, cb) => {
-        cb(null, uploadsDir);
-    },
-    filename: (req, file, cb) => {
-        // Generate unique filename: timestamp-userId-originalname
-        const userId = req.user?._id || 'anonymous';
-        const timestamp = Date.now();
-        const ext = path.extname(file.originalname);
-        const name = path.basename(file.originalname, ext).replace(/[^a-zA-Z0-9]/g, '_');
-        cb(null, `${timestamp}-${userId}-${name}${ext}`);
-    }
-});
-
-// File filter for allowed types
-const fileFilter = (req, file, cb) => {
-    const allowedTypes = [
-        'image/jpeg', 'image/jpg', 'image/png', 'image/gif', 'image/webp',
-        'application/pdf', 'text/plain',
-        'application/msword',
-        'application/vnd.openxmlformats-officedocument.wordprocessingml.document'
-    ];
-
-    if (allowedTypes.includes(file.mimetype)) {
-        cb(null, true);
-    } else {
-        cb(new Error('File type not supported'), false);
-    }
-};
-
-// Configure multer
-const upload = multer({
-    storage,
-    fileFilter,
-    limits: {
-        fileSize: 10 * 1024 * 1024, // 10MB limit
-        files: 1 // Only one file per message
-    }
-});
 
 // =====================================================
 // VALIDATION SCHEMAS
@@ -314,7 +257,7 @@ router.get("/conversations/:id",
 router.post("/conversations/:id/messages",
     authenticateToken,
     checkBlockedUser,
-    upload.single('file'), // Handle file upload
+    messageUpload.single('file'), // Handle file upload with Cloudinary
     validateMessageInput, // Custom validation for text/file
     async (req, res) => {
         try {
@@ -325,19 +268,10 @@ router.post("/conversations/:id/messages",
             const { text } = req.body;
             const file = req.file;
 
-            // Prepare file data if file was uploaded
+            // Upload file to Cloudinary if present
             let fileData = null;
             if (file) {
-                // Generate public URL for the file
-                const fileUrl = `/uploads/messages/${file.filename}`;
-
-                fileData = {
-                    originalName: file.originalname,
-                    filename: file.filename,
-                    mimetype: file.mimetype,
-                    size: file.size,
-                    url: fileUrl
-                };
+                fileData = await uploadMessageFile(file);
             }
 
             // Send the message with optional file
@@ -349,15 +283,6 @@ router.post("/conversations/:id/messages",
             );
 
             if (!result.success) {
-                // If message failed and we uploaded a file, clean it up
-                if (file) {
-                    try {
-                        fs.unlinkSync(file.path);
-                    } catch (cleanupError) {
-                        console.error('Failed to cleanup uploaded file:', cleanupError);
-                    }
-                }
-
                 const statusCode = result.code === 'CONVERSATION_NOT_FOUND' ? 404 :
                     result.code === 'UNAUTHORIZED_ACCESS' ? 403 :
                         result.code === 'EMPTY_MESSAGE' ? 400 : 500;
@@ -409,15 +334,6 @@ router.post("/conversations/:id/messages",
             }, "Message sent successfully", 201);
         } catch (error) {
             console.error('Send message error:', error);
-
-            // Clean up uploaded file if there was an error
-            if (req.file) {
-                try {
-                    fs.unlinkSync(req.file.path);
-                } catch (cleanupError) {
-                    console.error('Failed to cleanup uploaded file:', cleanupError);
-                }
-            }
 
             // Handle multer errors
             if (error.code === 'LIMIT_FILE_SIZE') {
