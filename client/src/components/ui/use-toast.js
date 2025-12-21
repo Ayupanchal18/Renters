@@ -1,2 +1,2 @@
-import { useToast, toast } from "@/hooks/use-toast";
-export { useToast, toast };
+// Re-export from toaster.jsx which contains the consolidated implementation
+export { useToast, toast } from "./toaster";

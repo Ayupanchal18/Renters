@@ -1,16 +1,21 @@
-import { useState } from "react";
-import { Button } from "../ui/button"; // Assuming shadcn/ui button
-import { ChevronDown, ShieldCheck, Check, Filter } from "lucide-react";
+import React, { useState, useRef } from "react";
+import { Button } from "../ui/button";
+import { ChevronDown, ShieldCheck, Check, SlidersHorizontal, X, RotateCcw } from "lucide-react";
+import { 
+    FILTER_PROPERTY_TYPE_OPTIONS, 
+} from "../../utils/propertyTypeStandardization";
 
 export function FilterSidebar({ filters, onFilterChange }) {
-    // --- Logic remains exactly the same ---
     const [expandedSections, setExpandedSections] = useState({
         propertyType: true,
         bedrooms: true,
         price: true,
-        amenities: true,
+        furnishing: true,
+        amenities: false,
         verified: true,
     });
+
+    const sidebarRef = useRef(null);
 
     const toggleSection = (section) => {
         setExpandedSections((prev) => ({
@@ -20,122 +25,200 @@ export function FilterSidebar({ filters, onFilterChange }) {
     };
 
     const handlePropertyTypeChange = (value) => {
-        onFilterChange({ ...filters, propertyType: value });
+        onFilterChange("propertyType", value);
     };
 
     const handleBedroomChange = (bed) => {
-        const newBeds = filters.beds.includes(bed)
-            ? filters.beds.filter((b) => b !== bed)
-            : [...filters.beds, bed];
-        onFilterChange({ ...filters, beds: newBeds });
+        const newBedrooms = filters.bedrooms.includes(bed)
+            ? filters.bedrooms.filter((b) => b !== bed)
+            : [...filters.bedrooms, bed];
+        onFilterChange("bedrooms", newBedrooms);
     };
 
     const handleAmenityChange = (amenity) => {
         const newAmenities = filters.amenities.includes(amenity)
             ? filters.amenities.filter((a) => a !== amenity)
             : [...filters.amenities, amenity];
+        onFilterChange("amenities", newAmenities);
+    };
 
-        onFilterChange({ ...filters, amenities: newAmenities });
+    const handleFurnishingChange = (value) => {
+        const currentFurnishing = filters.furnishing || [];
+        const newFurnishing = currentFurnishing.includes(value)
+            ? currentFurnishing.filter((f) => f !== value)
+            : [...currentFurnishing, value];
+        onFilterChange("furnishing", newFurnishing);
     };
 
     const handlePriceChange = (type, value) => {
-        onFilterChange({
-            ...filters,
-            [type === "min" ? "minPrice" : "maxPrice"]: value,
-        });
+        if (value === "" || value === null || value === undefined) {
+            const newPriceRange = {
+                ...filters.priceRange,
+                [type]: type === "min" ? 0 : 100000
+            };
+            onFilterChange("priceRange", newPriceRange);
+            return;
+        }
+
+        const numValue = parseInt(String(value), 10);
+        
+        if (isNaN(numValue) || numValue < 0) {
+            return;
+        }
+
+        const newPriceRange = {
+            ...filters.priceRange,
+            [type]: numValue
+        };
+        
+        if (type === "min" && newPriceRange.max < 100000 && numValue > newPriceRange.max) {
+            return;
+        }
+        if (type === "max" && newPriceRange.min > 0 && numValue < newPriceRange.min) {
+            return;
+        }
+        
+        onFilterChange("priceRange", newPriceRange);
+    };
+
+    const handleVerifiedToggle = (checked) => {
+        onFilterChange("verifiedOnly", checked);
     };
 
     const handleClearFilters = () => {
-        onFilterChange({
-            city: "",
-            propertyType: "",
-            minPrice: "",
-            maxPrice: "",
-            beds: [],
-            amenities: [],
-            verifiedOnly: false,
-        });
+        onFilterChange("clearAll", null);
     };
 
-    // --- Updated JSX Design ---
-    return (
-        <aside className="w-80 sticky top-24 h-fit bg-white dark:bg-zinc-900 border border-slate-200 dark:border-zinc-800 rounded-xl shadow-sm p-6 space-y-1 overflow-y-auto max-h-[calc(100vh-8rem)]">
+    const getActiveFilterCount = () => {
+        let count = 0;
+        if (filters.propertyType) count++;
+        if (filters.priceRange.min > 0 || filters.priceRange.max < 100000) count++;
+        if (filters.bedrooms.length > 0) count++;
+        if ((filters.furnishing || []).length > 0) count++;
+        if (filters.amenities.length > 0) count++;
+        if (filters.verifiedOnly) count++;
+        return count;
+    };
 
-            <div className="flex items-center gap-2 mb-6 pb-4 border-b border-slate-100 dark:border-zinc-800">
-                <Filter className="w-5 h-5 text-indigo-600" />
-                <h2 className="font-bold text-lg text-slate-900 dark:text-white">Filters</h2>
-            </div>
+    const activeFilterCount = getActiveFilterCount();
 
-            {/* Property Type - Card Select Style */}
-            <div className="py-3 border-b border-slate-100 dark:border-zinc-800/50 last:border-0">
+    const FilterSection = ({ id, title, children, defaultExpanded = true }) => {
+        const isExpanded = expandedSections[id];
+        
+        return (
+            <div className="border-b border-border last:border-0">
                 <button
-                    onClick={() => toggleSection("propertyType")}
-                    className="flex items-center justify-between w-full mb-4 font-medium text-slate-900 dark:text-slate-100 group"
+                    onClick={() => toggleSection(id)}
+                    className="flex items-center justify-between w-full py-4 text-left group"
+                    aria-expanded={isExpanded}
+                    aria-controls={`${id}-content`}
                 >
-                    Property Type
+                    <span className="text-sm font-semibold text-foreground group-hover:text-primary transition-colors">
+                        {title}
+                    </span>
                     <ChevronDown
-                        className={`w-4 h-4 text-slate-400 transition-transform duration-200${expandedSections.propertyType ? "rotate-180" : ""
-                            }`}
+                        className={`w-4 h-4 text-muted-foreground transition-transform duration-200 ${
+                            isExpanded ? "rotate-180" : ""
+                        }`}
                     />
                 </button>
+                
+                <div
+                    id={`${id}-content`}
+                    className={`overflow-hidden transition-all duration-200 ${
+                        isExpanded ? "max-h-[500px] pb-4" : "max-h-0"
+                    }`}
+                >
+                    {children}
+                </div>
+            </div>
+        );
+    };
 
-                {expandedSections.propertyType && (
-                    <div className="grid grid-cols-2 gap-3">
-                        {["Room", "House", "Flat", "Hall"].map((type) => {
-                            const isSelected = filters.propertyType === type.toLowerCase();
+    return (
+        <aside 
+            ref={sidebarRef}
+            className="w-full lg:w-80 bg-card border border-border rounded-2xl shadow-sm overflow-hidden"
+            role="complementary"
+            aria-label="Property filters"
+        >
+            {/* Header */}
+            <div className="flex items-center justify-between p-5 border-b border-border bg-muted/30">
+                <div className="flex items-center gap-3">
+                    <div className="w-9 h-9 rounded-xl bg-primary/10 flex items-center justify-center">
+                        <SlidersHorizontal className="w-4 h-4 text-primary" />
+                    </div>
+                    <div>
+                        <h2 className="font-semibold text-foreground">Filters</h2>
+                        {activeFilterCount > 0 && (
+                            <p className="text-xs text-muted-foreground">
+                                {activeFilterCount} active
+                            </p>
+                        )}
+                    </div>
+                </div>
+                {activeFilterCount > 0 && (
+                    <button
+                        onClick={handleClearFilters}
+                        className="flex items-center gap-1.5 text-xs font-medium text-muted-foreground hover:text-destructive transition-colors px-2 py-1 rounded-lg hover:bg-destructive/10"
+                        aria-label="Clear all filters"
+                    >
+                        <RotateCcw className="w-3.5 h-3.5" />
+                        Reset
+                    </button>
+                )}
+            </div>
+
+            {/* Filter Sections */}
+            <div className="p-5 space-y-0 max-h-[calc(100vh-12rem)] overflow-y-auto">
+                
+                {/* Property Type */}
+                <FilterSection id="propertyType" title="Property Type">
+                    <div className="grid grid-cols-2 gap-2">
+                        {FILTER_PROPERTY_TYPE_OPTIONS.map((option) => {
+                            const isSelected = filters.propertyType === option.value;
                             return (
                                 <label
-                                    key={type}
+                                    key={option.value}
                                     className={`
-                                        relative flex items-center justify-center px-4 py-3 rounded-lg border cursor-pointer text-sm font-medium transition-all duration-200
-                                       ${isSelected
-                                            ? "bg-indigo-50 border-indigo-500 text-indigo-700 shadow-sm"
-                                            : "bg-white border-slate-200 text-slate-600 hover:border-slate-300 hover:bg-slate-50"
+                                        relative flex items-center justify-center px-3 py-2.5 rounded-xl border-2 cursor-pointer text-sm font-medium transition-all duration-200
+                                        ${isSelected
+                                            ? "bg-primary/10 border-primary text-primary"
+                                            : "bg-card border-border text-muted-foreground hover:border-primary/30 hover:bg-muted/50"
                                         }
                                     `}
                                 >
                                     <input
                                         type="radio"
                                         name="propertyType"
-                                        value={type.toLowerCase()}
+                                        value={option.value}
                                         checked={isSelected}
                                         onChange={(e) => handlePropertyTypeChange(e.target.value)}
-                                        className="sr-only" // Hide default radio
+                                        className="sr-only"
                                     />
-                                    {type}
-                                    {isSelected && <Check className="w-3.5 h-3.5 absolute top-2 right-2 text-indigo-600" />}
+                                    <span className="truncate">{option.label}</span>
+                                    {isSelected && (
+                                        <Check className="w-3.5 h-3.5 absolute top-1.5 right-1.5 text-primary" />
+                                    )}
                                 </label>
                             );
                         })}
                     </div>
-                )}
-            </div>
+                </FilterSection>
 
-            {/* Bedrooms - Pill/Tag Style */}
-            <div className="py-3 border-b border-slate-100 dark:border-zinc-800/50 last:border-0">
-                <button
-                    onClick={() => toggleSection("bedrooms")}
-                    className="flex items-center justify-between w-full mb-4 font-medium text-slate-900 dark:text-slate-100"
-                >
-                    Bedrooms
-                    <ChevronDown
-                        className={`w-4 h-4 text-slate-400 transition-transform duration-200${expandedSections.bedrooms ? "rotate-180" : ""
-                            }`}
-                    />
-                </button>
-
-                {expandedSections.bedrooms && (
+                {/* Bedrooms */}
+                <FilterSection id="bedrooms" title="Bedrooms">
                     <div className="flex flex-wrap gap-2">
                         {["1", "2", "3", "4", "5+"].map((bed) => {
-                            const isSelected = filters.beds.includes(bed);
+                            const isSelected = filters.bedrooms.includes(bed);
                             return (
                                 <label
                                     key={bed}
                                     className={`
-                                        flex items-center justify-center w-10 h-10 rounded-full border cursor-pointer text-sm transition-all duration-200
-                                       ${isSelected
-                                            ? "bg-slate-900 border-slate-900 text-white shadow-md"
-                                            : "bg-white border-slate-200 text-slate-600 hover:border-slate-400"
+                                        flex items-center justify-center w-12 h-12 rounded-xl border-2 cursor-pointer text-sm font-semibold transition-all duration-200
+                                        ${isSelected
+                                            ? "bg-primary border-primary text-primary-foreground shadow-md"
+                                            : "bg-card border-border text-muted-foreground hover:border-primary/30"
                                         }
                                     `}
                                 >
@@ -149,125 +232,187 @@ export function FilterSidebar({ filters, onFilterChange }) {
                                 </label>
                             );
                         })}
-                        <span className="text-xs self-center text-slate-400 ml-1">Beds</span>
                     </div>
-                )}
-            </div>
+                </FilterSection>
 
-            {/* Price Range - Side by Side Inputs */}
-            <div className="py-3 border-b border-slate-100 dark:border-zinc-800/50 last:border-0">
-                <button
-                    onClick={() => toggleSection("price")}
-                    className="flex items-center justify-between w-full mb-4 font-medium text-slate-900 dark:text-slate-100"
-                >
-                    Price Range
-                    <ChevronDown
-                        className={`w-4 h-4 text-slate-400 transition-transform duration-200${expandedSections.price ? "rotate-180" : ""
-                            }`}
-                    />
-                </button>
+                {/* Price Range */}
+                <FilterSection id="price" title="Price Range">
+                    <div className="space-y-4">
+                        <div className="grid grid-cols-2 gap-3">
+                            <div className="space-y-1.5">
+                                <label htmlFor="price-min" className="text-xs font-medium text-muted-foreground">
+                                    Minimum
+                                </label>
+                                <div className="relative">
+                                    <span className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground text-sm">$</span>
+                                    <input
+                                        id="price-min"
+                                        type="number"
+                                        placeholder="0"
+                                        min="0"
+                                        value={filters.priceRange.min || ""}
+                                        onChange={(e) => handlePriceChange("min", e.target.value)}
+                                        className="w-full pl-7 pr-3 py-2.5 bg-muted/50 border border-border rounded-xl text-sm font-medium text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary transition-all"
+                                    />
+                                </div>
+                            </div>
 
-                {expandedSections.price && (
-                    <div className="grid grid-cols-2 gap-4">
-                        <div className="space-y-1.5">
-                            <label className="text-xs font-medium text-slate-500">Min</label>
-                            <div className="relative">
-                                <span className="absolute left-3 top-2.5 text-slate-400 text-sm">$</span>
-                                <input
-                                    type="number"
-                                    placeholder="0"
-                                    value={filters.minPrice}
-                                    onChange={(e) => handlePriceChange("min", e.target.value)}
-                                    className="w-full pl-7 pr-3 py-2 border border-slate-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 transition-all"
-                                />
+                            <div className="space-y-1.5">
+                                <label htmlFor="price-max" className="text-xs font-medium text-muted-foreground">
+                                    Maximum
+                                </label>
+                                <div className="relative">
+                                    <span className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground text-sm">$</span>
+                                    <input
+                                        id="price-max"
+                                        type="number"
+                                        placeholder="Any"
+                                        min="0"
+                                        value={filters.priceRange.max === 100000 ? "" : filters.priceRange.max || ""}
+                                        onChange={(e) => handlePriceChange("max", e.target.value)}
+                                        className="w-full pl-7 pr-3 py-2.5 bg-muted/50 border border-border rounded-xl text-sm font-medium text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary transition-all"
+                                    />
+                                </div>
                             </div>
                         </div>
-
-                        <div className="space-y-1.5">
-                            <label className="text-xs font-medium text-slate-500">Max</label>
-                            <div className="relative">
-                                <span className="absolute left-3 top-2.5 text-slate-400 text-sm">$</span>
-                                <input
-                                    type="number"
-                                    placeholder="Any"
-                                    value={filters.maxPrice}
-                                    onChange={(e) => handlePriceChange("max", e.target.value)}
-                                    className="w-full pl-7 pr-3 py-2 border border-slate-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 transition-all"
-                                />
-                            </div>
+                        
+                        {/* Quick Price Buttons */}
+                        <div className="flex flex-wrap gap-2">
+                            {[500, 1000, 2000, 5000].map((price) => (
+                                <button
+                                    key={price}
+                                    onClick={() => handlePriceChange("max", price)}
+                                    className={`px-3 py-1.5 text-xs font-medium rounded-lg transition-all ${
+                                        filters.priceRange.max === price
+                                            ? "bg-primary text-primary-foreground"
+                                            : "bg-muted text-muted-foreground hover:bg-muted/80"
+                                    }`}
+                                >
+                                    Under ${price.toLocaleString()}
+                                </button>
+                            ))}
                         </div>
                     </div>
-                )}
-            </div>
+                </FilterSection>
 
-            {/* Amenities - Clean List with accent color */}
-            <div className="py-3 border-b border-slate-100 dark:border-zinc-800/50 last:border-0">
-                <button
-                    onClick={() => toggleSection("amenities")}
-                    className="flex items-center justify-between w-full mb-4 font-medium text-slate-900 dark:text-slate-100"
-                >
-                    Amenities
-                    <ChevronDown
-                        className={`w-4 h-4 text-slate-400 transition-transform duration-200${expandedSections.amenities ? "rotate-180" : ""
-                            }`}
-                    />
-                </button>
-
-                {expandedSections.amenities && (
-                    <div className="space-y-3">
-                        {["Furnished", "Parking", "Wifi", "Pet-friendly"].map((amenity) => (
-                            <label key={amenity} className="flex items-center gap-3 cursor-pointer group">
-                                <div className="relative flex items-center">
+                {/* Furnishing */}
+                <FilterSection id="furnishing" title="Furnishing">
+                    <div className="flex flex-wrap gap-2">
+                        {[
+                            { value: "unfurnished", label: "Unfurnished" },
+                            { value: "semi", label: "Semi-Furnished" },
+                            { value: "fully", label: "Fully Furnished" }
+                        ].map((option) => {
+                            const isSelected = (filters.furnishing || []).includes(option.value);
+                            return (
+                                <label
+                                    key={option.value}
+                                    className={`
+                                        flex items-center gap-2 px-3 py-2 rounded-xl border-2 cursor-pointer text-sm font-medium transition-all duration-200
+                                        ${isSelected
+                                            ? "bg-primary/10 border-primary text-primary"
+                                            : "bg-card border-border text-muted-foreground hover:border-primary/30"
+                                        }
+                                    `}
+                                >
                                     <input
                                         type="checkbox"
-                                        checked={filters.amenities.includes(amenity)}
-                                        onChange={() => handleAmenityChange(amenity)}
-                                        className="peer h-4 w-4 cursor-pointer appearance-none rounded border border-slate-300 checked:border-indigo-600 checked:bg-indigo-600 transition-all"
+                                        checked={isSelected}
+                                        onChange={() => handleFurnishingChange(option.value)}
+                                        className="sr-only"
                                     />
-                                    <Check className="pointer-events-none absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 w-3 h-3 text-white opacity-0 peer-checked:opacity-100" />
-                                </div>
-                                <span className="text-sm text-slate-600 group-hover:text-slate-900 transition-colors">
-                                    {amenity}
+                                    {isSelected && <Check className="w-3.5 h-3.5" />}
+                                    {option.label}
+                                </label>
+                            );
+                        })}
+                    </div>
+                </FilterSection>
+
+                {/* Amenities */}
+                <FilterSection id="amenities" title="Amenities">
+                    <div className="grid grid-cols-2 gap-2">
+                        {["Parking", "Wifi", "Pet-friendly", "Gym", "Pool", "Laundry", "AC", "Balcony"].map((amenity) => {
+                            const isSelected = filters.amenities.includes(amenity);
+                            return (
+                                <label 
+                                    key={amenity} 
+                                    className={`
+                                        flex items-center gap-2 px-3 py-2.5 rounded-xl cursor-pointer transition-all duration-200
+                                        ${isSelected 
+                                            ? "bg-primary/10 text-primary" 
+                                            : "bg-muted/50 text-muted-foreground hover:bg-muted"
+                                        }
+                                    `}
+                                >
+                                    <div className={`
+                                        w-4 h-4 rounded border-2 flex items-center justify-center transition-all
+                                        ${isSelected 
+                                            ? "bg-primary border-primary" 
+                                            : "border-border"
+                                        }
+                                    `}>
+                                        {isSelected && <Check className="w-3 h-3 text-primary-foreground" />}
+                                    </div>
+                                    <input
+                                        type="checkbox"
+                                        checked={isSelected}
+                                        onChange={() => handleAmenityChange(amenity)}
+                                        className="sr-only"
+                                    />
+                                    <span className="text-sm font-medium">{amenity}</span>
+                                </label>
+                            );
+                        })}
+                    </div>
+                </FilterSection>
+
+                {/* Verified Toggle */}
+                <div className="pt-4">
+                    <label className="flex items-center justify-between p-4 bg-gradient-to-r from-emerald-50 to-teal-50 dark:from-emerald-950/30 dark:to-teal-950/30 border border-emerald-200 dark:border-emerald-800/50 rounded-xl cursor-pointer hover:shadow-sm transition-all">
+                        <div className="flex items-center gap-3">
+                            <div className="w-10 h-10 rounded-xl bg-emerald-500/10 flex items-center justify-center">
+                                <ShieldCheck className="w-5 h-5 text-emerald-600 dark:text-emerald-400" />
+                            </div>
+                            <div>
+                                <span className="text-sm font-semibold text-emerald-900 dark:text-emerald-100 block">
+                                    Verified Only
                                 </span>
-                            </label>
-                        ))}
-                    </div>
-                )}
-            </div>
-
-            {/* Verified Toggle - Highlighted */}
-            <div className="py-4">
-                <label className="flex items-center justify-between p-3 border border-indigo-100 bg-indigo-50/50 rounded-lg cursor-pointer hover:bg-indigo-50 transition-colors">
-                    <div className="flex items-center gap-2">
-                        <div className="p-1.5 bg-white rounded-md text-indigo-600 shadow-sm">
-                            <ShieldCheck className="w-4 h-4" />
+                                <span className="text-xs text-emerald-600 dark:text-emerald-400">
+                                    Show trusted listings
+                                </span>
+                            </div>
                         </div>
-                        <span className="text-sm font-semibold text-indigo-900">Verified Only</span>
-                    </div>
-                    <div className="relative inline-flex items-center cursor-pointer">
-                        <input
-                            type="checkbox"
-                            checked={filters.verifiedOnly}
-                            onChange={(e) =>
-                                onFilterChange({ ...filters, verifiedOnly: e.target.checked })
-                            }
-                            className="sr-only peer"
-                        />
-                        <div className="w-9 h-5 bg-slate-200 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-4 after:w-4 after:transition-all peer-checked:bg-indigo-600"></div>
-                    </div>
-                </label>
+                        <div className="relative">
+                            <input
+                                type="checkbox"
+                                checked={filters.verifiedOnly}
+                                onChange={(e) => handleVerifiedToggle(e.target.checked)}
+                                className="sr-only peer"
+                            />
+                            <div className="w-11 h-6 bg-muted rounded-full peer peer-checked:bg-emerald-500 transition-colors">
+                                <div className={`absolute top-0.5 left-0.5 w-5 h-5 bg-white rounded-full shadow-sm transition-transform ${
+                                    filters.verifiedOnly ? "translate-x-5" : ""
+                                }`} />
+                            </div>
+                        </div>
+                    </label>
+                </div>
             </div>
 
-            {/* Clear Button */}
-            <div className="pt-2">
-                <Button
-                    onClick={handleClearFilters}
-                    variant="outline"
-                    className="w-full border-dashed border-slate-300 hover:border-slate-400 hover:bg-slate-50 text-slate-600"
-                >
-                    Reset all filters
-                </Button>
-            </div>
+            {/* Footer - Clear All */}
+            {activeFilterCount > 0 && (
+                <div className="p-4 border-t border-border bg-muted/30">
+                    <Button
+                        onClick={handleClearFilters}
+                        variant="outline"
+                        className="w-full h-11 border-dashed border-border hover:border-destructive/50 hover:bg-destructive/5 hover:text-destructive rounded-xl font-medium transition-all"
+                    >
+                        <X className="w-4 h-4 mr-2" />
+                        Clear all filters ({activeFilterCount})
+                    </Button>
+                </div>
+            )}
         </aside>
     );
 }

@@ -1,0 +1,1488 @@
+import { Router } from "express";
+import { Property } from "../models/Property.js";
+import { User } from "../models/User.js";
+import { Favorite } from "../models/Favorite.js";
+import mongoose from "mongoose";
+import multer from "multer";
+import propertyCache from "../src/utils/cache.js";
+import { optimizeAggregationPipeline, buildOptimizedFilter, queryMonitor } from "../src/utils/queryOptimizer.js";
+
+
+const storage = multer.diskStorage({
+    destination: "uploads/properties",
+    filename: (req, file, cb) => {
+        const unique = Date.now() + "-" + Math.round(Math.random() * 1e9);
+        cb(null, unique + "-" + file.originalname);
+    }
+});
+const upload = multer({ storage });
+
+
+const router = Router();
+
+function slugify(text) {
+    return String(text || "")
+        .toLowerCase()
+        .replace(/[^a-z0-9]+/g, "-")
+        .replace(/(^-|-$)+/g, "");
+}
+
+function randomSuffix(len = 4) {
+    return Math.random().toString(36).substring(2, 2 + len).toUpperCase();
+}
+
+async function makeUniqueSlug(base) {
+    let s = base;
+    let tries = 0;
+    while (tries < 6) {
+        const exists = await Property.findOne({ slug: s }).lean();
+        if (!exists) return s;
+        s = `${base}-${randomSuffix(3)}`;
+        tries++;
+    }
+    // fallback - append ObjectId like string
+    return `${base}-${mongoose.Types.ObjectId().toString().slice(-6)}`;
+}
+
+function makeListingNumber() {
+    const dt = new Date();
+    const pad = (n) => String(n).padStart(2, "0");
+    const stamp = `${dt.getFullYear()}${pad(dt.getMonth() + 1)}${pad(dt.getDate())}${pad(dt.getHours())}${pad(dt.getMinutes())}${pad(dt.getSeconds())}`;
+    return `LIST-${stamp}-${randomSuffix(4)}`;
+}
+
+// Create property
+router.post("/", upload.array("photos", 10), async (req, res) => {
+    try {
+        const userId = req.headers["x-user-id"];
+        if (!userId) return res.status(401).json({ error: "Unauthorized - provide x-user-id header (dev)" });
+
+        const user = await User.findById(userId).lean();
+        if (!user) return res.status(401).json({ error: "Invalid user id in x-user-id header" });
+
+        // Required fields check (quick)
+        const body = req.body || {};
+        const required = ["category", "title", "propertyType", "furnishing", "availableFrom", "city", "address", "monthlyRent"];
+        for (const r of required) {
+            if (body[r] === undefined || body[r] === null || body[r] === "") {
+                return res.status(400).json({ error: `Missing required field:${r}` });
+            }
+        }
+
+        // owner info: prefer body if user explicitly passed ownerName/Phone (but keep ownerId for identity)
+        const ownerName = body.ownerName || user.name;
+        const ownerPhone = body.ownerPhone || user.phone;
+        if (!ownerPhone) return res.status(400).json({ error: "ownerPhone missing and user has no phone" });
+
+        // make slug/listingNumber
+        const baseSlug = slugify(`${body.title}-${body.city || ""}`.slice(0, 120));
+        const slug = await makeUniqueSlug(baseSlug);
+        const listingNumber = makeListingNumber();
+        const photoPaths = req.files?.map(f => `/uploads/properties/${f.filename}`) || [];
+
+        const doc = new Property({
+            ...body,
+            photos: photoPaths,
+            ownerId: user._id,
+            ownerName,
+            ownerPhone,
+            ownerEmail: body.ownerEmail || user.email || "",
+            slug,
+            listingNumber,
+            // Optionally set location if body provides lat/lng:
+            location: body.location || (body.lat && body.lng ? { type: "Point", coordinates: [body.lng, body.lat] } : undefined),
+        });
+
+        await doc.save();
+        res.status(201).json(doc);
+    } catch (err) {
+        // Mongoose validation errors:
+        if (err.name === "ValidationError") {
+            const messages = Object.values(err.errors).map(e => e.message);
+            return res.status(400).json({ error: "Property validation failed", details: messages });
+        }
+        console.error(err);
+        res.status(500).json({ error: "Server error", message: err.message });
+    }
+});
+
+/* ---------------- LIST + FILTER + PAGINATION ---------------- */
+// routes/properties.js
+
+
+/* ----------------- small dev admin middleware ----------------- */
+const isAdmin = (req, res, next) => {
+    const role = req.headers["x-user-role"];
+    if (role !== "admin") return res.status(403).json({ error: "Forbidden - admin only" });
+    next();
+};
+
+/* ----------------- helpers ----------------- */
+function parseCSV(q) {
+    if (!q) return [];
+    return String(q)
+        .split(",")
+        .map(s => s.trim())
+        .filter(Boolean);
+}
+
+function buildRangeFilter(fieldName, minVal, maxVal) {
+    const f = {};
+    if (minVal !== undefined && minVal !== null && minVal !== "") f.$gte = Number(minVal);
+    if (maxVal !== undefined && maxVal !== null && maxVal !== "") f.$lte = Number(maxVal);
+    return Object.keys(f).length ? { [fieldName]: f } : null;
+}
+
+/* ----------------- Single powerful GET /properties ----------------- */
+/**
+ * Supported query params:
+ * page, limit
+ * city, category, propertyType, ownerId
+ * minRent, maxRent
+ * bedrooms, bathrooms
+ * furnishing
+ * amenities (comma separated) -> requires property to contain ALL those amenities
+ * areaMin, areaMax -> will test against builtUpArea then carpetArea fallback
+ * sort: rent_low_to_high | rent_high_to_low | newest | oldest | featured | nearest
+ * lat, lng (required for nearest)
+ */
+router.get("/", async (req, res) => {
+    try {
+        const page = Math.max(1, Number(req.query.page) || 1);
+        const limit = Math.min(100, Number(req.query.limit) || 12);
+        const skip = (page - 1) * limit;
+
+        // base filter: visible only
+        const filter = { isDeleted: false, status: "active" };
+
+        // simple equality filters
+        if (req.query.city) filter.city = String(req.query.city);
+        if (req.query.category) filter.category = String(req.query.category);
+        if (req.query.propertyType) filter.propertyType = String(req.query.propertyType);
+        if (req.query.ownerId) {
+            if (mongoose.Types.ObjectId.isValid(req.query.ownerId)) filter.ownerId = req.query.ownerId;
+        }
+
+        // numeric range filters
+        if (req.query.minRent) filter.monthlyRent = { ...(filter.monthlyRent || {}), $gte: Number(req.query.minRent) };
+        if (req.query.maxRent) filter.monthlyRent = { ...(filter.monthlyRent || {}), $lte: Number(req.query.maxRent) };
+
+        if (req.query.bedrooms) filter.bedrooms = Number(req.query.bedrooms);
+        if (req.query.bathrooms) filter.bathrooms = Number(req.query.bathrooms);
+
+        if (req.query.furnishing) filter.furnishing = String(req.query.furnishing);
+
+        // amenities: require EVERY amenity in the list
+        if (req.query.amenities) {
+            const amenities = parseCSV(req.query.amenities);
+            if (amenities.length) filter.amenities = { $all: amenities };
+        }
+
+        // area filtering (check builtUpArea OR carpetArea)
+        const areaMin = req.query.areaMin, areaMax = req.query.areaMax;
+        if (areaMin || areaMax) {
+            const areaFilter = {};
+            if (areaMin) areaFilter.$gte = Number(areaMin);
+            if (areaMax) areaFilter.$lte = Number(areaMax);
+            // we'll use $or to accept if either builtUpArea or carpetArea falls in range
+            filter.$or = [
+                { builtUpArea: areaFilter },
+                { carpetArea: areaFilter }
+            ];
+        }
+
+        // search text (q)
+        if (req.query.q) {
+            // use text search if possible
+            filter.$text = { $search: String(req.query.q) };
+        }
+
+        // Sorting
+        const sortParam = String(req.query.sort || "newest");
+        let mongoSort = { createdAt: -1 }; // newest by default
+        let geoNear = null;
+
+        if (sortParam === "rent_low_to_high") mongoSort = { monthlyRent: 1, createdAt: -1 };
+        else if (sortParam === "rent_high_to_low") mongoSort = { monthlyRent: -1, createdAt: -1 };
+        else if (sortParam === "oldest") mongoSort = { createdAt: 1 };
+        else if (sortParam === "featured") mongoSort = { featured: -1, createdAt: -1 };
+        else if (sortParam === "nearest") {
+            const lat = Number(req.query.lat);
+            const lng = Number(req.query.lng);
+            if (!isFinite(lat) || !isFinite(lng)) {
+                return res.status(400).json({ error: "nearest sort requires lat & lng query params" });
+            }
+            // for nearest, we'll use aggregate $geoNear
+            geoNear = {
+                near: { type: "Point", coordinates: [lng, lat] },
+                distanceField: "dist.calculated",
+                spherical: true,
+                query: filter,
+            };
+            // if using geoNear, we won't use find+skip+limit directly
+        }
+
+        if (geoNear) {
+            // Aggregation pipeline for nearest
+            const agg = [
+                { $geoNear: geoNear },
+                { $sort: { "dist.calculated": 1, createdAt: -1 } },
+                { $skip: skip },
+                { $limit: limit },
+                {
+                    $project: {
+                        title: 1, slug: 1, city: 1, monthlyRent: 1, photos: 1, listingNumber: 1, location: 1, dist: 1
+                    }
+                }
+            ];
+
+            const items = await Property.aggregate(agg);
+            // countDocuments for geoNear using the same query
+            const total = await Property.countDocuments(filter);
+            return res.json({ items, total, page, pageSize: limit });
+        }
+
+        // Non-geo flow
+        // If text search was added, score sort is useful
+        let query = Property.find(filter).sort(mongoSort).skip(skip).limit(limit).lean();
+
+        if (filter.$text) {
+            // project text score and sort by it first
+            query = Property.find(filter, { score: { $meta: "textScore" } })
+                .sort({ score: { $meta: "textScore" }, ...mongoSort })
+                .skip(skip)
+                .limit(limit)
+                .lean();
+        }
+
+        const [items, total] = await Promise.all([query.exec(), Property.countDocuments(filter)]);
+        res.json({ items, total, page, pageSize: limit });
+
+    } catch (err) {
+        console.error("GET /properties error:", err);
+        res.status(500).json({ error: "Server error", message: err.message });
+    }
+});
+
+
+
+/* -------------- Search (autocomplete) -------------- */
+router.get("/search", async (req, res) => {
+    try {
+        const q = String(req.query.q || "").trim();
+        if (!q) return res.json({ items: [] });
+
+        // text search first
+        const textResults = await Property.find(
+            { $text: { $search: q }, isDeleted: false, status: "active" },
+            { score: { $meta: "textScore" } }
+        )
+            .sort({ score: { $meta: "textScore" } })
+            .limit(10)
+            .select("title slug city monthlyRent photos listingNumber")
+            .lean();
+
+        if (textResults.length) return res.json({ items: textResults });
+
+        // fallback: prefix regex search
+        const regex = new RegExp("^" + q.replace(/[.*+?^${}()|[\]\\]/g, "\\$&"), "i");
+        const fallback = await Property.find(
+            { $or: [{ title: regex }, { city: regex }], isDeleted: false, status: "active" }
+        )
+            .limit(10)
+            .select("title slug city monthlyRent photos listingNumber")
+            .lean();
+
+        res.json({ items: fallback });
+    } catch (err) {
+        console.error("GET /properties/search error:", err);
+        res.status(500).json({ error: "Server error" });
+    }
+});
+
+/* -------------- Search Suggestions -------------- */
+router.get("/search-suggestions", async (req, res) => {
+    try {
+        const q = String(req.query.q || "").trim();
+
+        if (!q) {
+            // Return popular search terms when no query
+            const suggestions = [
+                "apartment", "house", "studio", "2 bedroom", "3 bedroom",
+                "furnished", "unfurnished", "pet friendly", "parking"
+            ];
+            return res.json({ suggestions });
+        }
+
+        // Generate suggestions based on query
+        const commonTerms = [
+            "apartment", "house", "villa", "studio", "condo",
+            "furnished", "unfurnished", "pet friendly", "parking",
+            "gym", "pool", "balcony", "garden", "security"
+        ];
+
+        const matchingTerms = commonTerms.filter(term =>
+            term.toLowerCase().includes(q.toLowerCase()) &&
+            term.toLowerCase() !== q.toLowerCase()
+        );
+
+        // Also get suggestions from actual property data
+        const propertyBasedSuggestions = await Property.aggregate([
+            {
+                $match: {
+                    $or: [
+                        { title: { $regex: q, $options: "i" } },
+                        { city: { $regex: q, $options: "i" } },
+                        { propertyType: { $regex: q, $options: "i" } }
+                    ],
+                    isDeleted: false,
+                    status: "active"
+                }
+            },
+            {
+                $group: {
+                    _id: null,
+                    cities: { $addToSet: "$city" },
+                    propertyTypes: { $addToSet: "$propertyType" }
+                }
+            }
+        ]);
+
+        let suggestions = [...matchingTerms];
+
+        if (propertyBasedSuggestions.length > 0) {
+            const { cities, propertyTypes } = propertyBasedSuggestions[0];
+            suggestions.push(...cities.slice(0, 3), ...propertyTypes.slice(0, 3));
+        }
+
+        res.json({ suggestions: suggestions.slice(0, 8) });
+    } catch (err) {
+        console.error("GET /properties/search-suggestions error:", err);
+        res.status(500).json({ error: "Server error" });
+    }
+});
+
+/* -------------- Recent Searches -------------- */
+router.get("/recent-searches", async (req, res) => {
+    try {
+        // For now, return empty array since we don't have user session management
+        // In a real app, this would fetch from user's search history
+        res.json({ recentSearches: [] });
+    } catch (err) {
+        console.error("GET /properties/recent-searches error:", err);
+        res.status(500).json({ error: "Server error" });
+    }
+});
+
+
+// Enhanced search endpoint that matches frontend expectations
+router.post("/search", async (req, res) => {
+    try {
+        const {
+            // Frontend sends these parameters
+            q = "",
+            query = "",
+            searchQuery = "",
+            location = "",
+            city = "",
+            category = "",
+            propertyType = "",
+            type = "",
+            page = 1,
+            limit = 12,
+            sort = "newest",
+            filters = {}
+        } = req.body;
+
+        // Normalize search query from different possible fields
+        const searchText = q || query || searchQuery || "";
+        const searchLocation = location || city || filters.city || "";
+        const searchPropertyType = propertyType || type || filters.propertyType || "";
+
+        console.log("Search parameters:", { searchText, searchLocation, searchPropertyType, filters });
+
+        // Setup pagination
+        const pageNum = Math.max(1, Number(page));
+        const limitNum = Math.min(100, Number(limit));
+        const skip = (pageNum - 1) * limitNum;
+
+        // Build match stage
+        const matchStage = {
+            isDeleted: false,
+            status: "active"
+        };
+
+        const andConditions = [];
+
+        // Text search across title, description, category, propertyType
+        if (searchText) {
+            const escapedQuery = String(searchText).replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+            const regex = new RegExp(escapedQuery, "i");
+
+            andConditions.push({
+                $or: [
+                    { title: regex },
+                    { description: regex },
+                    { category: regex },
+                    { propertyType: regex },
+                    { amenities: regex }
+                ]
+            });
+        }
+
+        // Location search (city filtering with case-insensitive partial match)
+        if (searchLocation) {
+            const locationRegex = new RegExp(searchLocation.replace(/[.*+?^${}()|[\]\\]/g, "\\$&"), "i");
+            andConditions.push({
+                $or: [
+                    { city: locationRegex },
+                    { address: locationRegex }
+                ]
+            });
+        }
+
+        // Property type filter
+        if (searchPropertyType) {
+            matchStage.propertyType = searchPropertyType;
+        }
+
+        // Category filter
+        if (category) {
+            matchStage.category = category;
+        }
+
+        // Apply additional filters from filters object
+        if (filters.city) {
+            const cityRegex = new RegExp(filters.city.replace(/[.*+?^${}()|[\]\\]/g, "\\$&"), "i");
+            matchStage.city = cityRegex;
+        }
+
+        if (filters.category) {
+            matchStage.category = filters.category;
+        }
+
+        if (filters.propertyType) {
+            matchStage.propertyType = filters.propertyType;
+        }
+
+        // Price range filter
+        if (filters.priceRange) {
+            const priceFilter = {};
+            if (filters.priceRange.min !== undefined && filters.priceRange.min > 0) {
+                priceFilter.$gte = Number(filters.priceRange.min);
+            }
+            if (filters.priceRange.max !== undefined && filters.priceRange.max < 100000) {
+                priceFilter.$lte = Number(filters.priceRange.max);
+            }
+            if (Object.keys(priceFilter).length > 0) {
+                matchStage.monthlyRent = priceFilter;
+            }
+        }
+
+        // Bedrooms filter
+        if (filters.bedrooms && Array.isArray(filters.bedrooms) && filters.bedrooms.length > 0) {
+            const bedroomConditions = filters.bedrooms.map(bed => {
+                if (bed === "5+") {
+                    return { bedrooms: { $gte: 5 } };
+                }
+                return { bedrooms: Number(bed) };
+            });
+            andConditions.push({ $or: bedroomConditions });
+        }
+
+        // Amenities filter (must have all selected amenities)
+        if (filters.amenities && Array.isArray(filters.amenities) && filters.amenities.length > 0) {
+            matchStage.amenities = { $all: filters.amenities };
+        }
+
+        // Furnishing filter
+        if (filters.furnishing && Array.isArray(filters.furnishing) && filters.furnishing.length > 0) {
+            matchStage.furnishing = { $in: filters.furnishing };
+        }
+
+        // Verified only filter
+        if (filters.verifiedOnly) {
+            matchStage.ownerType = "owner";
+        }
+
+        // Apply AND conditions
+        if (andConditions.length > 0) {
+            matchStage.$and = andConditions;
+        }
+
+        // Build aggregation pipeline
+        const pipeline = [];
+
+        // Add match stage
+        pipeline.push({ $match: matchStage });
+
+        // Sorting
+        let sortStage = { createdAt: -1 };
+        switch (sort) {
+            case "rent_low_to_high":
+            case "price_low":
+                sortStage = { monthlyRent: 1, createdAt: -1 };
+                break;
+            case "rent_high_to_low":
+            case "price_high":
+                sortStage = { monthlyRent: -1, createdAt: -1 };
+                break;
+            case "oldest":
+                sortStage = { createdAt: 1 };
+                break;
+            case "featured":
+                sortStage = { featured: -1, createdAt: -1 };
+                break;
+            case "popular":
+                sortStage = { views: -1, createdAt: -1 };
+                break;
+            case "newest":
+            case "relevance":
+            default:
+                sortStage = { createdAt: -1 };
+        }
+
+        // Add relevance scoring for text search
+        if (searchText) {
+            pipeline.push({
+                $addFields: {
+                    relevanceScore: {
+                        $add: [
+                            { $cond: [{ $regexMatch: { input: "$title", regex: searchText, options: "i" } }, 10, 0] },
+                            { $cond: [{ $regexMatch: { input: "$category", regex: searchText, options: "i" } }, 5, 0] },
+                            { $cond: [{ $regexMatch: { input: "$propertyType", regex: searchText, options: "i" } }, 3, 0] }
+                        ]
+                    }
+                }
+            });
+
+            // Sort by relevance if text search
+            if (sort === "newest" || sort === "relevance") {
+                sortStage = { relevanceScore: -1, createdAt: -1 };
+            }
+        }
+
+        pipeline.push({ $sort: sortStage });
+
+        // Facet for data and count
+        pipeline.push({
+            $facet: {
+                metadata: [{ $count: "total" }],
+                data: [
+                    { $skip: skip },
+                    { $limit: limitNum }
+                ]
+            }
+        });
+
+        const result = await Property.aggregate(pipeline);
+        const data = result[0].data;
+        const total = result[0].metadata[0] ? result[0].metadata[0].total : 0;
+
+        // Format response to match frontend expectations
+        return res.json({
+            success: true,
+            data: {
+                searchResultData: data,
+                message: "Search completed successfully"
+            },
+            pagination: {
+                total,
+                page: pageNum,
+                pageSize: limitNum,
+                totalPages: Math.ceil(total / limitNum)
+            }
+        });
+
+    } catch (err) {
+        console.error("Search API Error:", err);
+        return res.status(500).json({
+            success: false,
+            error: "Internal Server Error",
+            message: err.message
+        });
+    }
+});
+
+/* -------------- ENHANCED PROPERTY ENDPOINTS -------------- */
+
+/**
+ * POST /api/properties/advanced-search
+ * Enhanced search endpoint with multiple criteria and better performance
+ * Requirements: 2.1, 3.1
+ */
+router.post("/advanced-search", async (req, res) => {
+    try {
+        const startTime = Date.now(); // Fix: Add missing startTime variable
+        const queryId = `search_${Date.now()}_${Math.random()}`;
+        queryMonitor.startTimer(queryId);
+
+        const {
+            // Search query
+            query = "",
+            location = "",
+
+            // Pagination
+            page = 1,
+            limit = 12,
+
+            // Filters
+            filters = {},
+
+            // Sorting
+            sort = "newest",
+
+            // Location for nearest sort
+            userLocation = null
+        } = req.body;
+
+        // Generate cache key
+        const cacheKey = propertyCache.generateKey({
+            query, location, page, limit, filters, sort, userLocation
+        });
+
+        // Check cache first (skip for geo queries as they're location-specific)
+        if (sort !== "nearest") {
+            const cachedResult = propertyCache.get(cacheKey);
+            if (cachedResult) {
+                queryMonitor.endTimer(queryId);
+                return res.json({
+                    ...cachedResult,
+                    cached: true
+                });
+            }
+        }
+
+        // Validate pagination
+        const pageNum = Math.max(1, Number(page));
+        const limitNum = Math.min(100, Number(limit));
+        const skip = (pageNum - 1) * limitNum;
+
+        // Build match stage
+        const matchStage = {
+            isDeleted: false,
+            status: "active"
+        };
+
+        const andConditions = [];
+
+        // Text search with relevance scoring
+        if (query) {
+            const escapedQuery = String(query).replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+            const regex = new RegExp(escapedQuery, "i");
+
+            andConditions.push({
+                $or: [
+                    { title: regex },
+                    { description: regex },
+                    { city: regex },
+                    { address: regex },
+                    { propertyType: regex },
+                    { amenities: regex }
+                ]
+            });
+        }
+
+        // Location search
+        if (location) {
+            const locationRegex = new RegExp(location.replace(/[.*+?^${}()|[\]\\]/g, "\\$&"), "i");
+            andConditions.push({
+                $or: [
+                    { city: locationRegex },
+                    { address: locationRegex }
+                ]
+            });
+        }
+
+        // Apply filters
+        if (filters.category) matchStage.category = filters.category;
+        if (filters.propertyType) matchStage.propertyType = filters.propertyType;
+        if (filters.furnishing) matchStage.furnishing = filters.furnishing;
+        if (filters.city) matchStage.city = filters.city;
+
+        // Price range
+        if (filters.priceRange) {
+            const priceFilter = {};
+            if (filters.priceRange.min !== undefined) priceFilter.$gte = Number(filters.priceRange.min);
+            if (filters.priceRange.max !== undefined) priceFilter.$lte = Number(filters.priceRange.max);
+            if (Object.keys(priceFilter).length > 0) {
+                matchStage.monthlyRent = priceFilter;
+            }
+        }
+
+        // Bedrooms - support both array and single value
+        if (filters.bedrooms) {
+            if (Array.isArray(filters.bedrooms)) {
+                matchStage.bedrooms = { $in: filters.bedrooms };
+            } else {
+                matchStage.bedrooms = Number(filters.bedrooms);
+            }
+        }
+
+        // Amenities - must have all specified
+        if (filters.amenities && Array.isArray(filters.amenities) && filters.amenities.length > 0) {
+            matchStage.amenities = { $all: filters.amenities };
+        }
+
+        // Verified properties only
+        if (filters.verifiedOnly) {
+            matchStage.ownerType = "owner"; // Assuming verified means owner-posted
+        }
+
+        // Owner ID filter for user-specific properties
+        if (filters.ownerId && mongoose.Types.ObjectId.isValid(filters.ownerId)) {
+            matchStage.ownerId = new mongoose.Types.ObjectId(filters.ownerId);
+        }
+
+        // Apply AND conditions
+        if (andConditions.length > 0) {
+            matchStage.$and = andConditions;
+        }
+
+        // Build aggregation pipeline
+        const pipeline = [];
+
+        // Geo search for nearest sort
+        if (sort === "nearest") {
+            if (!userLocation || !userLocation.lat || !userLocation.lng) {
+                return res.status(400).json({
+                    success: false,
+                    error: "Location coordinates required for nearest sort"
+                });
+            }
+
+            pipeline.push({
+                $geoNear: {
+                    near: {
+                        type: "Point",
+                        coordinates: [Number(userLocation.lng), Number(userLocation.lat)]
+                    },
+                    distanceField: "distance",
+                    spherical: true,
+                    query: matchStage,
+                    maxDistance: 50000 // 50km max
+                }
+            });
+        } else {
+            pipeline.push({ $match: matchStage });
+        }
+
+        // Sorting
+        let sortStage = { createdAt: -1 };
+        switch (sort) {
+            case "price_low":
+                sortStage = { monthlyRent: 1, createdAt: -1 };
+                break;
+            case "price_high":
+                sortStage = { monthlyRent: -1, createdAt: -1 };
+                break;
+            case "oldest":
+                sortStage = { createdAt: 1 };
+                break;
+            case "featured":
+                sortStage = { featured: -1, createdAt: -1 };
+                break;
+            case "popular":
+                sortStage = { views: -1, createdAt: -1 };
+                break;
+            case "nearest":
+                sortStage = { distance: 1 };
+                break;
+            default:
+                sortStage = { createdAt: -1 };
+        }
+
+        pipeline.push({ $sort: sortStage });
+
+        // Add relevance scoring for text search
+        if (query) {
+            pipeline.push({
+                $addFields: {
+                    relevanceScore: {
+                        $add: [
+                            { $cond: [{ $regexMatch: { input: "$title", regex: query, options: "i" } }, 10, 0] },
+                            { $cond: [{ $regexMatch: { input: "$city", regex: query, options: "i" } }, 5, 0] },
+                            { $cond: [{ $regexMatch: { input: "$propertyType", regex: query, options: "i" } }, 3, 0] }
+                        ]
+                    }
+                }
+            });
+
+            // Re-sort by relevance if text search
+            if (sort === "newest" || sort === "relevance") {
+                pipeline.push({ $sort: { relevanceScore: -1, createdAt: -1 } });
+            }
+        }
+
+        // Facet for data and count
+        pipeline.push({
+            $facet: {
+                metadata: [{ $count: "total" }],
+                data: [
+                    { $skip: skip },
+                    { $limit: limitNum }
+                ]
+            }
+        });
+
+        const result = await Property.aggregate(pipeline);
+        const data = result[0].data;
+        const total = result[0].metadata[0] ? result[0].metadata[0].total : 0;
+        const executionTime = Date.now() - startTime;
+
+        const response = {
+            success: true,
+            data,
+            pagination: {
+                total,
+                page: pageNum,
+                pageSize: limitNum,
+                totalPages: Math.ceil(total / limitNum)
+            },
+            executionTime,
+            appliedFilters: filters
+        };
+
+        // Cache the result (skip geo queries)
+        if (sort !== "nearest") {
+            propertyCache.set(cacheKey, response);
+        }
+
+        queryMonitor.endTimer(queryId);
+        res.json(response);
+
+    } catch (err) {
+        console.error("Advanced search error:", err);
+        res.status(500).json({
+            success: false,
+            error: "Server error",
+            message: err.message
+        });
+    }
+});
+
+/**
+ * POST /api/properties/filter
+ * Complex filtering endpoint for real-time filter application
+ * Requirements: 3.1
+ */
+router.post("/filter", async (req, res) => {
+    try {
+        const {
+            baseQuery = {},
+            filters = {},
+            page = 1,
+            limit = 12,
+            sort = "newest"
+        } = req.body;
+
+        const pageNum = Math.max(1, Number(page));
+        const limitNum = Math.min(100, Number(limit));
+        const skip = (pageNum - 1) * limitNum;
+
+        // Start with base query (could be search results)
+        const matchStage = {
+            isDeleted: false,
+            status: "active",
+            ...baseQuery
+        };
+
+        // Apply all filters
+        Object.keys(filters).forEach(key => {
+            const value = filters[key];
+
+            switch (key) {
+                case 'priceRange':
+                    if (value.min !== undefined || value.max !== undefined) {
+                        const priceFilter = {};
+                        if (value.min !== undefined) priceFilter.$gte = Number(value.min);
+                        if (value.max !== undefined) priceFilter.$lte = Number(value.max);
+                        matchStage.monthlyRent = priceFilter;
+                    }
+                    break;
+
+                case 'bedrooms':
+                    if (Array.isArray(value) && value.length > 0) {
+                        matchStage.bedrooms = { $in: value.map(Number) };
+                    } else if (typeof value === 'number') {
+                        matchStage.bedrooms = value;
+                    }
+                    break;
+
+                case 'amenities':
+                    if (Array.isArray(value) && value.length > 0) {
+                        matchStage.amenities = { $all: value };
+                    }
+                    break;
+
+                case 'propertyTypes':
+                    if (Array.isArray(value) && value.length > 0) {
+                        matchStage.propertyType = { $in: value };
+                    }
+                    break;
+
+                case 'furnishing':
+                    if (Array.isArray(value) && value.length > 0) {
+                        matchStage.furnishing = { $in: value };
+                    } else if (value) {
+                        matchStage.furnishing = value;
+                    }
+                    break;
+
+                case 'verifiedOnly':
+                    if (value === true) {
+                        matchStage.ownerType = "owner";
+                    }
+                    break;
+
+                default:
+                    if (value !== undefined && value !== null && value !== '') {
+                        matchStage[key] = value;
+                    }
+            }
+        });
+
+        // Build sort
+        let sortStage = { createdAt: -1 };
+        switch (sort) {
+            case "price_low":
+                sortStage = { monthlyRent: 1, createdAt: -1 };
+                break;
+            case "price_high":
+                sortStage = { monthlyRent: -1, createdAt: -1 };
+                break;
+            case "featured":
+                sortStage = { featured: -1, createdAt: -1 };
+                break;
+            case "popular":
+                sortStage = { views: -1, createdAt: -1 };
+                break;
+        }
+
+        const pipeline = [
+            { $match: matchStage },
+            { $sort: sortStage },
+            {
+                $facet: {
+                    metadata: [{ $count: "total" }],
+                    data: [
+                        { $skip: skip },
+                        { $limit: limitNum }
+                    ]
+                }
+            }
+        ];
+
+        const result = await Property.aggregate(pipeline);
+        const data = result[0].data;
+        const total = result[0].metadata[0] ? result[0].metadata[0].total : 0;
+
+        res.json({
+            success: true,
+            data,
+            pagination: {
+                total,
+                page: pageNum,
+                pageSize: limitNum,
+                totalPages: Math.ceil(total / limitNum)
+            },
+            appliedFilters: filters
+        });
+
+    } catch (err) {
+        console.error("Filter error:", err);
+        res.status(500).json({
+            success: false,
+            error: "Server error",
+            message: err.message
+        });
+    }
+});
+
+/**
+ * GET /api/properties/user/:userId
+ * Get user-specific properties for dashboard
+ * Requirements: 4.1
+ */
+router.get("/user/:userId", async (req, res) => {
+    try {
+        const { userId } = req.params;
+        const requestingUserId = req.headers["x-user-id"];
+        const userRole = req.headers["x-user-role"];
+
+        // Validate ObjectId
+        if (!mongoose.Types.ObjectId.isValid(userId)) {
+            return res.status(400).json({
+                success: false,
+                error: "Invalid user ID"
+            });
+        }
+
+        // Authorization: users can only see their own properties unless admin
+        if (userId !== requestingUserId && userRole !== "admin") {
+            return res.status(403).json({
+                success: false,
+                error: "Forbidden: Can only access your own properties"
+            });
+        }
+
+        const {
+            page = 1,
+            limit = 12,
+            status = "all", // all, active, inactive
+            sort = "newest"
+        } = req.query;
+
+        const pageNum = Math.max(1, Number(page));
+        const limitNum = Math.min(100, Number(limit));
+        const skip = (pageNum - 1) * limitNum;
+
+        // Build filter
+        const filter = {
+            ownerId: new mongoose.Types.ObjectId(userId),
+            isDeleted: false
+        };
+
+        if (status !== "all") {
+            filter.status = status;
+        }
+
+        // Build sort
+        let sortStage = { createdAt: -1 };
+        switch (sort) {
+            case "oldest":
+                sortStage = { createdAt: 1 };
+                break;
+            case "price_low":
+                sortStage = { monthlyRent: 1, createdAt: -1 };
+                break;
+            case "price_high":
+                sortStage = { monthlyRent: -1, createdAt: -1 };
+                break;
+            case "popular":
+                sortStage = { views: -1, createdAt: -1 };
+                break;
+            case "featured":
+                sortStage = { featured: -1, createdAt: -1 };
+                break;
+        }
+
+        const pipeline = [
+            { $match: filter },
+            { $sort: sortStage },
+            {
+                $facet: {
+                    metadata: [{ $count: "total" }],
+                    data: [
+                        { $skip: skip },
+                        { $limit: limitNum }
+                    ],
+                    stats: [
+                        {
+                            $group: {
+                                _id: null,
+                                totalViews: { $sum: "$views" },
+                                totalFavorites: { $sum: "$favoritesCount" },
+                                activeCount: {
+                                    $sum: { $cond: [{ $eq: ["$status", "active"] }, 1, 0] }
+                                },
+                                inactiveCount: {
+                                    $sum: { $cond: [{ $eq: ["$status", "inactive"] }, 1, 0] }
+                                },
+                                avgRent: { $avg: "$monthlyRent" }
+                            }
+                        }
+                    ]
+                }
+            }
+        ];
+
+        const result = await Property.aggregate(pipeline);
+        const data = result[0].data;
+        const total = result[0].metadata[0] ? result[0].metadata[0].total : 0;
+        const stats = result[0].stats[0] || {
+            totalViews: 0,
+            totalFavorites: 0,
+            activeCount: 0,
+            inactiveCount: 0,
+            avgRent: 0
+        };
+
+        res.json({
+            success: true,
+            data,
+            pagination: {
+                total,
+                page: pageNum,
+                pageSize: limitNum,
+                totalPages: Math.ceil(total / limitNum)
+            },
+            stats
+        });
+
+    } catch (err) {
+        console.error("User properties error:", err);
+        res.status(500).json({
+            success: false,
+            error: "Server error",
+            message: err.message
+        });
+    }
+});
+
+/**
+ * GET /api/properties/analytics/:propertyId
+ * Get property analytics and performance metrics
+ * Requirements: 4.1
+ */
+router.get("/analytics/:propertyId", async (req, res) => {
+    try {
+        const { propertyId } = req.params;
+        const requestingUserId = req.headers["x-user-id"];
+        const userRole = req.headers["x-user-role"];
+
+        if (!mongoose.Types.ObjectId.isValid(propertyId)) {
+            return res.status(400).json({
+                success: false,
+                error: "Invalid property ID"
+            });
+        }
+
+        // Get property and verify ownership
+        const property = await Property.findById(propertyId).lean();
+        if (!property) {
+            return res.status(404).json({
+                success: false,
+                error: "Property not found"
+            });
+        }
+
+        // Authorization check
+        if (property.ownerId.toString() !== requestingUserId && userRole !== "admin") {
+            return res.status(403).json({
+                success: false,
+                error: "Forbidden: Can only access analytics for your own properties"
+            });
+        }
+
+        // Get favorites count
+        const favoritesCount = await Favorite.countDocuments({ propertyId });
+
+        // Calculate performance metrics
+        const daysSinceCreated = Math.floor((Date.now() - property.createdAt.getTime()) / (1000 * 60 * 60 * 24));
+        const viewsPerDay = daysSinceCreated > 0 ? (property.views / daysSinceCreated).toFixed(2) : 0;
+
+        // Get similar properties for comparison
+        const similarProperties = await Property.aggregate([
+            {
+                $match: {
+                    _id: { $ne: property._id },
+                    city: property.city,
+                    category: property.category,
+                    isDeleted: false,
+                    status: "active"
+                }
+            },
+            {
+                $group: {
+                    _id: null,
+                    avgViews: { $avg: "$views" },
+                    avgRent: { $avg: "$monthlyRent" },
+                    avgFavorites: { $avg: "$favoritesCount" }
+                }
+            }
+        ]);
+
+        const comparison = similarProperties[0] || {
+            avgViews: 0,
+            avgRent: 0,
+            avgFavorites: 0
+        };
+
+        const analytics = {
+            propertyId,
+            views: property.views,
+            favorites: favoritesCount,
+            daysSinceCreated,
+            viewsPerDay: Number(viewsPerDay),
+            status: property.status,
+            featured: property.featured,
+            comparison: {
+                viewsVsAvg: property.views - comparison.avgViews,
+                rentVsAvg: property.monthlyRent - comparison.avgRent,
+                favoritesVsAvg: favoritesCount - comparison.avgFavorites
+            },
+            performance: {
+                viewsRank: property.views > comparison.avgViews ? "above_average" : "below_average",
+                rentRank: property.monthlyRent > comparison.avgRent ? "above_average" : "below_average",
+                popularityRank: favoritesCount > comparison.avgFavorites ? "above_average" : "below_average"
+            }
+        };
+
+        res.json({
+            success: true,
+            analytics
+        });
+
+    } catch (err) {
+        console.error("Property analytics error:", err);
+        res.status(500).json({
+            success: false,
+            error: "Server error",
+            message: err.message
+        });
+    }
+});
+
+/* -------------- Single property by slug OR id -------------- */
+router.post("/get-property", async (req, res) => {
+    try {
+        const { key } = req.body;
+        if (!key) return res.status(400).json({ error: "Key is required" });
+
+        let prop = await Property.findOne({ slug: key, isDeleted: false })
+            .populate("ownerId", "name email phone")
+            .lean();
+
+        if (!prop && mongoose.Types.ObjectId.isValid(key)) {
+            prop = await Property.findOne({ _id: key, isDeleted: false })
+                .populate("ownerId", "name email phone")
+                .lean();
+        }
+
+        if (!prop) return res.status(404).json({ error: "Not found" });
+
+        Property.findByIdAndUpdate(prop._id, { $inc: { views: 1 } }).catch(() => { });
+
+        res.json(prop);
+    } catch (err) {
+        console.error("GET property (payload) error:", err);
+        res.status(500).json({ error: "Server error" });
+    }
+});
+
+/* -------------- Related properties -------------- */
+/**
+ * GET /properties/related/:slugOrId
+ * - finds listings in same city, same category and/or similar rent range
+ */
+router.get("/related/:slugOrId", async (req, res) => {
+    try {
+        const key = req.params.slugOrId;
+        let base = await Property.findOne({ slug: key, isDeleted: false }).lean();
+        if (!base && mongoose.Types.ObjectId.isValid(key)) {
+            base = await Property.findById(key).lean();
+        }
+        if (!base) return res.status(404).json({ error: "Base property not found" });
+
+        const rent = Number(base.monthlyRent || 0);
+        const delta = Math.max(1000, Math.floor(rent * 0.25)); // 25% range or at least 1000
+        const minRent = Math.max(0, rent - delta);
+        const maxRent = rent + delta;
+
+        const q = {
+            _id: { $ne: base._id },
+            isDeleted: false,
+            status: "active",
+            city: base.city,
+            category: base.category,
+            monthlyRent: { $gte: minRent, $lte: maxRent },
+        };
+
+        // prioritize same propertyType too
+        const items = await Property.find(q)
+            .sort({ featured: -1, createdAt: -1 })
+            .limit(8)
+            .select("title slug city monthlyRent photos listingNumber builtUpArea carpetArea bedrooms")
+            .lean();
+
+        res.json({ items });
+    } catch (err) {
+        console.error("GET /properties/related error:", err);
+        res.status(500).json({ error: "Server error" });
+    }
+});
+
+/* ---------------- Admin: update status (approve/reject/block) ---------------- */
+router.patch("/admin/:id/status", isAdmin, async (req, res) => {
+    try {
+        const id = req.params.id;
+        const action = req.body.action || req.query.action; // 'approve' | 'reject' | 'block' | 'unblock'
+        if (!["approve", "reject", "block", "unblock"].includes(action)) {
+            return res.status(400).json({ error: "Invalid action" });
+        }
+
+        const prop = await Property.findById(id);
+        if (!prop) return res.status(404).json({ error: "Not found" });
+
+        if (action === "approve") {
+            prop.status = "active";
+        } else if (action === "reject" || action === "block") {
+            prop.status = "inactive";
+            if (action === "block") prop.status = "blocked";
+        } else if (action === "unblock") {
+            prop.status = "active";
+        }
+
+        await prop.save();
+        res.json({ success: true, status: prop.status });
+    } catch (err) {
+        console.error("PATCH /admin/:id/status error:", err);
+        res.status(500).json({ error: "Server error" });
+    }
+});
+
+/* ---------------- Favorites / Wishlist APIs ---------------- */
+/**
+ * POST /favorites/:propertyId  -> add to favorites (creates Favorite)
+ * DELETE /favorites/:propertyId -> remove from favorites
+ * GET /favorites -> list favorites for current user (x-user-id header)
+ */
+
+// add favorite
+router.post("/favorites/:propertyId", async (req, res) => {
+    try {
+        const userId = req.headers["x-user-id"];
+        if (!userId) return res.status(401).json({ error: "Unauthorized - x-user-id header required" });
+
+        const propertyId = req.params.propertyId;
+        if (!mongoose.Types.ObjectId.isValid(propertyId)) return res.status(400).json({ error: "Invalid property id" });
+
+        // create favorite (idempotent)
+        try {
+            const fav = new Favorite({ userId, propertyId });
+            await fav.save();
+            // increment property's favoritesCount
+            await Property.findByIdAndUpdate(propertyId, { $inc: { favoritesCount: 1 } }).catch(() => { });
+            return res.status(201).json({ success: true });
+        } catch (err) {
+            // if duplicate key means already favorited
+            if (err.code === 11000) return res.status(200).json({ success: true, message: "Already favorited" });
+            throw err;
+        }
+    } catch (err) {
+        console.error("POST /favorites error:", err);
+        res.status(500).json({ error: "Server error" });
+    }
+});
+
+// remove favorite
+router.delete("/favorites/:propertyId", async (req, res) => {
+    try {
+        const userId = req.headers["x-user-id"];
+        if (!userId) return res.status(401).json({ error: "Unauthorized - x-user-id header required" });
+
+        const propertyId = req.params.propertyId;
+        await Favorite.findOneAndDelete({ userId, propertyId });
+        // decrement favoritesCount (min 0)
+        await Property.findByIdAndUpdate(propertyId, { $inc: { favoritesCount: -1 } }).catch(() => { });
+        // optional: ensure non-negative
+        await Property.updateOne({ _id: propertyId, favoritesCount: { $lt: 0 } }, { $set: { favoritesCount: 0 } }).catch(() => { });
+        res.json({ success: true });
+    } catch (err) {
+        console.error("DELETE /favorites error:", err);
+        res.status(500).json({ error: "Server error" });
+    }
+});
+
+// list favorites for user
+router.get("/favorites", async (req, res) => {
+    try {
+        const userId = req.headers["x-user-id"];
+        if (!userId) return res.status(401).json({ error: "Unauthorized - x-user-id header required" });
+
+        const favs = await Favorite.find({ userId }).sort({ createdAt: -1 }).lean();
+        const propertyIds = favs.map(f => f.propertyId);
+        const items = await Property.find({ _id: { $in: propertyIds }, isDeleted: false }).lean();
+
+        // keep original order as favorites
+        const itemsById = new Map(items.map(it => [String(it._id), it]));
+        const ordered = propertyIds.map(id => itemsById.get(String(id))).filter(Boolean);
+
+        res.json({ items: ordered });
+    } catch (err) {
+        console.error("GET /favorites error:", err);
+        res.status(500).json({ error: "Server error" });
+    }
+});
+
+/* --------------------------- UPDATE PROPERTY --------------------------- */
+router.patch("/:id", async (req, res) => {
+    try {
+        const ownerId = req.headers["x-user-id"];
+        const userRole = req.headers["x-user-role"]; // Optional: admin support
+        if (!ownerId)
+            return res.status(401).json({ error: "Unauthorized" });
+
+        // Validate ObjectId
+        if (!mongoose.Types.ObjectId.isValid(req.params.id)) {
+            return res.status(400).json({ error: "Invalid property ID" });
+        }
+
+        const prop = await Property.findById(req.params.id);
+        if (!prop) return res.status(404).json({ error: "Property not found" });
+
+        // Allow owner or admin
+        if (prop.ownerId.toString() !== ownerId && userRole !== "admin") {
+            return res.status(403).json({ error: "Forbidden" });
+        }
+
+        /* SAFE UPDATE FIELDS ONLY (recommended security) */
+        const allowedFields = [
+            "title",
+            "description",
+            "address",
+            "rent",
+            "deposit",
+            "amenities",
+            "images",
+            "type",
+            "city",
+            "state",
+            "availableFrom",
+            "geo",
+        ];
+
+        Object.keys(req.body).forEach((key) => {
+            if (allowedFields.includes(key)) {
+                prop[key] = req.body[key];
+            }
+        });
+
+        await prop.save();
+
+        res.json({ success: true, updated: prop });
+    } catch (err) {
+        res.status(500).json({ error: "Server error", details: err.message });
+    }
+});
+
+/* --------------------------- DELETE PROPERTY --------------------------- */
+router.delete("/:id", async (req, res) => {
+    try {
+        const ownerId = req.headers["x-user-id"];
+        const userRole = req.headers["x-user-role"];
+        if (!ownerId)
+            return res.status(401).json({ error: "Unauthorized" });
+
+        if (!mongoose.Types.ObjectId.isValid(req.params.id)) {
+            return res.status(400).json({ error: "Invalid property ID" });
+        }
+
+        const prop = await Property.findById(req.params.id);
+        if (!prop) return res.status(404).json({ error: "Property not found" });
+
+        // Allow owner or admin
+        if (prop.ownerId.toString() !== ownerId && userRole !== "admin") {
+            return res.status(403).json({ error: "Forbidden" });
+        }
+
+        await prop.deleteOne();
+
+        res.json({ success: true, message: "Property deleted successfully" });
+    } catch (err) {
+        res.status(500).json({ error: "Server error", details: err.message });
+    }
+});
+
+export default router;

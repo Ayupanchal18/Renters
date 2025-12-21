@@ -70,16 +70,6 @@ export default function PropertyWizard() {
         ownerType: "",
     });
 
-
-    // const postPropertyreq = async () => {
-    //     try {
-    //         const response = await dispatch(postProperty(formData))
-    //         const data = response.data;
-    //         console.log("response Data", data)
-    //     } catch (error) {
-    //         console.log(error)
-    //     }
-    // }
     const postPropertyreq = async () => {
         const fd = new FormData();
         Object.keys(formData).forEach(key => {
@@ -97,9 +87,6 @@ export default function PropertyWizard() {
             console.log(error);
         }
     };
-
-
-
 
     const validateStep = (step) => {
         const errors = {};
@@ -145,7 +132,6 @@ export default function PropertyWizard() {
                 handleSubmit();
             }
         }
-
     };
 
     const handlePrevious = () => {
@@ -197,12 +183,12 @@ export default function PropertyWizard() {
     };
 
     return (
-        <div className="min-h-screen bg-gradient-to-br from-slate-50 to-blue-50 py-8 px-4 sm:px-6 lg:px-8">
+        <div className="min-h-screen bg-background py-8 px-4 sm:px-6 lg:px-8">
             <div className="max-w-4xl mx-auto">
                 {/* Header */}
                 <div className="mb-8">
-                    <h1 className="text-3xl sm:text-4xl font-bold text-slate-900 mb-2">Post Your Property</h1>
-                    <p className="text-slate-600">
+                    <h1 className="text-3xl sm:text-4xl font-bold text-foreground mb-2">Post Your Property</h1>
+                    <p className="text-muted-foreground">
                         Step {currentStep} of {STEPS.length} • Complete all details to list your property
                     </p>
                 </div>
@@ -218,18 +204,18 @@ export default function PropertyWizard() {
                             return (
                                 <div key={step.id} className="flex flex-col items-center flex-1">
                                     <div
-                                        className={`flex items-center justify-center w-10 h-10 rounded-full transition-all duration-300${isCompleted
-                                            ? "bg-emerald-500 text-white"
+                                        className={`flex items-center justify-center w-10 h-10 rounded-full transition-all duration-300 ${isCompleted
+                                            ? "bg-success text-success-foreground"
                                             : isCurrent
-                                                ? "bg-blue-600 text-white scale-110 shadow-lg"
-                                                : "bg-slate-200 text-slate-600"
+                                                ? "bg-primary text-primary-foreground scale-110 shadow-lg"
+                                                : "bg-muted text-muted-foreground"
                                             }`}
                                     >
                                         {isCompleted ? <Check size={20} /> : <StepIcon size={20} />}
                                     </div>
 
                                     <span
-                                        className={`text-xs mt-2 text-center${isCurrent ? "font-semibold text-blue-600" : "text-slate-500"
+                                        className={`text-xs mt-2 text-center hidden sm:block ${isCurrent ? "font-semibold text-primary" : "text-muted-foreground"
                                             }`}
                                     >
                                         {step.name}
@@ -239,9 +225,9 @@ export default function PropertyWizard() {
                         })}
                     </div>
 
-                    <div className="w-full h-1 bg-slate-200 rounded-full overflow-hidden">
+                    <div className="w-full h-1 bg-muted rounded-full overflow-hidden">
                         <div
-                            className="h-full bg-gradient-to-r from-blue-600 to-emerald-500 transition-all duration-500"
+                            className="h-full bg-gradient-to-r from-primary to-success transition-all duration-500"
                             style={{
                                 width: `${((currentStep - 1) / (STEPS.length - 1)) * 100}%`,
                             }}
@@ -251,11 +237,11 @@ export default function PropertyWizard() {
 
                 {/* Validation Errors */}
                 {Object.keys(validationErrors).length > 0 && (
-                    <div className="mb-6 p-4 bg-red-50 border border-red-200 rounded-lg flex gap-3">
-                        <AlertCircle className="text-red-600 flex-shrink-0 mt-0.5" size={20} />
+                    <div className="mb-6 p-4 bg-destructive/10 border border-destructive/20 rounded-lg flex gap-3">
+                        <AlertCircle className="text-destructive flex-shrink-0 mt-0.5" size={20} />
                         <div>
-                            <h3 className="font-semibold text-red-800 mb-1">Please fix the following:</h3>
-                            <ul className="text-sm text-red-700 space-y-1">
+                            <h3 className="font-semibold text-destructive mb-1">Please fix the following:</h3>
+                            <ul className="text-sm text-destructive/80 space-y-1">
                                 {Object.values(validationErrors).map((error, idx) => (
                                     <li key={idx}>• {error}</li>
                                 ))}
@@ -265,7 +251,7 @@ export default function PropertyWizard() {
                 )}
 
                 {/* Step Content */}
-                <Card className="p-6 sm:p-8 shadow-lg border-0 mb-8 animate-fade-in">{renderStep()}</Card>
+                <Card className="p-6 sm:p-8 shadow-lg border border-border mb-8 bg-card">{renderStep()}</Card>
 
                 {/* Buttons */}
                 <div className="flex gap-4 justify-between">
@@ -282,7 +268,7 @@ export default function PropertyWizard() {
                     <Button
                         onClick={handleNext}
                         disabled={isSubmitting}
-                        className="flex items-center gap-2 px-6 bg-blue-600 hover:bg-blue-700 text-white"
+                        className="flex items-center gap-2 px-6"
                     >
                         {isSubmitting ? (
                             <>

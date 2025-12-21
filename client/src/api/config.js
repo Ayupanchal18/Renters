@@ -1,8 +1,9 @@
 import axios from "axios";
+import { enhanceApiClient } from "../utils/errorHandling";
 
-const API_BASE_URL = "http://localhost:8080";
+const API_BASE_URL = import.meta.env.VITE_API_BASE_URL;
 
-const apiClient = axios.create({
+const baseApiClient = axios.create({
     baseURL: API_BASE_URL,
     timeout: 30000,
     transformResponse: [(data) => {
@@ -18,7 +19,7 @@ const apiClient = axios.create({
 });
 
 // Add interceptor to include token + x-user-id
-apiClient.interceptors.request.use(
+baseApiClient.interceptors.request.use(
     (config) => {
         const rawUserId = localStorage.getItem("userId");
 
@@ -46,5 +47,7 @@ apiClient.interceptors.request.use(
     (error) => Promise.reject(error)
 );
 
+// Enhance the API client with error handling and retry logic
+const apiClient = enhanceApiClient(baseApiClient);
 
 export default apiClient;

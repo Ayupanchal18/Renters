@@ -1,7 +1,7 @@
 const PROPERTY_ENDPOINTS = {
-    POST_PROPERTY: "/properties",
-    GET_ALL_PROPERTIES: "/properties",
-    GET_PROPERTY_BY_ID: "/properties/get-property"
+    POST_PROPERTY: "/api/properties",
+    GET_ALL_PROPERTIES: "/api/properties",
+    GET_PROPERTY_BY_ID: "/api/properties/get-property"
 }
 
 

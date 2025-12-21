@@ -35,20 +35,12 @@ router.post("/:propertyId", (async (req, res) => {
         res.status(503).json({ error: "Database connection failed" });
     }
 }));
-// Remove from wishlist
+// DISABLED: Wishlist deletion is disabled for data safety
 router.delete("/:propertyId", (async (req, res) => {
-    try {
-        const userId = req.headers["x-user-id"];
-        if (!userId)
-            return res.status(401).json({ error: "Unauthorized" });
-        const { propertyId } = req.params;
-        await Wishlist.findOneAndDelete({ user: userId, property: propertyId });
-        // Decrement property favorites count
-        await Property.findByIdAndUpdate(propertyId, { $inc: { favoritesCount: -1 } });
-        res.json({ success: true });
-    }
-    catch (err) {
-        res.status(503).json({ error: "Database connection failed" });
-    }
+    console.error('❌ Wishlist deletion is DISABLED for data safety');
+    res.status(403).json({
+        error: "OPERATION_DISABLED",
+        message: "Wishlist deletion is disabled to prevent accidental data loss"
+    });
 }));
 export default router;

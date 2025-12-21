@@ -1,212 +1,321 @@
-
-import { Heart, MapPin, Bed, Bath, Square, Phone, Mail } from "lucide-react";
+import { useState, useEffect } from "react";
+import { Heart, MapPin, Bed, Bath, Square, Phone, MessageCircle, Sparkles, BadgeCheck, ArrowRight } from "lucide-react";
 import { Button } from "../ui/button";
-import { useState } from "react";
 import { useNavigate } from "react-router-dom";
+import { PropertyImage } from "../ui/lazy-image";
+import { useNavigationStateContext } from "../ui/navigation-state-provider";
+import wishlistService from "../../api/wishlistService";
+import { isAuthenticated } from "../../utils/auth";
 
-export function PropertyCard({ property, viewMode }) {
+export function PropertyCard({ property, viewMode, initialSaved = false, onWishlistChange }) {
+    const navigate = useNavigate();
+    const { navigateWithState } = useNavigationStateContext();
 
-    const navigate = useNavigate()
+    const [isSaved, setIsSaved] = useState(initialSaved);
+    const [isLoading, setIsLoading] = useState(false);
 
-    const [isSaved, setIsSaved] = useState(false);
+    // Sync with initialSaved prop when it changes
+    useEffect(() => {
+        setIsSaved(initialSaved);
+    }, [initialSaved]);
 
-    const handleclick = (slug) => {
-        navigate(`/properties/${slug}`)
-    }
+    const handleClick = (slug) => {
+        navigateWithState(`/properties/${slug}`, {
+            saveViewState: {
+                fromListings: true,
+                propertyId: property._id,
+                timestamp: Date.now()
+            }
+        });
+    };
+
+    const handleToggleFavorite = async (e) => {
+        e.stopPropagation();
+        
+        if (!isAuthenticated()) {
+            navigate('/login');
+            return;
+        }
+
+        if (isLoading) return;
+
+        setIsLoading(true);
+        try {
+            const result = await wishlistService.toggleWishlist(property._id, isSaved);
+            setIsSaved(result.isFavorited);
+            onWishlistChange?.(property._id, result.isFavorited);
+        } catch (error) {
+            console.error('Failed to toggle favorite:', error);
+        } finally {
+            setIsLoading(false);
+        }
+    };
+
+    const formatPrice = (price) => {
+        return new Intl.NumberFormat('en-US', {
+            style: 'currency',
+            currency: 'USD',
+            minimumFractionDigits: 0,
+            maximumFractionDigits: 0
+        }).format(price);
+    };
 
     /* ------------------------- LIST VIEW ------------------------- */
     if (viewMode === "list") {
         return (
-            <div className="flex gap-5 bg-white border border-gray-200 rounded-xl overflow-hidden hover:shadow-xl hover:border-gray-300 transition-all duration-300">
-
-                {/* Image */}
-                <div className="w-64 h-40 flex-shrink-0 relative overflow-hidden bg-gray-100">
-                    <img
-                        // src={`http://localhost:8080/${property.photos[0]}`}
-                        src={`http://localhost:8080${property.photos[0]}`}
-
-                        alt={property.title}
-                        className="w-full h-full object-cover"
+            <article 
+                className="group relative flex flex-col sm:flex-row bg-card border border-border rounded-2xl overflow-hidden transition-all duration-300 hover:shadow-lg hover:shadow-primary/5 hover:border-primary/20"
+                onClick={() => handleClick(property.slug)}
+            >
+                {/* Image Section */}
+                <div className="relative w-full sm:w-80 h-56 sm:h-auto sm:min-h-[220px] flex-shrink-0 overflow-hidden cursor-pointer">
+                    <PropertyImage
+                        property={property}
+                        className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-105"
+                        priority={false}
                     />
+                    
+                    {/* Gradient Overlay */}
+                    <div className="absolute inset-0 bg-gradient-to-t from-black/40 via-transparent to-transparent sm:bg-gradient-to-r sm:from-transparent sm:via-transparent sm:to-black/10" />
 
-                    {property.featured && (
-                        <div className="absolute top-3 left-3 bg-gradient-to-r from-amber-500 to-orange-500 text-white px-3 py-1 rounded-lg text-xs font-bold shadow-md">
-                            Featured
-                        </div>
-                    )}
-
-                    {property.verified && (
-                        <div className="absolute top-3 right-3 bg-gradient-to-r from-emerald-500 to-teal-500 text-white px-3 py-1 rounded-lg text-xs font-bold shadow-md">
-                            Verified
-                        </div>
-                    )}
-                </div>
-
-                {/* Details */}
-                <div className="flex-1 p-5 flex flex-col justify-between"  >
-                    <div>
-                        <h3 className="font-bold text-gray-900 text-lg mb-2" onClick={() => handleclick(property.slug)}>{property.title}</h3>
-
-                        <div className="flex items-center gap-1.5 text-sm text-gray-600 mb-3">
-                            <MapPin className="w-4 h-4 text-indigo-500" />
-                            {property.address}
-                        </div>
-
-                        <div className="flex gap-6 text-sm text-gray-700">
-                            <span className="flex items-center gap-1.5 font-medium">
-                                <Bed className="w-4 h-4 text-indigo-500" /> {property.bedrooms} Beds
+                    {/* Badges */}
+                    <div className="absolute top-3 left-3 flex flex-wrap gap-2">
+                        {property.featured && (
+                            <span className="inline-flex items-center gap-1 px-2.5 py-1 bg-gradient-to-r from-amber-500 to-orange-500 text-white text-xs font-semibold rounded-full shadow-lg">
+                                <Sparkles className="w-3 h-3" />
+                                Featured
                             </span>
-                            <span className="flex items-center gap-1.5 font-medium">
-                                <Bath className="w-4 h-4 text-indigo-500" /> {property.bathrooms} Baths
+                        )}
+                        {property.verified && (
+                            <span className="inline-flex items-center gap-1 px-2.5 py-1 bg-gradient-to-r from-emerald-500 to-teal-500 text-white text-xs font-semibold rounded-full shadow-lg">
+                                <BadgeCheck className="w-3 h-3" />
+                                Verified
                             </span>
-                            <span className="flex items-center gap-1.5 font-medium">
-                                <Square className="w-4 h-4 text-indigo-500" /> {property.builtUpArea} sqft
-                            </span>
-                        </div>
-
-                        {property.amenities?.length > 0 && (
-                            <div className="flex flex-wrap gap-2 mt-3">
-                                {property.amenities.map((amenity) => (
-                                    <span
-                                        key={amenity}
-                                        className="text-xs bg-indigo-50 text-indigo-700 px-3 py-1 rounded-full font-medium"
-                                    >
-                                        {amenity}
-                                    </span>
-                                ))}
-                            </div>
                         )}
                     </div>
+                    
+                    {/* Mobile Save Button */}
+                    <button
+                        onClick={handleToggleFavorite}
+                        disabled={isLoading}
+                        className={`sm:hidden absolute top-3 right-3 w-10 h-10 rounded-full bg-white/95 dark:bg-card/95 backdrop-blur-sm flex items-center justify-center shadow-lg transition-all ${isLoading ? 'opacity-50' : 'hover:scale-110'}`}
+                        aria-label={isSaved ? "Remove from favorites" : "Add to favorites"}
+                    >
+                        <Heart className={`w-5 h-5 transition-colors ${isSaved ? "fill-rose-500 text-rose-500" : "text-muted-foreground"}`} />
+                    </button>
 
-                    <div className="flex items-center justify-between pt-4 border-t border-gray-200 mt-3">
-                        <div className="text-3xl font-bold text-indigo-600">
-                            ${property.monthlyRent}
-                            <span className="text-sm text-gray-500 font-normal">/mo</span>
+                    {/* Price Tag - Mobile */}
+                    <div className="sm:hidden absolute bottom-3 left-3">
+                        <div className="bg-white/95 dark:bg-card/95 backdrop-blur-sm px-3 py-1.5 rounded-lg shadow-lg">
+                            <span className="text-lg font-bold text-primary">{formatPrice(property.monthlyRent)}</span>
+                            <span className="text-xs text-muted-foreground">/mo</span>
+                        </div>
+                    </div>
+                </div>
+
+                {/* Content Section */}
+                <div className="flex-1 p-5 sm:p-6 flex flex-col">
+                    {/* Header */}
+                    <div className="mb-4">
+                        <h3 className="font-semibold text-lg text-foreground mb-2 line-clamp-1 group-hover:text-primary transition-colors cursor-pointer">
+                            {property.title}
+                        </h3>
+                        <div className="flex items-center gap-1.5 text-sm text-muted-foreground">
+                            <MapPin className="w-4 h-4 text-primary/70 flex-shrink-0" />
+                            <span className="line-clamp-1">{property.address}</span>
+                        </div>
+                    </div>
+
+                    {/* Property Stats */}
+                    <div className="flex flex-wrap items-center gap-x-5 gap-y-2 mb-4">
+                        <div className="flex items-center gap-2 text-sm">
+                            <div className="w-8 h-8 rounded-lg bg-primary/10 flex items-center justify-center">
+                                <Bed className="w-4 h-4 text-primary" />
+                            </div>
+                            <span className="font-medium text-foreground">{property.bedrooms} Beds</span>
+                        </div>
+                        <div className="flex items-center gap-2 text-sm">
+                            <div className="w-8 h-8 rounded-lg bg-primary/10 flex items-center justify-center">
+                                <Bath className="w-4 h-4 text-primary" />
+                            </div>
+                            <span className="font-medium text-foreground">{property.bathrooms} Baths</span>
+                        </div>
+                        <div className="flex items-center gap-2 text-sm">
+                            <div className="w-8 h-8 rounded-lg bg-primary/10 flex items-center justify-center">
+                                <Square className="w-4 h-4 text-primary" />
+                            </div>
+                            <span className="font-medium text-foreground">{property.builtUpArea} sqft</span>
+                        </div>
+                    </div>
+
+                    {/* Amenities */}
+                    {property.amenities?.length > 0 && (
+                        <div className="flex flex-wrap gap-2 mb-4">
+                            {property.amenities.slice(0, 3).map((amenity) => (
+                                <span
+                                    key={amenity}
+                                    className="text-xs bg-muted text-muted-foreground px-2.5 py-1 rounded-md font-medium"
+                                >
+                                    {amenity}
+                                </span>
+                            ))}
+                            {property.amenities.length > 3 && (
+                                <span className="text-xs text-muted-foreground px-2 py-1 font-medium">
+                                    +{property.amenities.length - 3} more
+                                </span>
+                            )}
+                        </div>
+                    )}
+
+                    {/* Footer */}
+                    <div className="mt-auto pt-4 border-t border-border flex items-center justify-between">
+                        <div className="hidden sm:block">
+                            <div className="text-2xl font-bold text-primary">
+                                {formatPrice(property.monthlyRent)}
+                                <span className="text-sm text-muted-foreground font-normal">/mo</span>
+                            </div>
                         </div>
 
-                        <div className="flex gap-2">
+                        <div className="flex items-center gap-2 w-full sm:w-auto">
                             <Button
                                 variant="outline"
                                 size="sm"
-                                onClick={() => setIsSaved(!isSaved)}
-                                className={isSaved ? "bg-rose-50 text-rose-600 border-rose-200 hover:bg-rose-100" : "border-gray-300 hover:bg-gray-50"}
+                                onClick={handleToggleFavorite}
+                                disabled={isLoading}
+                                className={`hidden sm:flex h-10 px-3 rounded-xl transition-all ${
+                                    isSaved 
+                                        ? "bg-rose-50 dark:bg-rose-950/30 text-rose-600 dark:text-rose-400 border-rose-200 dark:border-rose-800 hover:bg-rose-100 dark:hover:bg-rose-900/50" 
+                                        : "border-border hover:bg-muted"
+                                }`}
+                                aria-label={isSaved ? "Remove from favorites" : "Add to favorites"}
                             >
-                                <Heart className={`w-4 h-4${isSaved ? "fill-current" : ""}`} />
+                                <Heart className={`w-4 h-4 ${isSaved ? "fill-current" : ""}`} />
                             </Button>
 
-                            <Button size="sm" className="bg-indigo-600 hover:bg-indigo-700 text-white">
+                            <Button 
+                                size="sm" 
+                                className="flex-1 sm:flex-none h-10 px-5 bg-primary hover:bg-primary/90 text-primary-foreground rounded-xl font-medium"
+                                onClick={(e) => e.stopPropagation()}
+                            >
+                                <MessageCircle className="w-4 h-4 mr-2" />
                                 Contact
                             </Button>
                         </div>
                     </div>
                 </div>
-            </div>
+            </article>
         );
     }
 
     /* ------------------------- GRID VIEW ------------------------- */
     return (
-        <div className="bg-white border border-gray-200 rounded-xl overflow-hidden hover:shadow-xl hover:border-gray-300 transition-all duration-300 group" onClick={() => handleclick(property.slug)}>
-
-            {/* Image */}
-            <div className="relative overflow-hidden bg-gray-100 h-48">
-                <img
-                    src={`http://localhost:8080${property.photos[0]}`}
-
-                    alt={property.title}
-                    className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
+        <article 
+            className="group h-full flex flex-col bg-card border border-border rounded-2xl overflow-hidden transition-all duration-300 hover:shadow-xl hover:shadow-primary/5 hover:border-primary/20 hover:-translate-y-1 cursor-pointer"
+            onClick={() => handleClick(property.slug)}
+        >
+            {/* Image Section */}
+            <div className="relative h-52 overflow-hidden">
+                <PropertyImage
+                    property={property}
+                    className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-110"
+                    priority={false}
                 />
+                
+                {/* Gradient Overlay */}
+                <div className="absolute inset-0 bg-gradient-to-t from-black/50 via-black/10 to-transparent opacity-60 group-hover:opacity-80 transition-opacity duration-300" />
 
                 {/* Badges */}
-                <div className="absolute top-3 left-3 right-3 flex justify-between">
-                    {/* {property.featured && (
-                        <div className="bg-gradient-to-r from-amber-500 to-orange-500 text-white px-3 py-1.5 rounded-lg text-xs font-bold shadow-lg">
-                            Featured
-                        </div>
-                    )} */}
-
+                <div className="absolute top-3 left-3 flex flex-wrap gap-2">
                     {property.verified && (
-                        <div className="bg-gradient-to-r from-emerald-500 to-teal-500 text-white px-3 py-1.5 rounded-lg text-xs font-bold shadow-lg">
+                        <span className="inline-flex items-center gap-1 px-2 py-1 bg-emerald-500/90 backdrop-blur-sm text-white text-xs font-semibold rounded-full">
+                            <BadgeCheck className="w-3 h-3" />
                             Verified
-                        </div>
+                        </span>
+                    )}
+                    {property.featured && (
+                        <span className="inline-flex items-center gap-1 px-2 py-1 bg-amber-500/90 backdrop-blur-sm text-white text-xs font-semibold rounded-full">
+                            <Sparkles className="w-3 h-3" />
+                            Featured
+                        </span>
                     )}
                 </div>
 
                 {/* Save Button */}
                 <button
-                    onClick={() => setIsSaved(!isSaved)}
-                    className="absolute top-3 right-3 w-10 h-10 rounded-full bg-white/95 hover:bg-white flex items-center justify-center transition-all shadow-md hover:shadow-lg"
+                    onClick={handleToggleFavorite}
+                    disabled={isLoading}
+                    className={`absolute top-3 right-3 w-9 h-9 rounded-full bg-white/90 dark:bg-card/90 backdrop-blur-sm flex items-center justify-center shadow-md transition-all ${
+                        isLoading ? 'opacity-50' : 'hover:scale-110 hover:bg-white dark:hover:bg-card'
+                    }`}
+                    aria-label={isSaved ? "Remove from favorites" : "Add to favorites"}
                 >
-                    <Heart
-                        className={`w-5 h-5${isSaved ? "fill-rose-500 text-rose-500" : "text-gray-700"
-                            }`}
-                    />
+                    <Heart className={`w-4 h-4 transition-colors ${isSaved ? "fill-rose-500 text-rose-500" : "text-muted-foreground"}`} />
                 </button>
+                
+                {/* Price Tag */}
+                <div className="absolute bottom-3 left-3 right-3 flex items-end justify-between">
+                    <div className="bg-white/95 dark:bg-card/95 backdrop-blur-sm px-3 py-2 rounded-xl shadow-lg">
+                        <span className="text-xl font-bold text-primary">{formatPrice(property.monthlyRent)}</span>
+                        <span className="text-xs text-muted-foreground">/mo</span>
+                    </div>
+                </div>
             </div>
 
-            {/* Content */}
-            <div className="p-3 space-y-1" >
-                <div>
-                    <h3 className="font-bold text-gray-900 text-lg line-clamp-2 mb-2" >
+            {/* Content Section */}
+            <div className="flex-1 flex flex-col p-4">
+                {/* Title & Location */}
+                <div className="mb-3">
+                    <h3 className="font-semibold text-foreground text-sm leading-snug line-clamp-2 mb-2 group-hover:text-primary transition-colors">
                         {property.title}
                     </h3>
-
-                    <div className="flex items-center gap-1.5 text-sm text-gray-600">
-                        <MapPin className="w-4 h-4 text-indigo-500" />
-                        {property.address}
+                    <div className="flex items-center gap-1.5 text-xs text-muted-foreground">
+                        <MapPin className="w-3.5 h-3.5 text-primary/70 flex-shrink-0" />
+                        <span className="line-clamp-1">{property.address}</span>
                     </div>
                 </div>
 
-                {/* Details Grid */}
-                <div className="grid grid-cols-3 gap-3 py-2 border-y border-gray-200 text-sm text-gray-700">
-                    <div className="flex items-center gap-1.5 font-medium">
-                        <Bed className="w-4 h-4 text-indigo-500" /> {property.bedrooms}
+                {/* Property Stats */}
+                <div className="flex items-center justify-between py-3 border-y border-border mb-3">
+                    <div className="flex items-center gap-1.5 text-xs">
+                        <Bed className="w-4 h-4 text-primary/70" />
+                        <span className="font-medium text-foreground">{property.bedrooms}</span>
+                        <span className="text-muted-foreground">Beds</span>
                     </div>
-                    <div className="flex items-center gap-1.5 font-medium">
-                        <Bath className="w-4 h-4 text-indigo-500" /> {property.bathrooms}
+                    <div className="w-px h-4 bg-border" />
+                    <div className="flex items-center gap-1.5 text-xs">
+                        <Bath className="w-4 h-4 text-primary/70" />
+                        <span className="font-medium text-foreground">{property.bathrooms}</span>
+                        <span className="text-muted-foreground">Baths</span>
                     </div>
-                    <div className="flex items-center gap-1.5 font-medium">
-                        <Square className="w-4 h-4 text-indigo-500" /> {property.builtUpArea}
-                    </div>
-                </div>
-
-                {/* Owner */}
-                {property.owner && (
-                    <div className="flex items-center gap-3 py-1 ">
-                        <img
-                            src={"https://dummyimage.com/40x30/edeef0/555"}
-                            alt={property.ownerName}
-                            className="w-9 h-9 rounded-full ring-2 ring-gray-100"
-                        />
-                        <span className="text-sm font-semibold text-gray-800 flex-1">
-                            {property.ownerName}
-                        </span>
-                    </div>
-                )}
-
-                {/* Price */}
-                <div className="flex items-center justify-between">
-                    <div>
-                        <div className="text-2xl font-bold text-indigo-600">
-                            ${property.monthlyRent}
-                        </div>
-                        <div className="text-xs text-gray-500 font-medium">per month</div>
+                    <div className="w-px h-4 bg-border" />
+                    <div className="flex items-center gap-1.5 text-xs">
+                        <Square className="w-4 h-4 text-primary/70" />
+                        <span className="font-medium text-foreground">{property.builtUpArea}</span>
+                        <span className="text-muted-foreground">sqft</span>
                     </div>
                 </div>
 
                 {/* Action Buttons */}
-                <div className="flex gap-2 ">
-                    <Button variant="outline" size="sm" className="flex-1 text-xs border-gray-300 hover:bg-gray-50">
+                <div className="flex gap-2 mt-auto">
+                    <Button 
+                        variant="outline" 
+                        size="sm" 
+                        className="flex-1 h-9 text-xs rounded-xl border-border hover:bg-muted hover:border-primary/30"
+                        onClick={(e) => e.stopPropagation()}
+                    >
                         <Phone className="w-3.5 h-3.5 mr-1.5" />
                         Call
                     </Button>
-
-                    <Button size="sm" className="flex-1 bg-indigo-600 hover:bg-indigo-700 text-white text-xs">
-                        <Mail className="w-3.5 h-3.5 mr-1.5" />
+                    <Button 
+                        size="sm" 
+                        className="flex-1 h-9 text-xs bg-primary hover:bg-primary/90 text-primary-foreground rounded-xl"
+                        onClick={(e) => e.stopPropagation()}
+                    >
+                        <MessageCircle className="w-3.5 h-3.5 mr-1.5" />
                         Message
                     </Button>
                 </div>
             </div>
-        </div>
+        </article>
     );
 }

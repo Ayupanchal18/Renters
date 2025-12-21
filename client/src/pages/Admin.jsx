@@ -4,7 +4,7 @@ import Footer from "../components/Footer";
 import Navbar from "../components/Navbar";
 import { Card, CardContent } from "../components/ui/card";
 import { Button } from "../components/ui/button";
-import { MapPin, CheckCircle, XCircle, Clock } from "lucide-react";
+import { MapPin, CheckCircle, XCircle, Clock, Activity } from "lucide-react";
 import { propertiesAPI } from "../lib/api";
 
 export default function Admin() {
@@ -77,8 +77,19 @@ export default function Admin() {
             <main className="max-w-7xl mx-auto px-4 py-12">
                 {/* Header */}
                 <div className="mb-8">
-                    <h1 className="text-3xl font-bold mb-2">Admin Dashboard</h1>
-                    <p className="text-gray-600">Manage and verify property listings</p>
+                    <div className="flex justify-between items-center">
+                        <div>
+                            <h1 className="text-3xl font-bold mb-2">Admin Dashboard</h1>
+                            <p className="text-gray-600">Manage and verify property listings</p>
+                        </div>
+                        <Button
+                            onClick={() => navigate("/admin/monitoring")}
+                            className="bg-blue-600 hover:bg-blue-700"
+                        >
+                            <Activity className="h-4 w-4 mr-2" />
+                            OTP Monitoring
+                        </Button>
+                    </div>
                 </div>
 
                 {/* Filters */}
