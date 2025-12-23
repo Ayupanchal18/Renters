@@ -14,6 +14,9 @@ COPY . .
 # Build client
 RUN npm run build
 
+# Debug: verify build output exists
+RUN ls -la dist/ && ls -la dist/assets/ || echo "Build output missing!"
+
 # Expose port
 EXPOSE 8080
 

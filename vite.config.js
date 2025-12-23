@@ -9,6 +9,10 @@ const __dirname = path.dirname(__filename);
 export default defineConfig({
   root: "./client",
   publicDir: "public",
+  build: {
+    outDir: "../dist",
+    emptyOutDir: true,
+  },
   server: {
     host: "::",
     port: 8080,
