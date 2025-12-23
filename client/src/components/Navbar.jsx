@@ -194,7 +194,7 @@ export default function Navbar({ variant = "default" }) {
                                 isGradientVariant ? "text-white" : "text-primary-foreground"
                             )} />
                         </div>
-                        <span>EstateHub</span>
+                        <span>Renters</span>
                     </Link>
 
                     {/* Desktop Menu Links */}
@@ -484,32 +484,35 @@ export default function Navbar({ variant = "default" }) {
                     </div>
 
                     {/* Mobile Menu Toggle */}
-                    <button
-                        className={cn(
-                            "md:hidden p-2 rounded-lg transition-colors",
-                            isGradientVariant 
-                                ? "hover:bg-white/10 text-white" 
-                                : "hover:bg-muted"
-                        )}
-                        onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
-                    >
-                        {mobileMenuOpen ? (
-                            <X className="h-6 w-6" />
-                        ) : (
-                            <Menu className="h-6 w-6" />
-                        )}
-                    </button>
+                    <div className="md:hidden flex items-center gap-2">
+                        <ThemeToggle />
+                        <button
+                            className={cn(
+                                "p-2 rounded-lg transition-colors",
+                                isGradientVariant 
+                                    ? "hover:bg-white/10 text-white" 
+                                    : "hover:bg-muted"
+                            )}
+                            onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
+                        >
+                            {mobileMenuOpen ? (
+                                <X className="h-6 w-6" />
+                            ) : (
+                                <Menu className="h-6 w-6" />
+                            )}
+                        </button>
+                    </div>
                 </div>
 
                 {/* Mobile Menu */}
                 {mobileMenuOpen && (
                     <div className={cn(
-                        "md:hidden py-4 animate-in slide-in-from-top-2",
+                        "md:hidden py-3 animate-in slide-in-from-top-2",
                         isGradientVariant 
                             ? "border-t border-white/20" 
                             : "border-t border-border"
                     )}>
-                        <div className="flex flex-col gap-2 mb-4">
+                        <div className="flex flex-col gap-1 mb-3">
                             {isLoggedIn ? (
                                 userLinks.map((link) => (
                                     <Link
@@ -519,7 +522,7 @@ export default function Navbar({ variant = "default" }) {
                                     >
                                         <button
                                             className={cn(
-                                                "w-full text-left px-4 py-3 rounded-lg font-medium transition-all",
+                                                "w-full text-left px-4 py-2.5 rounded-lg font-medium transition-all text-sm",
                                                 isActive(link.to)
                                                     ? isGradientVariant 
                                                         ? "text-white bg-white/20" 
@@ -542,7 +545,7 @@ export default function Navbar({ variant = "default" }) {
                                     >
                                         <button
                                             className={cn(
-                                                "w-full text-left px-4 py-3 rounded-lg font-medium transition-all",
+                                                "w-full text-left px-4 py-2.5 rounded-lg font-medium transition-all text-sm",
                                                 isActive(link.to)
                                                     ? isGradientVariant 
                                                         ? "text-white bg-white/20" 
@@ -559,19 +562,9 @@ export default function Navbar({ variant = "default" }) {
                             )}
                         </div>
 
-                        {/* Mobile Theme Toggle */}
-                        <div className={cn(
-                            "flex justify-center pt-4",
-                            isGradientVariant 
-                                ? "border-t border-white/20" 
-                                : "border-t border-border"
-                        )}>
-                            <ThemeToggle />
-                        </div>
-
                         {/* Mobile Auth Section */}
                         <div className={cn(
-                            "flex flex-col gap-2 pt-4",
+                            "flex flex-col gap-1.5 pt-3",
                             isGradientVariant 
                                 ? "border-t border-white/20" 
                                 : "border-t border-border"
@@ -584,13 +577,13 @@ export default function Navbar({ variant = "default" }) {
                                     >
                                         <Button
                                             variant="outline"
-                                            className="w-full justify-start gap-2 relative"
+                                            size="sm"
+                                            className="w-full justify-start gap-2 relative h-9 text-sm"
                                         >
                                             <MessageSquare className="h-4 w-4" />
                                             Messages
-                                            {/* Mobile unread message badge - Requirements: 7.1, 7.3 */}
                                             {messageCount > 0 && (
-                                                <span className="ml-auto h-5 w-5 flex items-center justify-center text-xs font-bold bg-destructive text-destructive-foreground rounded-full">
+                                                <span className="ml-auto h-4 w-4 flex items-center justify-center text-[10px] font-bold bg-destructive text-destructive-foreground rounded-full">
                                                     {messageCount > 99 ? '99+' : messageCount}
                                                 </span>
                                             )}
@@ -602,13 +595,13 @@ export default function Navbar({ variant = "default" }) {
                                     >
                                         <Button
                                             variant="outline"
-                                            className="w-full justify-start gap-2 relative"
+                                            size="sm"
+                                            className="w-full justify-start gap-2 relative h-9 text-sm"
                                         >
                                             <Bell className="h-4 w-4" />
                                             Notifications
-                                            {/* Mobile unread notification badge - Requirements: 7.2, 7.3 */}
                                             {notificationCount > 0 && (
-                                                <span className="ml-auto h-5 w-5 flex items-center justify-center text-xs font-bold bg-destructive text-destructive-foreground rounded-full">
+                                                <span className="ml-auto h-4 w-4 flex items-center justify-center text-[10px] font-bold bg-destructive text-destructive-foreground rounded-full">
                                                     {notificationCount > 99 ? '99+' : notificationCount}
                                                 </span>
                                             )}
@@ -620,7 +613,8 @@ export default function Navbar({ variant = "default" }) {
                                     >
                                         <Button
                                             variant="outline"
-                                            className="w-full justify-start gap-2"
+                                            size="sm"
+                                            className="w-full justify-start gap-2 h-9 text-sm"
                                         >
                                             <User className="h-4 w-4" />
                                             My Profile
@@ -632,13 +626,13 @@ export default function Navbar({ variant = "default" }) {
                                     >
                                         <Button
                                             variant="outline"
-                                            className="w-full justify-start gap-2"
+                                            size="sm"
+                                            className="w-full justify-start gap-2 h-9 text-sm"
                                         >
                                             <Heart className="h-4 w-4" />
                                             Wishlist
                                         </Button>
                                     </Link>
-                                    {/* Admin Panel Link - Only visible for admin users (Mobile) */}
                                     {isAdmin && (
                                         <Link
                                             to="/admin"
@@ -646,7 +640,8 @@ export default function Navbar({ variant = "default" }) {
                                         >
                                             <Button
                                                 variant="outline"
-                                                className="w-full justify-start gap-2 text-primary border-primary hover:bg-primary/10"
+                                                size="sm"
+                                                className="w-full justify-start gap-2 text-primary border-primary hover:bg-primary/10 h-9 text-sm"
                                             >
                                                 <Shield className="h-4 w-4" />
                                                 Admin Panel
@@ -657,7 +652,7 @@ export default function Navbar({ variant = "default" }) {
                                         to="/post-property"
                                         onClick={() => setMobileMenuOpen(false)}
                                     >
-                                        <Button className="w-full bg-primary hover:bg-primary/90 text-primary-foreground">
+                                        <Button size="sm" className="w-full bg-primary hover:bg-primary/90 text-primary-foreground h-9 text-sm">
                                             Post Property
                                         </Button>
                                     </Link>
@@ -670,7 +665,8 @@ export default function Navbar({ variant = "default" }) {
                                     >
                                         <Button
                                             variant="outline"
-                                            className="w-full justify-start gap-2 text-destructive hover:bg-destructive/10"
+                                            size="sm"
+                                            className="w-full justify-start gap-2 text-destructive hover:bg-destructive/10 h-9 text-sm"
                                         >
                                             <LogOut className="h-4 w-4" />
                                             Logout
@@ -680,12 +676,12 @@ export default function Navbar({ variant = "default" }) {
                             ) : (
                                 <>
                                     <Link to="/login" onClick={() => setMobileMenuOpen(false)}>
-                                        <Button variant="outline" className="w-full">
+                                        <Button variant="outline" size="sm" className="w-full h-9 text-sm">
                                             Login
                                         </Button>
                                     </Link>
                                     <Link to="/signup" onClick={() => setMobileMenuOpen(false)}>
-                                        <Button variant="outline" className="w-full">
+                                        <Button variant="outline" size="sm" className="w-full h-9 text-sm">
                                             Sign Up
                                         </Button>
                                     </Link>
@@ -693,7 +689,7 @@ export default function Navbar({ variant = "default" }) {
                                         to="/post-property"
                                         onClick={() => setMobileMenuOpen(false)}
                                     >
-                                        <Button className="w-full bg-primary hover:bg-primary/90 text-primary-foreground">
+                                        <Button size="sm" className="w-full bg-primary hover:bg-primary/90 text-primary-foreground h-9 text-sm">
                                             Post Property
                                         </Button>
                                     </Link>

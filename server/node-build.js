@@ -18,7 +18,7 @@ import * as express from "express";
         res.sendFile(path.join(distPath, "index.html"));
     });
     httpServer.listen(port, () => {
-        console.log(`🚀 Fusion Starter server running on port${port}`);
+        console.log(`🚀 Renters server running on port${port}`);
         console.log(`📱 Frontend: http://localhost:${port}`);
         console.log(`🔧 API: http://localhost:${port}/api`);
         console.log(`💬 WebSocket: ws://localhost:${port}`);

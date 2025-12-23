@@ -683,17 +683,20 @@ export function HeroSection({ onSearch }) {
     };
 
     return (
-        <section className="relative w-full min-h-[280px] flex flex-col items-center justify-center text-white overflow-hidden py-8">
+        <section className="relative w-full min-h-[280px] flex flex-col items-center justify-center text-white py-8">
 
             {/* Background Image with Overlay */}
             <div className="absolute inset-0 z-0">
                 <img
-                    src="https://images.unsplash.com/photo-1600596542815-600025513036?q=80&w=2000&auto=format&fit=crop"
+                    src="/property_image/luxury-apartment-living-room.png"
                     alt="Real Estate Background"
                     className="w-full h-full object-cover"
                     loading="eager"
+                    onError={(e) => {
+                        e.target.src = "https://images.unsplash.com/photo-1600596542815-600025513036?q=80&w=2000&auto=format&fit=crop";
+                    }}
                 />
-                <div className="absolute inset-0 bg-gradient-to-b from-slate-900/70 via-slate-900/60 to-slate-900/70 backdrop-blur-[2px]"></div>
+                <div className="absolute inset-0 bg-gradient-to-b from-slate-900/80 via-slate-900/60 to-slate-900/80 backdrop-blur-[1px]"></div>
             </div>
 
             {/* Content Container */}
@@ -703,16 +706,26 @@ export function HeroSection({ onSearch }) {
                 <div ref={searchWrapperRef} className="bg-white dark:bg-slate-800 rounded-2xl shadow-2xl p-2 md:p-3 max-w-4xl mx-auto text-slate-800 dark:text-slate-100">
 
                     {/* Tabs (Rent/Buy/Commercial) */}
-                    <div className="flex gap-2 mb-3 px-2 overflow-x-auto scrollbar-hide">
+                    <div className="relative flex items-center bg-slate-100 dark:bg-slate-700 rounded-full p-1 mb-4 w-fit">
+                        {/* Sliding Background Pill */}
+                        <div 
+                            className={`absolute top-1 bottom-1 rounded-full bg-white dark:bg-indigo-600 shadow-sm transition-all duration-300 ease-in-out border border-slate-200 dark:border-indigo-500/50`}
+                            style={{
+                                left: '4px',
+                                width: 'calc(50% - 4px)',
+                                transform: activeTab === 'rent' ? 'translateX(0)' : 'translateX(100%)'
+                            }}
+                        />
+                        
                         {['rent', 'buy'].map((tab) => (
                             <button
                                 key={tab}
                                 onClick={() => setActiveTab(tab)}
                                 className={`
-                                    px-4 py-2 rounded-full text-sm font-semibold transition-all capitalize whitespace-nowrap
+                                    relative z-10 px-8 py-2 rounded-full text-sm font-semibold transition-colors capitalize whitespace-nowrap min-w-[100px]
                                    ${activeTab === tab
-                                        ? 'bg-slate-900 dark:bg-indigo-600 text-white shadow-md'
-                                        : 'bg-transparent text-slate-500 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-700'}
+                                        ? 'text-slate-900 dark:text-white'
+                                        : 'text-slate-500 dark:text-slate-400 hover:text-slate-700 dark:hover:text-slate-200'}
                                 `}
                             >
                                 {tab}
@@ -873,7 +886,7 @@ export function HeroSection({ onSearch }) {
                         </div>
 
                         {/* 2. Property Type Select (Spans 3 columns) */}
-                        <div className="md:col-span-3 relative">
+                        <div className={`md:col-span-3 relative ${openDropdown === 'type' ? 'z-20' : ''}`}>
                             <button
                                 onClick={() => setOpenDropdown(openDropdown === 'type' ? null : 'type')}
                                 className={`
@@ -902,7 +915,7 @@ export function HeroSection({ onSearch }) {
                                         `}
                                     >
                                         All Types
-                                        {propertyType === "All Types" && <div className="w-2 h-2 rounded-full bg-indigo-600 dark:bg-indigo-400" />}
+                                        {propertyType === "All Types" && <div className="w-2.5 h-2.5 rounded-full bg-indigo-600 dark:bg-indigo-400 flex-shrink-0" />}
                                     </button>
                                     {FILTER_PROPERTY_TYPE_OPTIONS.map((option) => (
                                         <button
@@ -914,7 +927,7 @@ export function HeroSection({ onSearch }) {
                                             `}
                                         >
                                             {option.label}
-                                            {propertyType === option.value && <div className="w-2 h-2 rounded-full bg-indigo-600 dark:bg-indigo-400" />}
+                                            {propertyType === option.value && <div className="w-2.5 h-2.5 rounded-full bg-indigo-600 dark:bg-indigo-400 flex-shrink-0" />}
                                         </button>
                                     ))}
                                 </div>

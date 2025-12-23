@@ -92,7 +92,7 @@ export default function OwnerContact({ owner, propertyId }) {
                 </div>
 
                 {/* CTA Buttons */}
-                <div className="space-y-2 pt-4 animate-stagger-5">
+                <div className="pt-4 animate-stagger-5">
                     <Button 
                         className="w-full bg-primary hover:bg-primary/90 text-primary-foreground touch-target transition-all duration-200 hover:scale-105 focus-visible-enhanced"
                         disabled={!processedOwner.hasValidPhone && !processedOwner.hasValidEmail}
@@ -101,17 +101,6 @@ export default function OwnerContact({ owner, propertyId }) {
                         {processedOwner.hasValidPhone || processedOwner.hasValidEmail 
                             ? 'Request Viewing' 
                             : 'Contact Not Available'
-                        }
-                    </Button>
-
-                    <Button 
-                        variant="outline" 
-                        className="w-full touch-target transition-all duration-200 hover:scale-105 focus-visible-enhanced"
-                        disabled={!processedOwner.hasValidPhone && !processedOwner.hasValidEmail}
-                    >
-                        {processedOwner.hasValidPhone || processedOwner.hasValidEmail 
-                            ? 'Schedule Tour' 
-                            : 'Contact Required'
                         }
                     </Button>
                 </div>
@@ -316,7 +305,7 @@ function renderEmailContact(processedOwner) {
 }
 
 /**
- * Formats phone number for display
+ * Formats phone number for display in Indian format
  * @param {string} phone - Phone number to format
  * @returns {string} - Formatted phone number
  */
@@ -326,15 +315,20 @@ function formatPhoneNumber(phone) {
     // Remove all non-digit characters
     const digits = phone.replace(/\D/g, '');
     
-    // Format based on length (basic formatting)
+    // Indian phone number format
     if (digits.length === 10) {
-        return `(${digits.slice(0, 3)}) ${digits.slice(3, 6)}-${digits.slice(6)}`;
-    } else if (digits.length === 11 && digits[0] === '1') {
-        return `+1 (${digits.slice(1, 4)}) ${digits.slice(4, 7)}-${digits.slice(7)}`;
+        return `+91 ${digits.slice(0, 5)} ${digits.slice(5)}`;
+    } else if (digits.length === 12 && digits.startsWith('91')) {
+        return `+91 ${digits.slice(2, 7)} ${digits.slice(7)}`;
+    } else if (digits.length === 11 && digits.startsWith('0')) {
+        return `+91 ${digits.slice(1, 6)} ${digits.slice(6)}`;
     } else if (digits.length > 10) {
-        return `+${digits.slice(0, -10)} (${digits.slice(-10, -7)}) ${digits.slice(-7, -4)}-${digits.slice(-4)}`;
+        // For international numbers with country code
+        const countryCode = digits.slice(0, -10);
+        const phoneNumber = digits.slice(-10);
+        return `+${countryCode} ${phoneNumber.slice(0, 5)} ${phoneNumber.slice(5)}`;
     }
     
-    // Return original if no standard format applies
-    return phone;
+    // Return original with +91 prefix if no standard format applies
+    return phone.startsWith('+') ? phone : `+91 ${phone}`;
 }

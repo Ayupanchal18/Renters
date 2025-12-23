@@ -1,5 +1,5 @@
 import React, { useState, useCallback, useMemo } from "react";
-import { Lock, Phone, Trash2, Zap, Shield, ChevronRight, Calendar, CheckCircle, XCircle } from "lucide-react";
+import { Lock, Phone, Trash2, Shield, ChevronRight, Calendar, CheckCircle, XCircle } from "lucide-react";
 import SecurityModal from "./SecurityModal";
 import DiagnosticTools from "./DiagnosticTools";
 import { SecuritySectionSkeleton } from "../ui/skeleton-loaders";
@@ -34,15 +34,6 @@ const SecuritySection = React.memo(function SecuritySection({ isLoading = false,
             cardBg: "bg-gradient-to-br from-teal-50 to-teal-100/50 dark:from-teal-950/40 dark:to-teal-900/20",
             borderColor: "border-teal-200/60 dark:border-teal-800/40",
             description: "Update phone number"
-        },
-        {
-            icon: Zap,
-            label: "OTP Diagnostics",
-            action: "diagnostics",
-            iconBg: "bg-purple-500",
-            cardBg: "bg-gradient-to-br from-purple-50 to-purple-100/50 dark:from-purple-950/40 dark:to-purple-900/20",
-            borderColor: "border-purple-200/60 dark:border-purple-800/40",
-            description: "Test OTP delivery"
         },
         {
             icon: Trash2,
@@ -130,15 +121,6 @@ const SecuritySection = React.memo(function SecuritySection({ isLoading = false,
                             Security Information
                         </h4>
                         <div className="space-y-3">
-                            <div className="flex items-center justify-between py-2 border-b border-border/50">
-                                <span className="text-sm text-muted-foreground">Last password change</span>
-                                <span className="text-sm font-medium text-foreground">
-                                    {user?.lastPasswordChange 
-                                        ? new Date(user.lastPasswordChange).toLocaleDateString()
-                                        : 'Never'
-                                    }
-                                </span>
-                            </div>
                             <div className="flex items-center justify-between py-2 border-b border-border/50">
                                 <span className="text-sm text-muted-foreground">Account created</span>
                                 <span className="text-sm font-medium text-foreground">

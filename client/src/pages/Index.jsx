@@ -3,6 +3,7 @@ import { Button } from "../components/ui/button";
 import { Input } from "../components/ui/input";
 import { Badge } from "../components/ui/badge";
 import { FavoriteButton } from "../components/ui/favorite-button";
+import { BackToTop } from "../components/ui/back-to-top";
 import { 
     MapPin, Search, Star, ArrowRight, Mail, CheckCircle2, 
     Zap, Shield, Clock, Users, Sparkles, Heart, ChevronDown, 
@@ -17,7 +18,8 @@ import { useDispatch } from 'react-redux';
 import wishlistService from '../api/wishlistService';
 import { isAuthenticated } from '../utils/auth';
 import { 
-    HOMEPAGE_PROPERTY_TYPE_OPTIONS, 
+    HOMEPAGE_PROPERTY_TYPE_OPTIONS,
+    filterPropertiesByType,
 } from '../utils/propertyTypeStandardization';
 import { 
     getCurrentLocation, 
@@ -157,37 +159,37 @@ export default function Home() {
     // Testimonials
     const testimonials = [
         {
-            name: 'Alex Chen',
+            name: 'Rahul Sharma',
             role: 'Software Engineer',
-            location: 'New York, NY',
-            image: 'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=100&h=100&fit=crop',
+            location: 'Mumbai, Maharashtra',
+            image: 'https://ui-avatars.com/api/?name=Rahul+Sharma&background=6366f1&color=fff&size=100',
             content: 'Found my dream apartment in just 2 days! The search filters were incredibly accurate. Finally living in a place I actually love.',
             rating: 5,
         },
         {
-            name: 'Maya Rodriguez',
+            name: 'Priya Patel',
             role: 'Property Owner',
-            location: 'San Francisco, CA',
-            image: 'https://images.unsplash.com/photo-1494790108377-be9c29b29330?w=100&h=100&fit=crop',
-            content: 'Rented my apartment in just 1 week! The platform is amazing for landlords. Great tenant quality and super easy management.',
+            location: 'Bangalore, Karnataka',
+            image: 'https://ui-avatars.com/api/?name=Priya+Patel&background=ec4899&color=fff&size=100',
+            content: 'Rented my flat in just 1 week! The platform is amazing for landlords. Great tenant quality and super easy management.',
             rating: 5,
         },
         {
-            name: 'James Wilson',
+            name: 'Arjun Mehta',
             role: 'Graduate Student',
-            location: 'Austin, TX',
-            image: 'https://images.unsplash.com/photo-1500648767791-00dcc994a43e?w=100&h=100&fit=crop',
-            content: 'The roommate matching feature is incredible! Found amazing housemates and saved hundreds on rent every month.',
+            location: 'Delhi, NCR',
+            image: 'https://ui-avatars.com/api/?name=Arjun+Mehta&background=10b981&color=fff&size=100',
+            content: 'The roommate matching feature is incredible! Found amazing flatmates and saved thousands on rent every month.',
             rating: 5,
         },
     ];
 
     // Cities
     const cities = [
-        { name: 'New York', properties: 3420, image: 'https://images.unsplash.com/photo-1496442226666-8d4d0e62e6e9?w=400&h=300&fit=crop', avgRent: '$2,100' },
-        { name: 'Los Angeles', properties: 2150, image: 'https://images.unsplash.com/photo-1580655653885-65763b2597d0?w=400&h=300&fit=crop', avgRent: '$2,350' },
-        { name: 'San Francisco', properties: 890, image: 'https://images.unsplash.com/photo-1511632765486-a01980e01a18?w=400&h=300&fit=crop', avgRent: '$3,200' },
-        { name: 'Austin', properties: 1560, image: 'https://images.unsplash.com/photo-1544961051-7257542302f0?w=400&h=300&fit=crop', avgRent: '$1,600' },
+        { name: 'Mumbai', properties: 4520, image: 'https://images.unsplash.com/photo-1570168007204-dfb528c6958f?w=400&h=300&fit=crop', avgRent: '₹25,000' },
+        { name: 'Delhi', properties: 3850, image: 'https://images.unsplash.com/photo-1587474260584-136574528ed5?w=400&h=300&fit=crop', avgRent: '₹20,000' },
+        { name: 'Bangalore', properties: 3200, image: 'https://images.unsplash.com/photo-1596176530529-78163a4f7af2?w=400&h=300&fit=crop', avgRent: '₹22,000' },
+        { name: 'Hyderabad', properties: 2150, image: 'https://images.unsplash.com/photo-1572638029678-d0beee1bb64d?w=400&h=300&fit=crop', avgRent: '₹18,000' },
     ];
 
     // Fetch wishlist IDs for the current user
@@ -242,30 +244,30 @@ export default function Home() {
                     <div className="absolute top-20 left-10 w-72 h-72 bg-primary/10 rounded-full blur-3xl animate-pulse" />
                     <div className="absolute bottom-20 right-10 w-96 h-96 bg-secondary/10 rounded-full blur-3xl animate-pulse delay-1000" />
                     
-                    <div className="relative max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pt-16 pb-24">
-                        <div className="text-center max-w-4xl mx-auto mb-12">
+                    <div className="relative max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pt-8 sm:pt-16 pb-16 sm:pb-24">
+                        <div className="text-center max-w-4xl mx-auto mb-8 sm:mb-12">
                             {/* Trust Badge */}
-                            <div className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-primary/10 border border-primary/20 mb-8">
+                            <div className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-primary/10 border border-primary/20 mb-4 sm:mb-8">
                                 <Sparkles className="w-4 h-4 text-primary" />
                                 <span className="text-sm font-medium text-primary">Trusted by 100,000+ renters</span>
                             </div>
                             
-                            <h1 className="text-4xl sm:text-5xl lg:text-6xl font-bold text-foreground mb-6 leading-tight tracking-tight">
+                            <h1 className="text-3xl sm:text-5xl lg:text-6xl font-bold text-foreground mb-4 sm:mb-6 leading-tight tracking-tight">
                                 Find Your Perfect
-                                <span className="block mt-2 bg-gradient-to-r from-primary via-primary to-secondary bg-clip-text text-transparent">
+                                <span className="block mt-1 sm:mt-2 bg-gradient-to-r from-primary via-primary to-secondary bg-clip-text text-transparent">
                                     Place to Call Home
                                 </span>
                             </h1>
                             
-                            <p className="text-lg sm:text-xl text-muted-foreground max-w-2xl mx-auto leading-relaxed">
+                            <p className="text-base sm:text-xl text-muted-foreground max-w-2xl mx-auto leading-relaxed">
                                 Discover thousands of verified rooms, apartments, and shared spaces. 
                                 Your next home is just a search away.
                             </p>
                         </div>
 
                         {/* Search Card */}
-                        <div className="max-w-5xl mx-auto">
-                            <div className="bg-card/80 backdrop-blur-xl rounded-2xl shadow-2xl border border-border/50 p-6 sm:p-8">
+                        <div className="max-w-5xl mx-auto relative z-30">
+                            <div className="bg-card/80 backdrop-blur-xl rounded-2xl shadow-2xl border border-border/50 p-4 sm:p-8">
                                 {/* Main Search Row */}
                                 <div className="grid grid-cols-1 md:grid-cols-12 gap-4 items-end">
                                     {/* Location */}
@@ -284,8 +286,22 @@ export default function Home() {
                                                     if (errors.location) setErrors(prev => ({ ...prev, location: "" }));
                                                 }}
                                                 onKeyPress={handleKeyPress}
-                                                className="pl-10 h-12 bg-background border-border/50 focus:border-primary"
+                                                className="pl-10 pr-10 h-12 bg-background border-border/50 focus:border-primary"
                                             />
+                                            {/* Use My Location Button */}
+                                            <button
+                                                type="button"
+                                                onClick={handleGetLocation}
+                                                disabled={isDetectingLocation}
+                                                className="absolute right-2 top-1/2 -translate-y-1/2 p-1.5 rounded-md hover:bg-primary/10 text-muted-foreground hover:text-primary transition-colors disabled:opacity-50"
+                                                title="Use my current location"
+                                            >
+                                                {isDetectingLocation ? (
+                                                    <div className="w-5 h-5 border-2 border-primary/30 border-t-primary rounded-full animate-spin" />
+                                                ) : (
+                                                    <Compass className="w-5 h-5" />
+                                                )}
+                                            </button>
                                             {errors.location && (
                                                 <p className="text-destructive text-xs mt-1 absolute">{errors.location}</p>
                                             )}
@@ -311,7 +327,7 @@ export default function Home() {
                                     </div>
 
                                     {/* Property Type */}
-                                    <div className="md:col-span-3">
+                                    <div className={`md:col-span-3 ${showTypeDropdown ? 'relative z-50' : 'relative z-20'}`}>
                                         <label className="block text-sm font-medium text-foreground mb-2">Property Type</label>
                                         <div className="relative">
                                             <button
@@ -372,19 +388,9 @@ export default function Home() {
                                         </Button>
                                     </div>
                                 </div>
-                                
-                                {/* Use my location link */}
-                                <button
-                                    onClick={handleGetLocation}
-                                    disabled={isDetectingLocation}
-                                    className="mt-3 text-xs text-primary hover:text-primary/80 font-medium flex items-center gap-1.5 transition-colors disabled:opacity-50"
-                                >
-                                    <Compass className="w-3.5 h-3.5" />
-                                    {isDetectingLocation ? 'Detecting...' : 'Use my location'}
-                                </button>
 
                                 {/* Popular Searches */}
-                                <div className="flex flex-wrap items-center gap-2 mt-6 pt-6 border-t border-border/50">
+                                <div className="hidden sm:flex flex-wrap items-center gap-2 mt-6 pt-6 border-t border-border/50">
                                     <span className="text-xs text-muted-foreground font-medium">Popular:</span>
                                     {['Studio NYC', '1BHK LA', 'Pet Friendly', 'Near Metro'].map(tag => (
                                         <button
@@ -400,9 +406,9 @@ export default function Home() {
                         </div>
 
                         {/* Stats */}
-                        <div className="grid grid-cols-2 md:grid-cols-4 gap-4 sm:gap-6 mt-12 max-w-4xl mx-auto">
+                        <div className="grid grid-cols-2 md:grid-cols-4 gap-3 sm:gap-6 mt-8 sm:mt-12 max-w-4xl mx-auto">
                             {stats.map((stat, idx) => (
-                                <div key={idx} className="text-center p-4 rounded-xl bg-card/50 backdrop-blur border border-border/50">
+                                <div key={idx} className="text-center p-3 sm:p-4 rounded-xl bg-card/50 backdrop-blur border border-border/50">
                                     <stat.icon className="w-6 h-6 text-primary mx-auto mb-2" />
                                     <div className="text-2xl sm:text-3xl font-bold text-foreground">{stat.value}</div>
                                     <div className="text-sm text-muted-foreground">{stat.label}</div>
@@ -471,8 +477,13 @@ export default function Home() {
                                         </div>
                                     </div>
                                 ))
-                            ) : properties.length > 0 ? (
-                                properties.slice(0, 6).map((property, index) => (
+                            ) : (() => {
+                                const filteredProperties = selectedPropertyType === 'all' 
+                                    ? properties 
+                                    : filterPropertiesByType(properties, selectedPropertyType, 'homepage');
+                                
+                                return filteredProperties.length > 0 ? (
+                                    filteredProperties.slice(0, 6).map((property, index) => (
                                     <div
                                         key={property.id || property._id || `property-${index}`}
                                         className="group bg-card rounded-2xl overflow-hidden border border-border hover:border-primary/30 hover:shadow-xl hover:shadow-primary/5 transition-all duration-300 cursor-pointer"
@@ -481,7 +492,7 @@ export default function Home() {
                                         {/* Image */}
                                         <div className="relative h-48 overflow-hidden bg-muted">
                                             <img
-                                                src={property?.photos?.length >= 1 ? `http://localhost:8080${property.photos[0]}` : "/placeholder.svg"}
+                                                src={property?.photos?.length >= 1 ? property.photos[0] : "/placeholder.svg"}
                                                 alt={property.title}
                                                 className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
                                             />
@@ -509,7 +520,7 @@ export default function Home() {
                                             
                                             {/* Property Type Badge */}
                                             <Badge className="absolute top-3 left-3 bg-primary/90 text-primary-foreground">
-                                                {property.propertyType || 'Apartment'}
+                                                {property.propertyType || property.category || 'Property'}
                                             </Badge>
                                         </div>
 
@@ -520,12 +531,12 @@ export default function Home() {
                                             </h3>
                                             <div className="flex items-center text-muted-foreground text-sm mb-4">
                                                 <MapPin className="w-4 h-4 mr-1.5 text-primary/70" />
-                                                <span className="line-clamp-1">{property.address}</span>
+                                                <span className="line-clamp-1">{property.address || property.locality || property.city}</span>
                                             </div>
 
                                             {/* Price */}
                                             <div className="flex items-baseline gap-1 mb-4">
-                                                <span className="text-2xl font-bold text-primary">${property.monthlyRent}</span>
+                                                <span className="text-2xl font-bold text-primary">₹{property.monthlyRent?.toLocaleString()}</span>
                                                 <span className="text-muted-foreground text-sm">/month</span>
                                             </div>
 
@@ -533,7 +544,7 @@ export default function Home() {
                                             <div className="flex items-center gap-4 text-sm text-muted-foreground mb-4">
                                                 <div className="flex items-center gap-1.5">
                                                     <Shield className="w-4 h-4 text-emerald-500" />
-                                                    <span>${property.securityDeposit} deposit</span>
+                                                    <span>₹{property.securityDeposit?.toLocaleString()} deposit</span>
                                                 </div>
                                             </div>
 
@@ -551,13 +562,28 @@ export default function Home() {
                                         </div>
                                     </div>
                                 ))
-                            ) : (
-                                <div className="col-span-full text-center py-16">
-                                    <Building2 className="w-16 h-16 text-muted-foreground/50 mx-auto mb-4" />
-                                    <h3 className="text-lg font-semibold text-foreground mb-2">No properties found</h3>
-                                    <p className="text-muted-foreground">Try adjusting your filters or check back later.</p>
-                                </div>
-                            )}
+                                ) : (
+                                    <div className="col-span-full text-center py-16">
+                                        <Building2 className="w-16 h-16 text-muted-foreground/50 mx-auto mb-4" />
+                                        <h3 className="text-lg font-semibold text-foreground mb-2">
+                                            {selectedPropertyType === 'all' ? 'No properties found' : `No ${typeOptions.find(o => o.value === selectedPropertyType)?.label || selectedPropertyType} properties found`}
+                                        </h3>
+                                        <p className="text-muted-foreground mb-4">
+                                            {selectedPropertyType === 'all' 
+                                                ? 'Check back later for new listings.' 
+                                                : 'Try selecting a different property type.'}
+                                        </p>
+                                        {selectedPropertyType !== 'all' && (
+                                            <button
+                                                onClick={() => setSelectedPropertyType('all')}
+                                                className="text-primary hover:text-primary/80 font-medium transition-colors"
+                                            >
+                                                View all properties
+                                            </button>
+                                        )}
+                                    </div>
+                                );
+                            })()}
                         </div>
                     </div>
                 </section>
@@ -790,6 +816,7 @@ export default function Home() {
                 </section>
 
                 <Footer />
+                <BackToTop />
             </div>
         </>
     );

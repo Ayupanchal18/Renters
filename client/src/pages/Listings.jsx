@@ -5,6 +5,7 @@ import { HeroSection } from "../components/all_listing/hero-section";
 import { FilterSidebar } from "../components/all_listing/filter-sidebar";
 import { ListingsGrid } from "../components/all_listing/listings-grid";
 import { ViewControls } from "../components/all_listing/view-controls";
+import { BackToTop } from "../components/ui/back-to-top";
 import Navbar from "./../components/Navbar";
 import Footer from "./../components/Footer";
 import { getAllProperties, appendProperties } from "../redux/slices/propertySlice";
@@ -401,6 +402,7 @@ export default function ListingsPage() {
                 </div>
             </main>
             <Footer />
+            <BackToTop />
         </>
     );
 }

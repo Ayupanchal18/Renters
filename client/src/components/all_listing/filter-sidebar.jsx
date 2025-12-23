@@ -244,7 +244,7 @@ export function FilterSidebar({ filters, onFilterChange }) {
                                     Minimum
                                 </label>
                                 <div className="relative">
-                                    <span className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground text-sm">$</span>
+                                    <span className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground text-sm">₹</span>
                                     <input
                                         id="price-min"
                                         type="number"
@@ -262,7 +262,7 @@ export function FilterSidebar({ filters, onFilterChange }) {
                                     Maximum
                                 </label>
                                 <div className="relative">
-                                    <span className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground text-sm">$</span>
+                                    <span className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground text-sm">₹</span>
                                     <input
                                         id="price-max"
                                         type="number"
@@ -278,7 +278,7 @@ export function FilterSidebar({ filters, onFilterChange }) {
                         
                         {/* Quick Price Buttons */}
                         <div className="flex flex-wrap gap-2">
-                            {[500, 1000, 2000, 5000].map((price) => (
+                            {[10000, 20000, 35000, 50000].map((price) => (
                                 <button
                                     key={price}
                                     onClick={() => handlePriceChange("max", price)}
@@ -288,7 +288,7 @@ export function FilterSidebar({ filters, onFilterChange }) {
                                             : "bg-muted text-muted-foreground hover:bg-muted/80"
                                     }`}
                                 >
-                                    Under ${price.toLocaleString()}
+                                    Under ₹{price.toLocaleString('en-IN')}
                                 </button>
                             ))}
                         </div>

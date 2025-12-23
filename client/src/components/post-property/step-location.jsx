@@ -3,19 +3,28 @@ import { Label } from "../ui/label";
 import { Button } from "../ui/button";
 import { MapPin, Navigation } from 'lucide-react';
 
+// Top 20 popular cities of India
 const CITIES = [
     "Mumbai",
     "Delhi",
     "Bangalore",
-    "Pune",
     "Hyderabad",
     "Chennai",
     "Kolkata",
+    "Pune",
     "Ahmedabad",
     "Jaipur",
+    "Surat",
     "Lucknow",
-    "Chandigarh",
-    "Indore"
+    "Kanpur",
+    "Nagpur",
+    "Indore",
+    "Thane",
+    "Bhopal",
+    "Visakhapatnam",
+    "Patna",
+    "Vadodara",
+    "Ghaziabad"
 ];
 
 export default function StepLocation({ formData, setFormData, validationErrors }) {
@@ -73,10 +82,10 @@ export default function StepLocation({ formData, setFormData, validationErrors }
                 <div className="flex gap-2">
                     <Input
                         id="mapLocation"
-                        placeholder="Latitude, Longitude or Google Maps URL"
+                        placeholder="Latitude, Longitude"
                         value={formData.mapLocation}
                         onChange={(e) => setFormData({ ...formData, mapLocation: e.target.value })}
-                        className="flex-1"
+                        className="flex-1 text-xs sm:text-sm"
                     />
                     <Button
                         type="button"
@@ -98,10 +107,11 @@ export default function StepLocation({ formData, setFormData, validationErrors }
                                 alert('Geolocation is not supported by your browser.');
                             }
                         }}
-                        className="whitespace-nowrap flex items-center gap-2"
+                        className="whitespace-nowrap flex items-center gap-1.5 text-xs sm:text-sm px-3"
                     >
-                        <Navigation size={16} />
-                        Use My Location
+                        <Navigation size={14} />
+                        <span className="hidden sm:inline">Use My Location</span>
+                        <span className="sm:hidden">Location</span>
                     </Button>
                 </div>
             </div>

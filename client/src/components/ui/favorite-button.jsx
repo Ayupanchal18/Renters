@@ -51,21 +51,21 @@ export function FavoriteButton({
 
     const sizeClasses = {
         sm: "w-8 h-8",
-        default: "w-9 h-9",
-        lg: "w-10 h-10"
+        default: "w-10 h-10",
+        lg: "w-11 h-11"
     };
 
     const iconSizes = {
         sm: "w-3.5 h-3.5",
-        default: "w-4 h-4",
+        default: "w-5 h-5",
         lg: "w-5 h-5"
     };
 
     const variantClasses = {
         floating: cn(
-            "bg-white/90 dark:bg-card/90 backdrop-blur-sm shadow-md border border-border/50",
-            "hover:bg-white dark:hover:bg-card hover:scale-110",
-            isSaved && "bg-red-50 dark:bg-red-950/50 border-red-200 dark:border-red-800"
+            "bg-white dark:bg-card shadow-lg",
+            "hover:bg-white dark:hover:bg-card hover:scale-110 hover:shadow-xl",
+            isSaved && "bg-red-50 dark:bg-red-950/50"
         ),
         outline: cn(
             "border border-border bg-transparent",
@@ -84,7 +84,7 @@ export function FavoriteButton({
             onClick={handleToggleFavorite}
             disabled={isLoading}
             className={cn(
-                "rounded-full flex items-center justify-center transition-all",
+                "rounded-full overflow-hidden flex items-center justify-center transition-all duration-200",
                 sizeClasses[size],
                 variantClasses[variant],
                 isLoading && "opacity-50 cursor-not-allowed",

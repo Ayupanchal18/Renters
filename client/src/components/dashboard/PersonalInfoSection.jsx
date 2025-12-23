@@ -1,11 +1,10 @@
 import React, { useState } from "react";
-import { User, Phone, Mail, Edit2, UserCircle, Sparkles } from "lucide-react";
+import { User, Phone, Mail, Edit2, Sparkles } from "lucide-react";
 import EditModal from "../../model/EditModal";
 
 export default function PersonalInfoSection({ user, onEdit }) {
     const info = [
         { icon: User, label: "Full Name", value: user.name, color: "bg-blue-500" },
-        { icon: UserCircle, label: "Gender", value: user.gender || "Not specified", color: "bg-purple-500" },
         { icon: Mail, label: "Email", value: user.email || "Not provided", color: "bg-emerald-500" },
         { icon: Phone, label: "Phone", value: user.phone || "Not provided", color: "bg-orange-500" },
     ];
@@ -35,10 +34,10 @@ export default function PersonalInfoSection({ user, onEdit }) {
 
                 <button
                     onClick={() => setOpenModal(true)}
-                    className="group flex items-center gap-2 text-primary hover:bg-primary hover:text-primary-foreground px-4 py-2 rounded-xl transition-all duration-200 border border-primary/20 hover:border-primary"
+                    className="group inline-flex items-center gap-1.5 text-primary hover:bg-primary hover:text-primary-foreground px-3 py-2 rounded-xl transition-all duration-200 border border-primary/20 hover:border-primary whitespace-nowrap flex-shrink-0"
                 >
-                    <Edit2 size={16} className="transition-transform group-hover:rotate-12" />
-                    <span className="text-sm font-semibold">Edit</span>
+                    <Edit2 size={14} className="transition-transform group-hover:rotate-12 flex-shrink-0" />
+                    <span className="text-sm font-semibold whitespace-nowrap">Edit</span>
                 </button>
             </div>
 
@@ -61,7 +60,7 @@ export default function PersonalInfoSection({ user, onEdit }) {
                                     <p className="text-muted-foreground text-xs font-medium uppercase tracking-wide mb-0.5">
                                         {item.label}
                                     </p>
-                                    <p className={`font-semibold truncate ${isEmpty ? "text-muted-foreground/60 italic" : "text-foreground"}`}>
+                                    <p className={`font-semibold truncate no-underline decoration-transparent ${isEmpty ? "text-muted-foreground/60 italic" : "text-foreground"}`}>
                                         {item.value}
                                     </p>
                                 </div>

@@ -340,6 +340,92 @@ const Pagination = ({ pagination, onPageChange }) => {
   );
 };
 
+// Mobile Card Component for Reviews
+const ReviewCard = ({ review, onView, onApprove, onReject, onDelete, onBlockUser }) => {
+  const formatDate = (dateString) => {
+    if (!dateString) return '-';
+    return new Date(dateString).toLocaleDateString('en-US', {
+      year: 'numeric',
+      month: 'short',
+      day: 'numeric'
+    });
+  };
+
+  const StatusIcon = STATUS_ICONS[review.status] || Clock;
+
+  return (
+    <div className="bg-card border border-border rounded-lg p-4 space-y-3">
+      <div className="flex items-start justify-between">
+        <div className="flex items-center gap-3">
+          <div className="h-10 w-10 rounded-full bg-primary/10 flex items-center justify-center shrink-0">
+            <span className="text-sm font-medium text-primary">
+              {review.userId?.name?.charAt(0)?.toUpperCase() || '?'}
+            </span>
+          </div>
+          <div className="min-w-0">
+            <p className="font-medium text-foreground">{review.userId?.name || 'Unknown'}</p>
+            <p className="text-sm text-muted-foreground truncate">{review.userId?.email}</p>
+          </div>
+        </div>
+        <DropdownMenu>
+          <DropdownMenuTrigger asChild>
+            <Button variant="ghost" size="icon" className="h-8 w-8">
+              <MoreHorizontal className="h-4 w-4" />
+            </Button>
+          </DropdownMenuTrigger>
+          <DropdownMenuContent align="end" className="w-48">
+            <DropdownMenuItem onClick={() => onView(review)}>
+              <Eye className="h-4 w-4 mr-2" />
+              View Details
+            </DropdownMenuItem>
+            <DropdownMenuSeparator />
+            {review.status !== 'approved' && (
+              <DropdownMenuItem onClick={() => onApprove(review._id)}>
+                <Check className="h-4 w-4 mr-2" />
+                Approve
+              </DropdownMenuItem>
+            )}
+            {review.status !== 'rejected' && (
+              <DropdownMenuItem onClick={() => onReject(review)}>
+                <XCircle className="h-4 w-4 mr-2" />
+                Reject
+              </DropdownMenuItem>
+            )}
+            <DropdownMenuSeparator />
+            <DropdownMenuItem onClick={() => onBlockUser(review)} className="text-destructive focus:text-destructive">
+              <Ban className="h-4 w-4 mr-2" />
+              Block User
+            </DropdownMenuItem>
+            <DropdownMenuItem onClick={() => onDelete(review._id)} className="text-destructive focus:text-destructive">
+              <Trash2 className="h-4 w-4 mr-2" />
+              Delete Review
+            </DropdownMenuItem>
+          </DropdownMenuContent>
+        </DropdownMenu>
+      </div>
+
+      <div className="bg-muted/50 rounded-lg p-2">
+        <p className="text-xs text-muted-foreground">Property</p>
+        <p className="text-sm font-medium truncate">{review.propertyId?.title || 'Unknown Property'}</p>
+      </div>
+
+      <div className="flex items-center justify-between">
+        <StarRating rating={review.rating} />
+        <Badge className={cn('capitalize', STATUS_COLORS[review.status])}>
+          <StatusIcon className="h-3 w-3 mr-1" />
+          {review.status}
+        </Badge>
+      </div>
+
+      <p className="text-sm text-muted-foreground line-clamp-2">
+        {review.comment || 'No comment'}
+      </p>
+
+      <p className="text-xs text-muted-foreground">{formatDate(review.createdAt)}</p>
+    </div>
+  );
+};
+
 // Review Row Component
 const ReviewRow = ({ review, onView, onApprove, onReject, onDelete, onBlockUser }) => {
   const formatDate = (dateString) => {
@@ -796,20 +882,64 @@ const ReviewModeration = () => {
         </div>
       )}
 
-      {/* Reviews Table */}
-      <Card>
+      {/* Reviews - Mobile Cards */}
+      <div className="md:hidden space-y-3">
+        {loading ? (
+          [...Array(3)].map((_, i) => (
+            <div key={i} className="bg-card border border-border rounded-lg p-4 space-y-3">
+              <div className="flex items-center gap-3">
+                <Skeleton className="h-10 w-10 rounded-full" />
+                <div className="space-y-2">
+                  <Skeleton className="h-4 w-24" />
+                  <Skeleton className="h-3 w-32" />
+                </div>
+              </div>
+              <Skeleton className="h-8 w-full rounded-lg" />
+              <div className="flex justify-between">
+                <Skeleton className="h-4 w-20" />
+                <Skeleton className="h-5 w-16 rounded-full" />
+              </div>
+              <Skeleton className="h-4 w-full" />
+            </div>
+          ))
+        ) : reviews.length === 0 ? (
+          <div className="px-4 py-12 text-center">
+            <MessageSquare className="h-12 w-12 text-muted-foreground mx-auto mb-4" />
+            <p className="text-muted-foreground">No reviews found</p>
+          </div>
+        ) : (
+          reviews.map((review) => (
+            <ReviewCard
+              key={review._id}
+              review={review}
+              onView={(r) => { setSelectedReview(r); setDetailModalOpen(true); }}
+              onApprove={handleApprove}
+              onReject={(r) => { setSelectedReview(r); setRejectModalOpen(true); }}
+              onDelete={handleDelete}
+              onBlockUser={(r) => { setSelectedReview(r); setBlockModalOpen(true); }}
+            />
+          ))
+        )}
+        
+        {!loading && reviews.length > 0 && (
+          <Pagination pagination={pagination} onPageChange={(page) => fetchReviews(page)} />
+        )}
+      </div>
+
+      {/* Reviews Table - Desktop */}
+      <Card className="hidden md:block">
         <CardContent className="p-0">
           <div className="overflow-x-auto">
-            <table className="w-full">
+            <table className="w-full min-w-[900px]">
               <thead>
                 <tr className="border-b border-border bg-muted/50">
-                  <th className="px-4 py-3 text-left text-sm font-medium text-muted-foreground">User</th>
-                  <th className="px-4 py-3 text-left text-sm font-medium text-muted-foreground">Property</th>
-                  <th className="px-4 py-3 text-left text-sm font-medium text-muted-foreground">Rating</th>
-                  <th className="px-4 py-3 text-left text-sm font-medium text-muted-foreground">Comment</th>
-                  <th className="px-4 py-3 text-left text-sm font-medium text-muted-foreground">Status</th>
-                  <th className="px-4 py-3 text-left text-sm font-medium text-muted-foreground">Date</th>
-                  <th className="px-4 py-3 text-left text-sm font-medium text-muted-foreground">Actions</th>
+                  <th className="px-4 py-3 text-left text-sm font-medium text-muted-foreground whitespace-nowrap">User</th>
+                  <th className="px-4 py-3 text-left text-sm font-medium text-muted-foreground whitespace-nowrap">Property</th>
+                  <th className="px-4 py-3 text-left text-sm font-medium text-muted-foreground whitespace-nowrap">Rating</th>
+                  <th className="px-4 py-3 text-left text-sm font-medium text-muted-foreground whitespace-nowrap">Comment</th>
+                  <th className="px-4 py-3 text-left text-sm font-medium text-muted-foreground whitespace-nowrap">Status</th>
+                  <th className="px-4 py-3 text-left text-sm font-medium text-muted-foreground whitespace-nowrap">Date</th>
+                  <th className="px-4 py-3 text-left text-sm font-medium text-muted-foreground whitespace-nowrap">Actions</th>
                 </tr>
               </thead>
               <tbody>

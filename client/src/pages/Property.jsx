@@ -4,6 +4,7 @@ import { useDispatch, useSelector } from "react-redux";
 import { ArrowLeft, Share2, Heart, Calendar, Home, Sparkles } from 'lucide-react';
 
 import { Button } from "../components/ui/button";
+import { BackToTop } from "../components/ui/back-to-top";
 import ImageGallery from "../components/property/image-gallery";
 import PropertyOverview from "../components/property/property-overview";
 import PropertySpecs from "../components/property/property-specs";
@@ -313,19 +314,22 @@ export default function PropertyPage() {
                     {/* Listing Info Footer */}
                     {propertyData.listingNumber && (
                         <div className="mt-8 pt-6 border-t border-border">
-                            <div className="flex flex-wrap items-center justify-between gap-4 text-sm text-muted-foreground">
-                                <div className="flex items-center gap-4">
-                                    <span>Listing ID: <span className="font-mono text-foreground">{propertyData.listingNumber}</span></span>
+                            <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 text-sm text-muted-foreground">
+                                <div className="flex flex-col sm:flex-row sm:items-center gap-2 sm:gap-4">
+                                    <div className="flex items-center gap-1">
+                                        <span className="whitespace-nowrap">Listing ID:</span>
+                                        <span className="font-mono text-foreground text-xs break-all">{propertyData.listingNumber}</span>
+                                    </div>
                                     {propertyData.createdAt && (
-                                        <span className="flex items-center gap-1.5">
-                                            <Calendar className="w-3.5 h-3.5" />
+                                        <span className="flex items-center gap-1.5 whitespace-nowrap">
+                                            <Calendar className="w-3.5 h-3.5 flex-shrink-0" />
                                             Posted {formatDate(propertyData.createdAt)}
                                         </span>
                                     )}
                                 </div>
                                 <div className="flex items-center gap-1.5 text-primary">
-                                    <Sparkles className="w-3.5 h-3.5" />
-                                    <span className="text-xs font-medium">Premium Listing</span>
+                                    <Sparkles className="w-3.5 h-3.5 flex-shrink-0" />
+                                    <span className="text-xs font-medium whitespace-nowrap">Premium Listing</span>
                                 </div>
                             </div>
                         </div>
@@ -333,6 +337,7 @@ export default function PropertyPage() {
                 </div>
             </div>
             <Footer />
+            <BackToTop />
         </>
     );
 }

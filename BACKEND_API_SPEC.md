@@ -1,6 +1,6 @@
-# EstateHub Backend API Specification
+# Renters Backend API Specification
 
-Complete REST API contract for the EstateHub real estate marketplace.
+Complete REST API contract for the Renters real estate marketplace.
 
 ---
 

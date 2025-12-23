@@ -47,8 +47,8 @@ export default function Footer() {
     return (
         <footer className="bg-card border-t border-border">
             {/* Main Footer Content */}
-            <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12 lg:py-16">
-                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-12 gap-8 lg:gap-12">
+            <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 lg:py-10">
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-12 gap-6 lg:gap-8">
                     
                     {/* Brand Section */}
                     <div className="lg:col-span-4">
@@ -57,10 +57,10 @@ export default function Footer() {
                                 <Building2 className="h-5 w-5 text-primary-foreground" />
                             </div>
                             <span className="text-xl font-bold bg-gradient-to-r from-primary to-primary bg-clip-text text-transparent">
-                                EstateHub
+                                Renters
                             </span>
                         </Link>
-                        <p className="text-muted-foreground text-sm leading-relaxed mb-6 max-w-xs">
+                        <p className="text-muted-foreground text-sm leading-relaxed mb-4 max-w-xs">
                             Your trusted platform for finding the perfect property. 
                             Buy, sell, or rent with confidence.
                         </p>
@@ -81,11 +81,11 @@ export default function Footer() {
                     </div>
 
                     {/* Links Sections */}
-                    <div className="lg:col-span-5 grid grid-cols-3 gap-8">
+                    <div className="lg:col-span-5 grid grid-cols-3 gap-6">
                         {/* Explore */}
                         <div>
                             <h4 className="font-semibold text-foreground mb-4 text-sm">Explore</h4>
-                            <ul className="space-y-3">
+                            <ul className="space-y-2">
                                 {footerLinks.explore.map((link) => (
                                     <li key={link.label}>
                                         <Link
@@ -102,7 +102,7 @@ export default function Footer() {
                         {/* Company */}
                         <div>
                             <h4 className="font-semibold text-foreground mb-4 text-sm">Company</h4>
-                            <ul className="space-y-3">
+                            <ul className="space-y-2">
                                 {footerLinks.company.map((link) => (
                                     <li key={link.label}>
                                         <Link
@@ -119,7 +119,7 @@ export default function Footer() {
                         {/* Legal */}
                         <div>
                             <h4 className="font-semibold text-foreground mb-4 text-sm">Legal</h4>
-                            <ul className="space-y-3">
+                            <ul className="space-y-2">
                                 {footerLinks.legal.map((link) => (
                                     <li key={link.label}>
                                         <Link
@@ -155,18 +155,18 @@ export default function Footer() {
                         {/* Contact Info */}
                         <div className="mt-6 space-y-2">
                             <a 
-                                href="mailto:info@estatehub.com" 
+                                href="mailto:info@renters.com" 
                                 className="flex items-center gap-2 text-sm text-muted-foreground hover:text-primary transition-colors"
                             >
                                 <Mail className="h-4 w-4" />
-                                info@estatehub.com
+                                info@renters.com
                             </a>
                             <a 
-                                href="tel:+15551234567" 
+                                href="tel:+919876543210" 
                                 className="flex items-center gap-2 text-sm text-muted-foreground hover:text-primary transition-colors"
                             >
                                 <Phone className="h-4 w-4" />
-                                +1 (555) 123-4567
+                                +91 98765 43210
                             </a>
                         </div>
                     </div>
@@ -178,7 +178,7 @@ export default function Footer() {
                 <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4">
                     <div className="flex flex-col sm:flex-row justify-between items-center gap-4">
                         <p className="text-sm text-muted-foreground">
-                            © {currentYear} EstateHub. All rights reserved.
+                            © {currentYear} Renters. All rights reserved.
                         </p>
                         <p className="text-sm text-muted-foreground flex items-center gap-1">
                             Made with <Heart className="h-3 w-3 text-destructive fill-destructive" /> in India

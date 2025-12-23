@@ -145,14 +145,14 @@ export default function OwnerCard({ owner, propertyId }) {
                 {phone && (
                     <a
                         href={`tel:${phone}`}
-                        className="flex items-center gap-3 p-3 rounded-lg bg-primary/5 hover:bg-primary/10 transition-colors group"
+                        className="flex items-center gap-3 p-3 rounded-lg bg-primary/5 hover:bg-primary/10 transition-colors group no-underline"
                     >
                         <div className="w-10 h-10 rounded-full bg-primary/10 flex items-center justify-center group-hover:bg-primary/20 transition-colors">
                             <Phone className="w-4 h-4 text-primary" />
                         </div>
                         <div>
                             <p className="text-xs text-muted-foreground">Call</p>
-                            <p className="font-medium text-foreground">{formatPhone(phone)}</p>
+                            <p className="font-medium text-foreground no-underline">{formatPhone(phone)}</p>
                         </div>
                     </a>
                 )}
@@ -160,14 +160,14 @@ export default function OwnerCard({ owner, propertyId }) {
                 {email && (
                     <a
                         href={`mailto:${email}`}
-                        className="flex items-center gap-3 p-3 rounded-lg bg-muted/50 hover:bg-muted transition-colors group"
+                        className="flex items-center gap-3 p-3 rounded-lg bg-muted/50 hover:bg-muted transition-colors group no-underline"
                     >
                         <div className="w-10 h-10 rounded-full bg-muted flex items-center justify-center group-hover:bg-muted/80 transition-colors">
                             <Mail className="w-4 h-4 text-muted-foreground" />
                         </div>
                         <div className="min-w-0">
                             <p className="text-xs text-muted-foreground">Email</p>
-                            <p className="font-medium text-foreground truncate">{email}</p>
+                            <p className="font-medium text-foreground truncate no-underline">{email}</p>
                         </div>
                     </a>
                 )}

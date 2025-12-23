@@ -1019,89 +1019,157 @@ const NotificationManagement = () => {
                 <p className="text-destructive">{logsError}</p>
               </div>
             ) : (
-              <div className="overflow-x-auto">
-                <table className="w-full">
-                  <thead>
-                    <tr className="border-b border-border bg-muted/50">
-                      <th className="px-4 py-3 text-left text-sm font-medium text-muted-foreground">Subject</th>
-                      <th className="px-4 py-3 text-left text-sm font-medium text-muted-foreground">Type</th>
-                      <th className="px-4 py-3 text-left text-sm font-medium text-muted-foreground">Channel</th>
-                      <th className="px-4 py-3 text-left text-sm font-medium text-muted-foreground">Recipients</th>
-                      <th className="px-4 py-3 text-left text-sm font-medium text-muted-foreground">Status</th>
-                      <th className="px-4 py-3 text-left text-sm font-medium text-muted-foreground">Date</th>
-                      <th className="px-4 py-3 text-left text-sm font-medium text-muted-foreground">Actions</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {logsLoading ? (
-                      [...Array(5)].map((_, i) => (
-                        <tr key={i} className="border-b border-border">
-                          <td className="px-4 py-3"><Skeleton className="h-4 w-48" /></td>
-                          <td className="px-4 py-3"><Skeleton className="h-5 w-20 rounded-full" /></td>
-                          <td className="px-4 py-3"><Skeleton className="h-5 w-16 rounded-full" /></td>
-                          <td className="px-4 py-3"><Skeleton className="h-4 w-16" /></td>
-                          <td className="px-4 py-3"><Skeleton className="h-5 w-20 rounded-full" /></td>
-                          <td className="px-4 py-3"><Skeleton className="h-4 w-32" /></td>
-                          <td className="px-4 py-3"><Skeleton className="h-8 w-8" /></td>
-                        </tr>
-                      ))
-                    ) : logs.length === 0 ? (
-                      <tr>
-                        <td colSpan={7} className="px-4 py-12 text-center text-muted-foreground">
-                          No notification logs found
-                        </td>
+              <>
+                {/* Mobile Cards for Logs */}
+                <div className="md:hidden space-y-3 p-4">
+                  {logsLoading ? (
+                    [...Array(3)].map((_, i) => (
+                      <div key={i} className="bg-card border border-border rounded-lg p-4 space-y-3">
+                        <Skeleton className="h-4 w-48" />
+                        <div className="flex gap-2">
+                          <Skeleton className="h-5 w-20 rounded-full" />
+                          <Skeleton className="h-5 w-16 rounded-full" />
+                        </div>
+                        <div className="flex justify-between">
+                          <Skeleton className="h-4 w-16" />
+                          <Skeleton className="h-5 w-20 rounded-full" />
+                        </div>
+                      </div>
+                    ))
+                  ) : logs.length === 0 ? (
+                    <div className="px-4 py-12 text-center text-muted-foreground">
+                      No notification logs found
+                    </div>
+                  ) : (
+                    logs.map((log) => {
+                      const ChannelIcon = CHANNEL_ICONS[log.channel] || Bell;
+                      return (
+                        <div key={log._id} className="bg-card border border-border rounded-lg p-4 space-y-3">
+                          <div className="flex items-start justify-between">
+                            <p className="font-medium text-sm">{log.subject}</p>
+                            <Button
+                              variant="ghost"
+                              size="icon"
+                              className="h-8 w-8 shrink-0"
+                              onClick={() => {
+                                setSelectedLogId(log._id);
+                                setLogDetailModalOpen(true);
+                              }}
+                            >
+                              <Eye className="h-4 w-4" />
+                            </Button>
+                          </div>
+                          
+                          <div className="flex flex-wrap gap-2">
+                            <Badge className={cn('capitalize', TYPE_COLORS[log.type])}>{log.type}</Badge>
+                            <Badge variant="outline" className="capitalize">
+                              <ChannelIcon className="h-3 w-3 mr-1" />
+                              {log.channel}
+                            </Badge>
+                            <Badge className={cn('capitalize', STATUS_COLORS[log.status])}>{log.status}</Badge>
+                          </div>
+                          
+                          <div className="flex justify-between text-sm">
+                            <span className="text-muted-foreground">
+                              Recipients: {log.sentCount || 0}/{log.totalRecipients || 0}
+                            </span>
+                            <span className="text-muted-foreground">{formatDate(log.createdAt)}</span>
+                          </div>
+                        </div>
+                      );
+                    })
+                  )}
+                  
+                  {!logsLoading && logs.length > 0 && (
+                    <Pagination pagination={logsPagination} onPageChange={(page) => fetchLogs(page)} />
+                  )}
+                </div>
+
+                {/* Desktop Table for Logs */}
+                <div className="hidden md:block overflow-x-auto">
+                  <table className="w-full min-w-[900px]">
+                    <thead>
+                      <tr className="border-b border-border bg-muted/50">
+                        <th className="px-4 py-3 text-left text-sm font-medium text-muted-foreground whitespace-nowrap">Subject</th>
+                        <th className="px-4 py-3 text-left text-sm font-medium text-muted-foreground whitespace-nowrap">Type</th>
+                        <th className="px-4 py-3 text-left text-sm font-medium text-muted-foreground whitespace-nowrap">Channel</th>
+                        <th className="px-4 py-3 text-left text-sm font-medium text-muted-foreground whitespace-nowrap">Recipients</th>
+                        <th className="px-4 py-3 text-left text-sm font-medium text-muted-foreground whitespace-nowrap">Status</th>
+                        <th className="px-4 py-3 text-left text-sm font-medium text-muted-foreground whitespace-nowrap">Date</th>
+                        <th className="px-4 py-3 text-left text-sm font-medium text-muted-foreground whitespace-nowrap">Actions</th>
                       </tr>
-                    ) : (
-                      logs.map((log) => {
-                        const ChannelIcon = CHANNEL_ICONS[log.channel] || Bell;
-                        return (
-                          <tr key={log._id} className="border-b border-border hover:bg-muted/50">
-                            <td className="px-4 py-3">
-                              <p className="font-medium truncate max-w-[200px]">{log.subject}</p>
-                            </td>
-                            <td className="px-4 py-3">
-                              <Badge className={cn('capitalize', TYPE_COLORS[log.type])}>{log.type}</Badge>
-                            </td>
-                            <td className="px-4 py-3">
-                              <Badge variant="outline" className="capitalize">
-                                <ChannelIcon className="h-3 w-3 mr-1" />
-                                {log.channel}
-                              </Badge>
-                            </td>
-                            <td className="px-4 py-3">
-                              <span className="text-sm">
-                                {log.sentCount || 0}/{log.totalRecipients || 0}
-                              </span>
-                            </td>
-                            <td className="px-4 py-3">
-                              <Badge className={cn('capitalize', STATUS_COLORS[log.status])}>{log.status}</Badge>
-                            </td>
-                            <td className="px-4 py-3">
-                              <span className="text-sm text-muted-foreground">{formatDate(log.createdAt)}</span>
-                            </td>
-                            <td className="px-4 py-3">
-                              <Button
-                                variant="ghost"
-                                size="icon"
-                                className="h-8 w-8"
-                                onClick={() => {
-                                  setSelectedLogId(log._id);
-                                  setLogDetailModalOpen(true);
-                                }}
-                              >
-                                <Eye className="h-4 w-4" />
-                              </Button>
-                            </td>
+                    </thead>
+                    <tbody>
+                      {logsLoading ? (
+                        [...Array(5)].map((_, i) => (
+                          <tr key={i} className="border-b border-border">
+                            <td className="px-4 py-3"><Skeleton className="h-4 w-48" /></td>
+                            <td className="px-4 py-3"><Skeleton className="h-5 w-20 rounded-full" /></td>
+                            <td className="px-4 py-3"><Skeleton className="h-5 w-16 rounded-full" /></td>
+                            <td className="px-4 py-3"><Skeleton className="h-4 w-16" /></td>
+                            <td className="px-4 py-3"><Skeleton className="h-5 w-20 rounded-full" /></td>
+                            <td className="px-4 py-3"><Skeleton className="h-4 w-32" /></td>
+                            <td className="px-4 py-3"><Skeleton className="h-8 w-8" /></td>
                           </tr>
-                        );
-                      })
-                    )}
-                  </tbody>
-                </table>
-                {!logsLoading && logs.length > 0 && (
-                  <Pagination pagination={logsPagination} onPageChange={(page) => fetchLogs(page)} />
-                )}
-              </div>
+                        ))
+                      ) : logs.length === 0 ? (
+                        <tr>
+                          <td colSpan={7} className="px-4 py-12 text-center text-muted-foreground">
+                            No notification logs found
+                          </td>
+                        </tr>
+                      ) : (
+                        logs.map((log) => {
+                          const ChannelIcon = CHANNEL_ICONS[log.channel] || Bell;
+                          return (
+                            <tr key={log._id} className="border-b border-border hover:bg-muted/50">
+                              <td className="px-4 py-3">
+                                <p className="font-medium truncate max-w-[200px]">{log.subject}</p>
+                              </td>
+                              <td className="px-4 py-3">
+                                <Badge className={cn('capitalize', TYPE_COLORS[log.type])}>{log.type}</Badge>
+                              </td>
+                              <td className="px-4 py-3">
+                                <Badge variant="outline" className="capitalize">
+                                  <ChannelIcon className="h-3 w-3 mr-1" />
+                                  {log.channel}
+                                </Badge>
+                              </td>
+                              <td className="px-4 py-3">
+                                <span className="text-sm">
+                                  {log.sentCount || 0}/{log.totalRecipients || 0}
+                                </span>
+                              </td>
+                              <td className="px-4 py-3">
+                                <Badge className={cn('capitalize', STATUS_COLORS[log.status])}>{log.status}</Badge>
+                              </td>
+                              <td className="px-4 py-3">
+                                <span className="text-sm text-muted-foreground">{formatDate(log.createdAt)}</span>
+                              </td>
+                              <td className="px-4 py-3">
+                                <Button
+                                  variant="ghost"
+                                  size="icon"
+                                  className="h-8 w-8"
+                                  onClick={() => {
+                                    setSelectedLogId(log._id);
+                                    setLogDetailModalOpen(true);
+                                  }}
+                                >
+                                  <Eye className="h-4 w-4" />
+                                </Button>
+                              </td>
+                            </tr>
+                          );
+                        })
+                      )}
+                    </tbody>
+                  </table>
+                  {!logsLoading && logs.length > 0 && (
+                    <Pagination pagination={logsPagination} onPageChange={(page) => fetchLogs(page)} />
+                  )}
+                </div>
+              </>
             )}
           </CardContent>
         </Card>

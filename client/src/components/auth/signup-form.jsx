@@ -135,7 +135,7 @@ export default function SignupForm() {
                     Create Your Account
                 </h1>
                 <p className="text-muted-foreground">
-                    Join EstateHub to discover properties and connect with agents
+                    Join Renters to discover properties and connect with agents
                 </p>
             </div>
 

@@ -157,7 +157,7 @@ const AdminSidebar = ({ onClose }) => {
             <Building2 className="h-4 w-4 text-primary" />
           </div>
           <div className="flex-1 min-w-0">
-            <p className="text-sm font-medium text-foreground truncate">EstateHub</p>
+            <p className="text-sm font-medium text-foreground truncate">Renters</p>
             <p className="text-xs text-muted-foreground">Admin v1.0</p>
           </div>
         </div>

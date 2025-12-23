@@ -47,21 +47,6 @@ export default function EditModal({ isOpen, onClose, user, onSave }) {
                     </div>
 
                     <div>
-                        <label className="text-sm font-medium">Gender</label>
-                        <select
-                            name="gender"
-                            value={formData.gender}
-                            onChange={handleChange}
-                            className="w-full mt-1 border rounded-lg px-3 py-2"
-                        >
-                            <option value="">Not specified</option>
-                            <option value="Male">Male</option>
-                            <option value="Female">Female</option>
-                            <option value="Other">Other</option>
-                        </select>
-                    </div>
-
-                    <div>
                         <label className="text-sm font-medium">Email</label>
                         <input
                             name="email"

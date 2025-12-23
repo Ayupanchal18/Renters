@@ -70,13 +70,13 @@ export function normalizeImageUrl(imageUrl) {
         return url;
     }
 
-    // If it starts with /, it's a relative path from server root
+    // If it starts with /, it's a relative path - use relative URL for cross-device compatibility
     if (url.startsWith('/')) {
-        return `http://localhost:8080${url}`;
+        return url;
     }
 
-    // Otherwise, assume it's a path that needs server prefix
-    return `http://localhost:8080/${url}`;
+    // Otherwise, assume it's a path that needs / prefix
+    return `/${url}`;
 }
 
 /**

@@ -13,14 +13,14 @@
  */
 export class DataTransformationUtils {
     constructor() {
-        this.currencyFormatter = new Intl.NumberFormat('en-US', {
+        this.currencyFormatter = new Intl.NumberFormat('en-IN', {
             style: 'currency',
-            currency: 'USD',
+            currency: 'INR',
             minimumFractionDigits: 0,
             maximumFractionDigits: 0
         });
 
-        this.numberFormatter = new Intl.NumberFormat('en-US');
+        this.numberFormatter = new Intl.NumberFormat('en-IN');
     }
 
     /**
@@ -351,7 +351,7 @@ export class DataTransformationUtils {
             }
 
             // Format as MM/DD/YYYY or DD/MM/YYYY based on locale
-            return date.toLocaleDateString('en-US', {
+            return date.toLocaleDateString('en-IN', {
                 year: 'numeric',
                 month: 'numeric',
                 day: 'numeric'

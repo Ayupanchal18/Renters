@@ -33,15 +33,15 @@ export function safeGet(obj, path, defaultValue = null) {
 /**
  * Formats currency values
  * @param {number} amount - Amount to format
- * @param {string} currency - Currency symbol
+ * @param {string} currency - Currency symbol (default: ₹ for Indian Rupee)
  * @returns {string} - Formatted currency string
  */
-export function formatCurrency(amount, currency = '$') {
+export function formatCurrency(amount, currency = '₹') {
     if (typeof amount !== 'number' || isNaN(amount)) {
         return `${currency}0`;
     }
 
-    return `${currency}${amount.toLocaleString()}`;
+    return `${currency}${amount.toLocaleString('en-IN')}`;
 }
 
 /**

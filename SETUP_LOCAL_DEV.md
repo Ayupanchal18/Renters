@@ -1,6 +1,6 @@
 # Local Development Setup Guide
 
-This guide will help you set up the EstateHub application for local development with MongoDB running on your machine.
+This guide will help you set up the Renters application for local development with MongoDB running on your machine.
 
 ## Prerequisites
 
@@ -12,7 +12,7 @@ This guide will help you set up the EstateHub application for local development 
 
 ```bash
 git clone <repo-url>
-cd estatehub
+cd renters
 pnpm install
 ```
 
@@ -28,7 +28,7 @@ pnpm db:up
 This starts MongoDB on `localhost:27017` with:
 - Username: `admin`
 - Password: `password`
-- Database: `estatehub`
+- Database: `renters`
 
 2. Stop MongoDB (when done):
 ```bash
@@ -50,7 +50,7 @@ cp .env.example .env.local
 
 2. Update `.env.local` with your local settings (already configured for local dev):
 ```env
-MONGO_URI=mongodb://localhost:27017/estatehub
+MONGO_URI=mongodb://localhost:27017/renters
 JWT_SECRET=dev-secret-key-12345
 PORT=3000
 NODE_ENV=development
@@ -148,7 +148,7 @@ mongosh mongodb://localhost:27017
 
 2. Use database and collections:
 ```javascript
-use estatehub
+use renters
 db.users.find().pretty()
 db.properties.find().pretty()
 ```

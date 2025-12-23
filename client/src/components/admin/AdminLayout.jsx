@@ -65,8 +65,8 @@ const AdminLayout = ({ children }) => {
           </Button>
 
           {/* Page title area - can be customized per page */}
-          <div className="flex-1">
-            <h1 className="text-lg font-semibold text-foreground">Admin Dashboard</h1>
+          <div className="flex-1 min-w-0">
+            <h1 className="text-sm sm:text-base font-semibold text-foreground whitespace-nowrap truncate">Admin Dashboard</h1>
           </div>
 
           {/* Header actions */}

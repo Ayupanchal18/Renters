@@ -205,7 +205,7 @@ export default function Messages() {
                 )}
 
                 {/* Layout */}
-                <div className="flex flex-1 overflow-hidden p-4 md:p-5 gap-0">
+                <div className="flex flex-1 overflow-hidden p-2 sm:p-4 md:p-5 gap-0">
                     {/* Left panel - Conversation List */}
                     <div
                         className={`w-full md:w-[380px] lg:w-[420px] md:rounded-l-xl bg-card border md:border-r-0 border-border flex flex-col rounded-xl md:rounded-r-none shadow-sm ${showMobileChat ? "hidden md:flex" : "flex"
@@ -221,7 +221,7 @@ export default function Messages() {
 
                     {/* Right panel - Chat Window */}
                     <div
-                        className={`flex-1 flex md:rounded-r-xl flex-col border md:border-l-0 border-border rounded-xl md:rounded-l-none shadow-sm ${showMobileChat ? "flex" : "hidden md:flex"
+                        className={`flex-1 flex md:rounded-r-xl flex-col border md:border-l-0 border-border rounded-xl md:rounded-l-none shadow-sm overflow-hidden min-w-0 ${showMobileChat ? "flex" : "hidden md:flex"
                             }`}
                     >
                         {messagesLoading ? (

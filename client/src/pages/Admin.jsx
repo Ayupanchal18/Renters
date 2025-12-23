@@ -195,7 +195,7 @@ export default function Admin() {
                                                 <div>
                                                     <span className="text-gray-600">Price:</span>
                                                     <p className="font-semibold">
-                                                       ${property.price?.toLocaleString()}
+                                                       ₹{property.price?.toLocaleString('en-IN')}
                                                     </p>
                                                 </div>
 

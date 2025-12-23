@@ -1,4 +1,4 @@
-# EstateHub - Full Integration Setup Guide
+# Renters - Full Integration Setup Guide
 
 ## 🎉 Backend & Frontend Integration Complete!
 
@@ -270,7 +270,7 @@ pnpm build
 
 ### Environment Variables (Production)
 ```env
-MONGO_URI=mongodb+srv://user:pass@cluster.mongodb.net/estatehub
+MONGO_URI=mongodb+srv://user:pass@cluster.mongodb.net/renters
 JWT_SECRET=your-strong-secret-key
 S3_BUCKET=your-bucket
 S3_REGION=us-east-1

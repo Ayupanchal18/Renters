@@ -136,9 +136,11 @@ export function ListingsGrid({
 
     if (viewMode === "map") {
         return (
-            <Suspense fallback={<MapLoadingFallback />}>
-                <PropertyMapView properties={properties} loading={loading} />
-            </Suspense>
+            <div className="relative pb-4">
+                <Suspense fallback={<MapLoadingFallback />}>
+                    <PropertyMapView properties={properties} loading={loading} />
+                </Suspense>
+            </div>
         );
     }
 

@@ -195,14 +195,14 @@ export default function PropertyWizard() {
 
                 {/* Progress Bar */}
                 <div className="mb-8">
-                    <div className="flex justify-between items-center mb-4">
+                    <div className="flex justify-between items-center mb-4 px-2">
                         {STEPS.map((step, index) => {
                             const StepIcon = step.icon;
                             const isCompleted = index < currentStep - 1;
                             const isCurrent = index === currentStep - 1;
 
                             return (
-                                <div key={step.id} className="flex flex-col items-center flex-1">
+                                <div key={step.id} className="flex flex-col items-center flex-1 px-1">
                                     <div
                                         className={`flex items-center justify-center w-10 h-10 rounded-full transition-all duration-300 ${isCompleted
                                             ? "bg-success text-success-foreground"
@@ -211,7 +211,7 @@ export default function PropertyWizard() {
                                                 : "bg-muted text-muted-foreground"
                                             }`}
                                     >
-                                        {isCompleted ? <Check size={20} /> : <StepIcon size={20} />}
+                                        {isCompleted ? <Check size={18} /> : <StepIcon size={18} />}
                                     </div>
 
                                     <span

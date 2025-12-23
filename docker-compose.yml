@@ -3,21 +3,21 @@ version: "3.8"
 services:
   mongodb:
     image: mongo:latest
-    container_name: estatehub-mongo
+    container_name: renters-mongo
     ports:
       - "27017:27017"
     environment:
       MONGO_INITDB_ROOT_USERNAME: admin
       MONGO_INITDB_ROOT_PASSWORD: password
-      MONGO_INITDB_DATABASE: estatehub
+      MONGO_INITDB_DATABASE: renters
     volumes:
       - mongodb_data:/data/db
     networks:
-      - estatehub-network
+      - renters-network
 
 volumes:
   mongodb_data:
 
 networks:
-  estatehub-network:
+  renters-network:
     driver: bridge

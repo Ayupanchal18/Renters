@@ -1,5 +1,5 @@
 import React from 'react';
-import { IndianRupee, TrendingUp, Shield, Calculator, MessageSquare, CalendarCheck } from 'lucide-react';
+import { IndianRupee, TrendingUp, Shield, Calculator, MessageSquare } from 'lucide-react';
 import { Button } from '../ui/button';
 
 export default function PricingCard({ property }) {
@@ -76,14 +76,10 @@ export default function PricingCard({ property }) {
                 )}
 
                 {/* CTA Buttons */}
-                <div className="space-y-3 pt-4">
+                <div className="pt-4">
                     <Button className="w-full bg-primary hover:bg-primary/90 text-primary-foreground h-12 text-base font-semibold">
                         <MessageSquare className="w-4 h-4 mr-2" />
                         Contact Owner
-                    </Button>
-                    <Button variant="outline" className="w-full h-11">
-                        <CalendarCheck className="w-4 h-4 mr-2" />
-                        Schedule Visit
                     </Button>
                 </div>
 

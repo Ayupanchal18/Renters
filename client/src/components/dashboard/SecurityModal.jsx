@@ -539,11 +539,11 @@ const SecurityModal = React.memo(function SecurityModal({ isOpen, onClose, type,
                 </div>
 
                 {/* Footer */}
-                <div className="border-t border-border p-6 flex gap-3">
+                <div className="border-t border-border p-6 flex justify-end gap-3">
                     <button
                         onClick={onClose}
                         disabled={isLoading}
-                        className="flex-1 px-4 py-2 border border-input text-foreground font-semibold rounded-lg hover:bg-muted transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                        className="px-4 py-2 border border-input text-foreground font-medium text-sm rounded-lg hover:bg-muted transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
                     >
                         Cancel
                     </button>
@@ -555,7 +555,7 @@ const SecurityModal = React.memo(function SecurityModal({ isOpen, onClose, type,
                             (type === "delete" && !formData.deleteConfirmCheckbox) ||
                             (type === "password" && (!getPasswordValidation(formData.newPassword)?.isValid || getPasswordValidation(formData.newPassword)?.score < 30))
                         }
-                        className={`flex-1 px-4 py-2 text-white font-semibold rounded-lg transition-colors disabled:opacity-50 disabled:cursor-not-allowed ${
+                        className={`px-4 py-2 text-white font-medium text-sm rounded-lg transition-colors disabled:opacity-50 disabled:cursor-not-allowed ${
                             content.dangerous
                                 ? "bg-red-600 hover:bg-red-700 focus:ring-2 focus:ring-red-500 focus:ring-offset-2"
                                 : "bg-primary hover:bg-primary/90 focus:ring-2 focus:ring-primary/50 focus:ring-offset-2"
@@ -564,9 +564,9 @@ const SecurityModal = React.memo(function SecurityModal({ isOpen, onClose, type,
                         {isLoading ? (
                             <div className="flex items-center justify-center">
                                 <Loader2 className="h-4 w-4 animate-spin mr-2" />
-                                {type === "password" && "Updating Password..."}
-                                {type === "phone" && (showOTPInput ? "Verifying Code..." : "Sending Code...")}
-                                {type === "delete" && "Deleting Account..."}
+                                {type === "password" && "Updating..."}
+                                {type === "phone" && (showOTPInput ? "Verifying..." : "Sending...")}
+                                {type === "delete" && "Deleting..."}
                             </div>
                         ) : (
                             content.buttonText

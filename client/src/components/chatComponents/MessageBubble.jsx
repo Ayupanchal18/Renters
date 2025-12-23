@@ -24,9 +24,9 @@ export function MessageBubble({ message, isOwn, isPending = false }) {
     const isImageFile = message.image || (message.file && message.file.type?.startsWith('image/'));
 
     return (
-        <div className={`flex ${isOwn ? "justify-end" : "justify-start"} mb-3`}>
+        <div className={`flex ${isOwn ? "justify-end" : "justify-start"} mb-1 w-full`}>
             <div
-                className={`max-w-xs lg:max-w-md px-4 py-2.5 rounded-2xl ${
+                className={`max-w-[80%] sm:max-w-[75%] lg:max-w-md px-3 py-1.5 rounded-2xl overflow-hidden ${
                     isOwn
                         ? "bg-primary text-primary-foreground rounded-br-sm"
                         : "bg-card text-foreground border border-border rounded-bl-sm"
@@ -79,10 +79,10 @@ export function MessageBubble({ message, isOwn, isPending = false }) {
                 )}
 
                 {/* Message text */}
-                {message.text && <p className="break-words text-sm">{message.text}</p>}
+                {message.text && <p className="break-words text-sm whitespace-pre-wrap overflow-wrap-anywhere">{message.text}</p>}
 
                 {/* Timestamp and status */}
-                <div className={`flex items-center gap-1 mt-1.5 ${
+                <div className={`flex items-center gap-1 mt-0.5 ${
                     isOwn ? "justify-end" : "justify-start"
                 }`}>
                     {isPending && (

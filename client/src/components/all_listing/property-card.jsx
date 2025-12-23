@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react";
-import { Heart, MapPin, Bed, Bath, Square, Phone, MessageCircle, Sparkles, BadgeCheck, ArrowRight } from "lucide-react";
+import { Heart, MapPin, Bed, Bath, Home, Phone, MessageCircle, Sparkles, BadgeCheck, ArrowRight } from "lucide-react";
 import { Button } from "../ui/button";
 import { useNavigate } from "react-router-dom";
 import { PropertyImage } from "../ui/lazy-image";
@@ -52,12 +52,47 @@ export function PropertyCard({ property, viewMode, initialSaved = false, onWishl
     };
 
     const formatPrice = (price) => {
-        return new Intl.NumberFormat('en-US', {
+        return new Intl.NumberFormat('en-IN', {
             style: 'currency',
-            currency: 'USD',
+            currency: 'INR',
             minimumFractionDigits: 0,
             maximumFractionDigits: 0
         }).format(price);
+    };
+
+    // Get owner phone number
+    const getOwnerPhone = () => {
+        return property.ownerPhone || property.contactPhone || property.phone || property.owner?.phone || '+91 9876543210';
+    };
+
+    // Handle call button click - opens dial pad
+    const handleCall = (e) => {
+        e.stopPropagation();
+        const phone = getOwnerPhone().replace(/\s+/g, '');
+        window.location.href = `tel:${phone}`;
+    };
+
+    // Handle message button click - navigate to messages
+    const handleMessage = (e) => {
+        e.stopPropagation();
+        if (!isAuthenticated()) {
+            navigate('/login');
+            return;
+        }
+        // Navigate to messages with property context
+        navigate('/messages', { 
+            state: { 
+                propertyId: property._id,
+                ownerId: property.owner?._id || property.ownerId,
+                propertyTitle: property.title
+            }
+        });
+    };
+
+    // Capitalize first letter
+    const capitalizeFirst = (str) => {
+        if (!str) return 'Room';
+        return str.charAt(0).toUpperCase() + str.slice(1).toLowerCase();
     };
 
     /* ------------------------- LIST VIEW ------------------------- */
@@ -98,7 +133,7 @@ export function PropertyCard({ property, viewMode, initialSaved = false, onWishl
                     <button
                         onClick={handleToggleFavorite}
                         disabled={isLoading}
-                        className={`sm:hidden absolute top-3 right-3 w-10 h-10 rounded-full bg-white/95 dark:bg-card/95 backdrop-blur-sm flex items-center justify-center shadow-lg transition-all ${isLoading ? 'opacity-50' : 'hover:scale-110'}`}
+                        className={`sm:hidden absolute top-3 right-3 w-10 h-10 rounded-full bg-white/95 dark:bg-card/95 backdrop-blur-sm flex items-center justify-center shadow-lg border border-white/20 transition-all ${isLoading ? 'opacity-50' : 'hover:scale-110'} ${isSaved ? 'bg-rose-50 dark:bg-rose-950/50 border-rose-200 dark:border-rose-800' : ''}`}
                         aria-label={isSaved ? "Remove from favorites" : "Add to favorites"}
                     >
                         <Heart className={`w-5 h-5 transition-colors ${isSaved ? "fill-rose-500 text-rose-500" : "text-muted-foreground"}`} />
@@ -142,9 +177,9 @@ export function PropertyCard({ property, viewMode, initialSaved = false, onWishl
                         </div>
                         <div className="flex items-center gap-2 text-sm">
                             <div className="w-8 h-8 rounded-lg bg-primary/10 flex items-center justify-center">
-                                <Square className="w-4 h-4 text-primary" />
+                                <Home className="w-4 h-4 text-primary" />
                             </div>
-                            <span className="font-medium text-foreground">{property.builtUpArea} sqft</span>
+                            <span className="font-medium text-foreground">{capitalizeFirst(property.roomType || property.propertyType)}</span>
                         </div>
                     </div>
 
@@ -195,10 +230,10 @@ export function PropertyCard({ property, viewMode, initialSaved = false, onWishl
                             <Button 
                                 size="sm" 
                                 className="flex-1 sm:flex-none h-10 px-5 bg-primary hover:bg-primary/90 text-primary-foreground rounded-xl font-medium"
-                                onClick={(e) => e.stopPropagation()}
+                                onClick={handleMessage}
                             >
                                 <MessageCircle className="w-4 h-4 mr-2" />
-                                Contact
+                                Message
                             </Button>
                         </div>
                     </div>
@@ -244,9 +279,9 @@ export function PropertyCard({ property, viewMode, initialSaved = false, onWishl
                 <button
                     onClick={handleToggleFavorite}
                     disabled={isLoading}
-                    className={`absolute top-3 right-3 w-9 h-9 rounded-full bg-white/90 dark:bg-card/90 backdrop-blur-sm flex items-center justify-center shadow-md transition-all ${
+                    className={`absolute top-3 right-3 w-9 h-9 rounded-full bg-white/90 dark:bg-card/90 backdrop-blur-sm flex items-center justify-center shadow-md border border-white/20 transition-all ${
                         isLoading ? 'opacity-50' : 'hover:scale-110 hover:bg-white dark:hover:bg-card'
-                    }`}
+                    } ${isSaved ? 'bg-rose-50 dark:bg-rose-950/50 border-rose-200 dark:border-rose-800' : ''}`}
                     aria-label={isSaved ? "Remove from favorites" : "Add to favorites"}
                 >
                     <Heart className={`w-4 h-4 transition-colors ${isSaved ? "fill-rose-500 text-rose-500" : "text-muted-foreground"}`} />
@@ -289,9 +324,8 @@ export function PropertyCard({ property, viewMode, initialSaved = false, onWishl
                     </div>
                     <div className="w-px h-4 bg-border" />
                     <div className="flex items-center gap-1.5 text-xs">
-                        <Square className="w-4 h-4 text-primary/70" />
-                        <span className="font-medium text-foreground">{property.builtUpArea}</span>
-                        <span className="text-muted-foreground">sqft</span>
+                        <Home className="w-4 h-4 text-primary/70" />
+                        <span className="font-medium text-foreground truncate max-w-[60px]">{capitalizeFirst(property.roomType || property.propertyType)}</span>
                     </div>
                 </div>
 
@@ -301,7 +335,7 @@ export function PropertyCard({ property, viewMode, initialSaved = false, onWishl
                         variant="outline" 
                         size="sm" 
                         className="flex-1 h-9 text-xs rounded-xl border-border hover:bg-muted hover:border-primary/30"
-                        onClick={(e) => e.stopPropagation()}
+                        onClick={handleCall}
                     >
                         <Phone className="w-3.5 h-3.5 mr-1.5" />
                         Call
@@ -309,7 +343,7 @@ export function PropertyCard({ property, viewMode, initialSaved = false, onWishl
                     <Button 
                         size="sm" 
                         className="flex-1 h-9 text-xs bg-primary hover:bg-primary/90 text-primary-foreground rounded-xl"
-                        onClick={(e) => e.stopPropagation()}
+                        onClick={handleMessage}
                     >
                         <MessageCircle className="w-3.5 h-3.5 mr-1.5" />
                         Message
