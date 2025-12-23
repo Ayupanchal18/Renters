@@ -10,7 +10,7 @@ import * as express from "express";
     // Serve static files
     app.use(express.static(distPath));
     // Handle React Router - serve index.html for all non-API routes
-    app.get("*", (req, res) => {
+    app.get("/{*splat}", (req, res) => {
         // Don't serve index.html for API routes or socket.io
         if (req.path.startsWith("/api/") || req.path.startsWith("/health") || req.path.startsWith("/socket.io")) {
             return res.status(404).json({ error: "API endpoint not found" });

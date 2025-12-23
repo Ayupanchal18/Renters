@@ -15,7 +15,7 @@ async function startServer() {
         app.use(express.static(distPath));
 
         // Handle React Router - serve index.html for all non-API routes
-        app.get("*", (req, res) => {
+        app.get("/{*splat}", (req, res) => {
             if (req.path.startsWith("/api/") || req.path.startsWith("/health") || req.path.startsWith("/socket.io")) {
                 return res.status(404).json({ error: "API endpoint not found" });
             }
