@@ -11,7 +11,7 @@ async function startServer() {
         const { app, httpServer } = await createServer(false);
 
         // Serve built client files in production
-        const distPath = path.join(__dirname, "../dist");
+        const distPath = path.join(__dirname, "../client/dist");
         app.use(express.static(distPath));
 
         // Handle React Router - serve index.html for all non-API routes
