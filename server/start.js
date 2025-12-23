@@ -1,5 +1,6 @@
 import path from "path";
 import { fileURLToPath } from "url";
+import fs from "fs";
 import express from "express";
 import createServer from "./index.js";
 
@@ -12,6 +13,16 @@ async function startServer() {
 
         // Serve built client files in production
         const distPath = path.join(__dirname, "../dist");
+        console.log(`📁 Serving static files from: ${distPath}`);
+
+        // Debug: Check if dist folder exists
+        if (fs.existsSync(distPath)) {
+            const files = fs.readdirSync(distPath);
+            console.log(`📂 Dist folder contents: ${files.join(", ")}`);
+        } else {
+            console.error(`❌ Dist folder NOT FOUND at: ${distPath}`);
+        }
+
         app.use(express.static(distPath));
 
         // Handle React Router - serve index.html for all non-API routes

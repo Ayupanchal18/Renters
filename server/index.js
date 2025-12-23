@@ -142,9 +142,9 @@ export default async function createServer(devMode = false) {
 
     // In development mode, don't add catch-all error handlers
     // Let Vite handle non-API routes
+    // Note: In production, static files and catch-all are handled in start.js
+    // so we only add error handler here, not notFoundHandler
     if (!devMode) {
-        // Error handling middleware (only for production)
-        app.use(notFoundHandler);
         app.use(errorHandler);
     }
 
