@@ -1,6 +1,9 @@
-FROM node:22-alpine
+FROM node:22.16-alpine
 
 WORKDIR /app
+
+# Verify Node version
+RUN node --version && npm --version
 
 # Copy package files
 COPY package*.json ./
