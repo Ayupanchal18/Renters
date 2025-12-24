@@ -2,8 +2,8 @@ FROM node:22.16-alpine
 
 WORKDIR /app
 
-# Cache bust: v4 - Fix static file serving order
-RUN echo "Build version: 4"
+# Cache bust: v5 - Fix Express 5 route syntax
+RUN echo "Build version: 5"
 
 # Verify Node version
 RUN node --version && npm --version

@@ -56,7 +56,7 @@ async function startServer() {
 
         // Handle React Router - serve index.html for all non-API routes
         // This MUST be after static file middleware
-        app.get("*", (req, res, next) => {
+        app.get("/{*path}", (req, res, next) => {
             // Let static files pass through
             if (req.path.includes('.')) {
                 return next();
