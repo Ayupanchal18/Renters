@@ -93,17 +93,10 @@ export const authenticateAdmin = async (req, res, next) => {
         // Extract token from Authorization header
         const token = extractToken(req);
 
-        // Debug logging
-        console.log('=== Admin Auth Debug ===');
-        console.log('Has token:', !!token);
-        console.log('Authorization header:', req.headers.authorization ? 'Present' : 'Missing');
-
         // Development mode fallback for testing
         if (!token && process.env.NODE_ENV === 'development') {
             const userId = req.headers["x-user-id"];
             const userRole = req.headers["x-user-role"];
-
-            console.log('Dev mode - userId:', userId, 'userRole:', userRole);
 
             if (userId && userRole === 'admin') {
                 await connectDB();
@@ -141,11 +134,9 @@ export const authenticateAdmin = async (req, res, next) => {
                 }
             }
 
-            // Dev mode fallback: if we have userId header, try to authenticate with just that
             if (userId) {
                 await connectDB();
                 const user = await User.findById(userId).lean();
-                console.log('Dev mode - Found user:', user ? user.email : 'Not found', 'Role:', user?.role);
 
                 if (user && user.role === 'admin') {
                     req.user = user;
@@ -157,7 +148,6 @@ export const authenticateAdmin = async (req, res, next) => {
 
         // Token is required
         if (!token) {
-            console.log('No token provided, returning 401');
             return res.status(401).json({
                 success: false,
                 error: ErrorCodes.AUTH_REQUIRED,
@@ -169,9 +159,7 @@ export const authenticateAdmin = async (req, res, next) => {
         let decoded;
         try {
             decoded = verifyToken(token);
-            console.log('Token decoded successfully:', { sub: decoded.sub, role: decoded.role });
         } catch (error) {
-            console.log('Token verification failed:', error.message);
             if (error.name === 'TokenExpiredError') {
                 // Requirement 1.4: Force logout on expired token
                 return res.status(401).json({
@@ -190,7 +178,6 @@ export const authenticateAdmin = async (req, res, next) => {
 
         // Validate role claim exists in token (Requirement 1.1)
         if (!decoded.role) {
-            console.log('Token missing role claim');
             return res.status(401).json({
                 success: false,
                 error: ErrorCodes.AUTH_INVALID,
@@ -201,7 +188,6 @@ export const authenticateAdmin = async (req, res, next) => {
         // Get user from database to verify current state
         await connectDB();
         const user = await User.findById(decoded.sub).lean();
-        console.log('User from DB:', user ? { email: user.email, role: user.role, isActive: user.isActive, isBlocked: user.isBlocked } : 'Not found');
 
         if (!user) {
             return res.status(401).json({
@@ -240,7 +226,6 @@ export const authenticateAdmin = async (req, res, next) => {
 
         // Verify role claim matches database (Requirement 1.1)
         if (decoded.role !== user.role) {
-            console.log('Role mismatch - Token role:', decoded.role, 'DB role:', user.role);
             return res.status(401).json({
                 success: false,
                 error: ErrorCodes.AUTH_INVALID,
@@ -249,7 +234,6 @@ export const authenticateAdmin = async (req, res, next) => {
         }
 
         // Attach user to request
-        console.log('Admin auth successful for user:', user.email);
         req.user = user;
         req.tokenPayload = decoded;
         next();
@@ -281,16 +265,13 @@ export const requireAdmin = async (req, res, next) => {
     // First authenticate the request
     await authenticateAdmin(req, res, async () => {
         // Check if user has admin role
-        console.log('requireAdmin check - user:', req.user?.email, 'role:', req.user?.role);
         if (!req.user || req.user.role !== 'admin') {
-            console.log('requireAdmin DENIED - user role is not admin');
             return res.status(403).json({
                 success: false,
                 error: ErrorCodes.AUTH_FORBIDDEN,
                 message: "Access denied. Admin privileges required."
             });
         }
-        console.log('requireAdmin PASSED - proceeding to route handler');
         next();
     });
 };
