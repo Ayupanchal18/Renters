@@ -2,8 +2,12 @@
 module.exports = {
   darkMode: ["class"],
   content: [
-    "./client/src/**/*.{js,jsx}",
+    // Paths from project root
+    "./client/src/**/*.{js,jsx,ts,tsx}",
     "./client/index.html",
+    // Paths relative to client folder (when Vite root is ./client)
+    "./src/**/*.{js,jsx,ts,tsx}",
+    "./index.html",
   ],
   prefix: "",
   theme: {
