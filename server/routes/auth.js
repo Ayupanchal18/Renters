@@ -31,6 +31,11 @@ const safeUser = (u) => ({
     userType: u.userType,
     role: u.role,
     avatar: u.avatar,
+    emailVerified: u.emailVerified,
+    phoneVerified: u.phoneVerified,
+    emailVerifiedAt: u.emailVerifiedAt,
+    phoneVerifiedAt: u.phoneVerifiedAt,
+    createdAt: u.createdAt,
 });
 /* ---------------------- REGISTER ROUTE ---------------------- */
 router.post("/register", (async (req, res) => {

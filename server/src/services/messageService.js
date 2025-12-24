@@ -51,7 +51,7 @@ class MessageService {
                 participants: { $all: sortedParticipants, $size: 2 },
                 property: propertyObjectId,
                 isActive: true
-            }).populate('participants', 'name email avatar')
+            }).populate('participants', 'name email avatar phone')
                 .populate('property', 'title images');
 
             if (conversation) {
@@ -79,7 +79,7 @@ class MessageService {
 
             // Populate the newly created conversation
             conversation = await Conversation.findById(conversation._id)
-                .populate('participants', 'name email avatar')
+                .populate('participants', 'name email avatar phone')
                 .populate('property', 'title images');
 
             return {
@@ -103,7 +103,7 @@ class MessageService {
                 const conversation = await Conversation.findOne({
                     participants: { $all: sortedParticipants, $size: 2 },
                     property: propertyObjectId
-                }).populate('participants', 'name email avatar')
+                }).populate('participants', 'name email avatar phone')
                     .populate('property', 'title images');
 
                 if (conversation) {
@@ -495,7 +495,7 @@ class MessageService {
                 .sort({ lastActivityAt: -1 })
                 .skip(skip)
                 .limit(limit)
-                .populate('participants', 'name email avatar')
+                .populate('participants', 'name email avatar phone')
                 .populate('property', 'title images price')
                 .select('-messages'); // Exclude full messages array for performance
 
@@ -758,6 +758,76 @@ class MessageService {
 
         } catch (error) {
             console.error('Error in markAsRead:', error);
+            return {
+                success: false,
+                error: error.message,
+                code: 'INTERNAL_ERROR'
+            };
+        }
+    }
+
+    /**
+     * Delete a conversation (soft delete by setting isActive to false).
+     * Only participants can delete their conversations.
+     * 
+     * @param {string} conversationId - The conversation ID to delete
+     * @param {string} userId - The user attempting to delete the conversation
+     * @returns {Promise<{success: boolean, error?: string, code?: string}>}
+     */
+    async deleteConversation(conversationId, userId) {
+        try {
+            // Validate ObjectIds
+            if (!mongoose.Types.ObjectId.isValid(conversationId) ||
+                !mongoose.Types.ObjectId.isValid(userId)) {
+                return {
+                    success: false,
+                    error: 'Invalid conversation or user ID',
+                    code: 'INVALID_ID'
+                };
+            }
+
+            const conversationObjectId = new mongoose.Types.ObjectId(conversationId);
+
+            // Find the conversation
+            const conversation = await Conversation.findOne({
+                _id: conversationObjectId,
+                isActive: true
+            });
+
+            if (!conversation) {
+                return {
+                    success: false,
+                    error: 'Conversation not found',
+                    code: 'CONVERSATION_NOT_FOUND'
+                };
+            }
+
+            // Validate user is a participant
+            const isParticipant = conversation.participants.some(
+                p => p.toString() === userId.toString()
+            );
+
+            if (!isParticipant) {
+                return {
+                    success: false,
+                    error: 'User is not a participant in this conversation',
+                    code: 'UNAUTHORIZED_ACCESS'
+                };
+            }
+
+            // Soft delete by setting isActive to false
+            conversation.isActive = false;
+            conversation.deletedAt = new Date();
+            conversation.deletedBy = new mongoose.Types.ObjectId(userId);
+
+            await conversation.save();
+
+            return {
+                success: true
+            };
+
+        } catch (error) {
+            console.error('Error in deleteConversation:', error);
             return {
                 success: false,
                 error: error.message,

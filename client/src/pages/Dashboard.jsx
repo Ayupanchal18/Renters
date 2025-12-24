@@ -2,10 +2,11 @@ import React, { useEffect, useState, useCallback, useMemo, lazy, Suspense } from
 import Footer from "../components/Footer";
 import Navbar from "../components/Navbar";
 import { useNavigate } from "react-router-dom";
-import { isAuthenticated, getToken, getUser } from "../utils/auth";
+import { isAuthenticated, getToken, getUser, setUser as setUserInStorage } from "../utils/auth";
 import { propertiesAPI } from "../lib/api";
 import { showSuccessToast, showErrorToast } from "../utils/toastNotifications";
 import { Sparkles } from "lucide-react";
+import { calculateProfileCompletion } from "../utils/profileCompletion";
 
 // Lazy load heavy components
 const ProfileCard = lazy(() => import("../components/dashboard/ProfileCard"));
@@ -76,6 +77,24 @@ const Dashboard = React.memo(function Dashboard() {
             }
 
             setVerificationStatus(data);
+
+            // Update user data with latest verification status
+            if (data.success && data.verification) {
+                setUser(prevUser => {
+                    if (!prevUser) return prevUser;
+                    const updatedUser = {
+                        ...prevUser,
+                        emailVerified: data.verification.email.verified,
+                        phoneVerified: data.verification.phone.verified,
+                        emailVerifiedAt: data.verification.email.verifiedAt,
+                        phoneVerifiedAt: data.verification.phone.verifiedAt,
+                        createdAt: data.createdAt || prevUser.createdAt
+                    };
+                    // Update localStorage with the latest verification status
+                    setUserInStorage(updatedUser);
+                    return updatedUser;
+                });
+            }
         } catch (error) {
             console.error('Error fetching verification status:', error);
             setVerificationError(error.message);
@@ -89,7 +108,7 @@ const Dashboard = React.memo(function Dashboard() {
         if (isAuthenticated()) {
             fetchVerificationStatus();
         }
-    }, [fetchVerificationStatus]);
+    }, []);
 
     // Fetch user properties function
     const fetchUserProperties = useCallback(async () => {
@@ -209,6 +228,11 @@ const Dashboard = React.memo(function Dashboard() {
     // Memoize computed values
     const userListings = useMemo(() => userProperties, [userProperties]);
 
+    // Calculate profile completion dynamically
+    const profileCompletion = useMemo(() => {
+        return calculateProfileCompletion(user);
+    }, [user]);
+
     const unreadMessages = useMemo(() => {
         return conversations?.filter((c) => c.unreadCount?.get(user?.id) > 0).length || 0;
     }, [conversations, user?.id]);
@@ -227,40 +251,41 @@ const Dashboard = React.memo(function Dashboard() {
         <div className="min-h-screen bg-gradient-to-b from-background via-background to-muted/30">
             <Navbar />
 
-            <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 lg:py-12">
+            <main className="max-w-7xl mx-auto px-3 sm:px-6 lg:px-8 py-4 sm:py-6 lg:py-10">
                 {/* Network Status */}
                 <NetworkStatus
                     isOnline={isOnline}
                     onRetry={handleRetryDataLoad}
-                    className="mb-6"
+                    className="mb-3 sm:mb-4"
                 />
 
-                {/* Header Section */}
-                <div className="mb-10">
-                    <div className="flex items-center gap-3 mb-3">
-                        <div className="p-2 bg-primary/10 rounded-xl">
-                            <Sparkles className="w-6 h-6 text-primary" />
+                {/* Header Section - Compact on mobile */}
+                <div className="mb-4 sm:mb-8">
+                    <div className="flex items-center gap-2 mb-1 sm:mb-2">
+                        <div className="p-1.5 sm:p-2 bg-primary/10 rounded-lg sm:rounded-xl">
+                            <Sparkles className="w-4 h-4 sm:w-6 sm:h-6 text-primary" />
                         </div>
-                        <span className="text-sm font-medium text-primary bg-primary/5 px-3 py-1 rounded-full">
+                        <span className="text-xs sm:text-sm font-medium text-primary bg-primary/5 px-2 sm:px-3 py-0.5 sm:py-1 rounded-full">
                             Dashboard
                         </span>
                     </div>
-                    <h1 className="text-3xl lg:text-4xl font-bold text-foreground mb-2">
-                        Welcome back, <span className="text-primary">{user?.name}</span>! 👋
+                    <h1 className="text-xl sm:text-3xl lg:text-4xl font-bold text-foreground mb-1">
+                        Welcome, <span className="text-primary">{user?.name?.split(' ')[0]}</span>! 👋
                     </h1>
-                    <p className="text-muted-foreground text-lg max-w-2xl">
+                    <p className="text-muted-foreground text-sm sm:text-base lg:text-lg max-w-2xl hidden sm:block">
                         Manage your properties, verify your account, and keep your security settings updated
                     </p>
                 </div>
 
-                {/* Profile Card & Stats - Side by Side on Large Screens */}
-                <div className="grid grid-cols-1 xl:grid-cols-3 gap-6 mb-8">
+                {/* Profile Card & Stats */}
+                <div className="grid grid-cols-1 xl:grid-cols-3 gap-3 sm:gap-6 mb-3 sm:mb-6">
                     <div className="xl:col-span-1">
                         <Suspense fallback={<ProfileCardSkeleton />}>
                             {user ? (
                                 <ProfileCard
                                     user={user}
-                                    completion={45}
+                                    completion={profileCompletion.percentage}
+                                    completionData={profileCompletion}
                                     onPostProperty={() => navigate("/post-property")}
                                 />
                             ) : (
@@ -279,13 +304,13 @@ const Dashboard = React.memo(function Dashboard() {
                     </div>
                 </div>
 
-                {/* Personal Info & Verification - Two Column Layout */}
-                <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-8">
-                    <Suspense fallback={<div className="animate-pulse bg-card h-64 rounded-2xl border border-border"></div>}>
+                {/* Personal Info & Verification */}
+                <div className="grid grid-cols-1 lg:grid-cols-2 gap-3 sm:gap-6 mb-3 sm:mb-6">
+                    <Suspense fallback={<div className="animate-pulse bg-card h-48 sm:h-64 rounded-xl sm:rounded-2xl border border-border"></div>}>
                         <PersonalInfoSection user={user} />
                     </Suspense>
                     
-                    <Suspense fallback={<div className="animate-pulse bg-card h-64 rounded-2xl border border-border"></div>}>
+                    <Suspense fallback={<div className="animate-pulse bg-card h-48 sm:h-64 rounded-xl sm:rounded-2xl border border-border"></div>}>
                         <VerificationSection
                             user={user}
                             verificationStatus={verificationStatus}
@@ -297,9 +322,9 @@ const Dashboard = React.memo(function Dashboard() {
                     </Suspense>
                 </div>
 
-                {/* Properties Section - Full Width */}
-                <div className="mb-8">
-                    <Suspense fallback={<div className="animate-pulse bg-card h-96 rounded-2xl border border-border"></div>}>
+                {/* Properties Section */}
+                <div className="mb-3 sm:mb-6">
+                    <Suspense fallback={<div className="animate-pulse bg-card h-64 sm:h-96 rounded-xl sm:rounded-2xl border border-border"></div>}>
                         <PropertiesSection 
                             properties={userListings}
                             isLoading={propertiesLoading}
@@ -312,8 +337,8 @@ const Dashboard = React.memo(function Dashboard() {
                 </div>
 
                 {/* Security Section */}
-                <div className="mb-8">
-                    <Suspense fallback={<div className="animate-pulse bg-card h-64 rounded-2xl border border-border"></div>}>
+                <div className="mb-3 sm:mb-6">
+                    <Suspense fallback={<div className="animate-pulse bg-card h-48 sm:h-64 rounded-xl sm:rounded-2xl border border-border"></div>}>
                         <SecuritySection 
                             isLoading={false}
                             error={null}

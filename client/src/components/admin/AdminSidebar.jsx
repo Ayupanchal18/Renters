@@ -15,7 +15,8 @@ import {
   FileBarChart,
   ClipboardList,
   X,
-  Home
+  Home,
+  Quote
 } from 'lucide-react';
 
 /**
@@ -50,6 +51,7 @@ const navigationItems = [
     items: [
       { name: 'CMS', href: '/admin/content', icon: FileText },
       { name: 'Reviews', href: '/admin/reviews', icon: Star },
+      { name: 'Testimonials', href: '/admin/testimonials', icon: Quote },
     ]
   },
   {

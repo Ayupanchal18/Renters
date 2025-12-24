@@ -1,4 +1,4 @@
-import { useEffect } from "react";
+import { useEffect, lazy, Suspense, useCallback } from "react";
 import { Toaster } from "./components/ui/toaster";
 import { Toaster as Sonner } from "./components/ui/sonner.jsx";
 import { TooltipProvider } from "./components/ui/tooltip";
@@ -9,51 +9,108 @@ import { register as registerSW } from "./utils/serviceWorker";
 import { NavigationStateProvider } from "./components/ui/navigation-state-provider";
 import { ThemeLoadingState } from "./components/ui/theme-error-boundary";
 import { SocketProvider } from "./contexts/SocketContext";
+import { HelmetProvider } from "react-helmet-async";
+import { useWebVitals, WEB_VITALS_THRESHOLDS } from "./hooks/useWebVitals";
 
+// Critical path - load immediately
 import Index from "./pages/Index";
 import NotFound from "./pages/NotFound";
-import Listings from "./pages/Listings";
-import Property from "./pages/Property";
-import PostProperty from "./pages/PostProperty";
-import SearchResults from "./pages/SearchResults";
-import Login from "./pages/Login";
-import Signup from "./pages/Signup";
-import Dashboard from "./pages/Dashboard";
-import Wishlist from "./pages/Wishlist";
-import Messages from "./pages/Messages";
-import Admin from "./pages/Admin";
-import AdminDashboard from "./pages/AdminDashboard";
-import About from "./pages/About";
-import Contact from "./pages/Contact";
-import FAQs from "./pages/FAQs";
-import Blog from "./pages/Blog";
-import BlogPost from "./pages/BlogPost";
-import Privacy from "./pages/Privacy";
-import Terms from "./pages/Terms";
-import Refund from "./pages/Refund";
-import ComingSoon from "./pages/ComingSoon";
-import Maintenance from "./pages/Maintenance";
-import VerificationSection from "./components/dashboard/VerificationSection";
-import Notifications from "./pages/Notifications";
 
-// Admin pages
-import AdminRoute from "./components/admin/AdminRoute";
-import AdminLayout from "./components/admin/AdminLayout";
-import AdminOverview from "./pages/admin/AdminOverview";
-import UserManagement from "./pages/admin/UserManagement";
-import PropertyManagement from "./pages/admin/PropertyManagement";
-import LocationManagement from "./pages/admin/LocationManagement";
-import CategoryManagement from "./pages/admin/CategoryManagement";
-import ContentManagement from "./pages/admin/ContentManagement";
-import NotificationManagement from "./pages/admin/NotificationManagement";
-import ReviewModeration from "./pages/admin/ReviewModeration";
-import SystemSettings from "./pages/admin/SystemSettings";
-import Reports from "./pages/admin/Reports";
-import AuditLogs from "./pages/admin/AuditLogs";
+// Route-based code splitting - lazy load all other pages
+const Listings = lazy(() => import("./pages/Listings"));
+const Property = lazy(() => import("./pages/Property"));
+const PostProperty = lazy(() => import("./pages/PostProperty"));
+const SearchResults = lazy(() => import("./pages/SearchResults"));
+const Login = lazy(() => import("./pages/Login"));
+const Signup = lazy(() => import("./pages/Signup"));
+const Dashboard = lazy(() => import("./pages/Dashboard"));
+const Wishlist = lazy(() => import("./pages/Wishlist"));
+const Messages = lazy(() => import("./pages/Messages"));
+const Admin = lazy(() => import("./pages/Admin"));
+const AdminDashboard = lazy(() => import("./pages/AdminDashboard"));
+const About = lazy(() => import("./pages/About"));
+const Contact = lazy(() => import("./pages/Contact"));
+const FAQs = lazy(() => import("./pages/FAQs"));
+const Blog = lazy(() => import("./pages/Blog"));
+const BlogPost = lazy(() => import("./pages/BlogPost"));
+const Privacy = lazy(() => import("./pages/Privacy"));
+const Terms = lazy(() => import("./pages/Terms"));
+const Refund = lazy(() => import("./pages/Refund"));
+const ComingSoon = lazy(() => import("./pages/ComingSoon"));
+const Maintenance = lazy(() => import("./pages/Maintenance"));
+const Notifications = lazy(() => import("./pages/Notifications"));
 
-const queryClient = new QueryClient();
+// Admin pages - lazy loaded
+const AdminRoute = lazy(() => import("./components/admin/AdminRoute"));
+const AdminLayout = lazy(() => import("./components/admin/AdminLayout"));
+const AdminOverview = lazy(() => import("./pages/admin/AdminOverview"));
+const UserManagement = lazy(() => import("./pages/admin/UserManagement"));
+const PropertyManagement = lazy(() => import("./pages/admin/PropertyManagement"));
+const LocationManagement = lazy(() => import("./pages/admin/LocationManagement"));
+const CategoryManagement = lazy(() => import("./pages/admin/CategoryManagement"));
+const ContentManagement = lazy(() => import("./pages/admin/ContentManagement"));
+const NotificationManagement = lazy(() => import("./pages/admin/NotificationManagement"));
+const ReviewModeration = lazy(() => import("./pages/admin/ReviewModeration"));
+const TestimonialManagement = lazy(() => import("./pages/admin/TestimonialManagement"));
+const SystemSettings = lazy(() => import("./pages/admin/SystemSettings"));
+const Reports = lazy(() => import("./pages/admin/Reports"));
+const AuditLogs = lazy(() => import("./pages/admin/AuditLogs"));
+
+// Minimal loading fallback for lazy routes
+function PageLoader() {
+    return (
+        <div className="min-h-screen flex items-center justify-center bg-background">
+            <div className="flex flex-col items-center gap-3">
+                <div className="w-8 h-8 border-3 border-primary border-t-transparent rounded-full animate-spin" />
+                <p className="text-sm text-muted-foreground">Loading...</p>
+            </div>
+        </div>
+    );
+}
+
+// Admin route wrapper with lazy loading
+function AdminRouteWrapper({ children }) {
+    return (
+        <Suspense fallback={<PageLoader />}>
+            <AdminRoute>
+                <AdminLayout>{children}</AdminLayout>
+            </AdminRoute>
+        </Suspense>
+    );
+}
+
+const queryClient = new QueryClient({
+    defaultOptions: {
+        queries: {
+            staleTime: 1000 * 60 * 5, // 5 minutes
+            gcTime: 1000 * 60 * 30, // 30 minutes (formerly cacheTime)
+            refetchOnWindowFocus: false,
+            retry: 1,
+        },
+    },
+});
 
 const App = () => {
+    // Web Vitals reporting callback - logs metrics in development mode
+    const handleWebVitalsReport = useCallback((metric) => {
+        if (import.meta.env.DEV) {
+            const threshold = WEB_VITALS_THRESHOLDS[metric.name];
+            const isGood = threshold ? metric.value <= threshold.good : true;
+            const style = isGood ? 'color: green' : 'color: orange';
+            
+            console.log(
+                `%c[Web Vitals] ${metric.name}: ${metric.value.toFixed(2)} (${metric.rating})`,
+                style
+            );
+        }
+        
+        // In production, you could send metrics to an analytics endpoint
+        // Example: sendToAnalytics(metric);
+    }, []);
+
+    // Initialize Web Vitals monitoring
+    useWebVitals(handleWebVitalsReport);
+
     // Register service worker for offline functionality
     useEffect(() => {
         registerSW({
@@ -67,6 +124,7 @@ const App = () => {
     }, []);
 
     return (
+    <HelmetProvider>
     <QueryClientProvider client={queryClient}>
         <ThemeProvider
             attribute="class"
@@ -81,53 +139,59 @@ const App = () => {
                 <Sonner />
                 <ThemeLoadingState>
                 <BrowserRouter
-                        future={{
-                            v7_startTransition: true,
-                            v7_relativeSplatPath: true
-                        }}
-                    >
-                        <NavigationStateProvider>
+                    future={{
+                        v7_startTransition: true,
+                        v7_relativeSplatPath: true
+                    }}
+                >
+                    <NavigationStateProvider>
+                    <Suspense fallback={<PageLoader />}>
                         <Routes>
-                        <Route path="/" element={<Index />} />
-                        <Route path="/listings" element={<Listings />} />
-                        <Route path="/properties/:slug" element={<Property />} />
-                        <Route path="/post-property" element={<PostProperty />} />
-                        <Route path="/search" element={<SearchResults />} />
-                        <Route path="/login" element={<Login />} />
-                        <Route path="/signup" element={<Signup />} />
-                        <Route path="/dashboard" element={<Dashboard />} />
-                        <Route path="/wishlist" element={<Wishlist />} />
-                        <Route path="/messages" element={<Messages />} />
-                        <Route path="/admin" element={<AdminRoute><AdminLayout><AdminOverview /></AdminLayout></AdminRoute>} />
-                        <Route path="/admin/monitoring" element={<AdminDashboard />} />
-                        <Route path="/about" element={<About />} />
-                        <Route path="/contact" element={<Contact />} />
-                        <Route path="/faqs" element={<FAQs />} />
-                        <Route path="/blog" element={<Blog />} />
-                        <Route path="/blog/:slug" element={<BlogPost />} />
-                        <Route path="/privacy-policy" element={<Privacy />} />
-                        <Route path="/terms" element={<Terms />} />
-                        <Route path="/refund-policy" element={<Refund />} />
-                        <Route path="/coming-soon" element={<ComingSoon />} />
-                        <Route path="/maintenance" element={<Maintenance />} />
-                        <Route path="/notifications" element={<Notifications />} />
+                            {/* Critical routes - not lazy */}
+                            <Route path="/" element={<Index />} />
+                            
+                            {/* Lazy loaded routes */}
+                            <Route path="/listings" element={<Listings />} />
+                            <Route path="/properties/:slug" element={<Property />} />
+                            <Route path="/post-property" element={<PostProperty />} />
+                            <Route path="/search" element={<SearchResults />} />
+                            <Route path="/login" element={<Login />} />
+                            <Route path="/signup" element={<Signup />} />
+                            <Route path="/dashboard" element={<Dashboard />} />
+                            <Route path="/wishlist" element={<Wishlist />} />
+                            <Route path="/messages" element={<Messages />} />
+                            <Route path="/admin" element={<AdminRouteWrapper><AdminOverview /></AdminRouteWrapper>} />
+                            <Route path="/admin/monitoring" element={<AdminDashboard />} />
+                            <Route path="/about" element={<About />} />
+                            <Route path="/contact" element={<Contact />} />
+                            <Route path="/faqs" element={<FAQs />} />
+                            <Route path="/blog" element={<Blog />} />
+                            <Route path="/blog/:slug" element={<BlogPost />} />
+                            <Route path="/privacy-policy" element={<Privacy />} />
+                            <Route path="/terms" element={<Terms />} />
+                            <Route path="/refund-policy" element={<Refund />} />
+                            <Route path="/coming-soon" element={<ComingSoon />} />
+                            <Route path="/maintenance" element={<Maintenance />} />
+                            <Route path="/notifications" element={<Notifications />} />
 
-                        {/* Admin routes - protected with AdminRoute and wrapped in AdminLayout */}
-                        <Route path="/admin/overview" element={<AdminRoute><AdminLayout><AdminOverview /></AdminLayout></AdminRoute>} />
-                        <Route path="/admin/users" element={<AdminRoute><AdminLayout><UserManagement /></AdminLayout></AdminRoute>} />
-                        <Route path="/admin/properties" element={<AdminRoute><AdminLayout><PropertyManagement /></AdminLayout></AdminRoute>} />
-                        <Route path="/admin/locations" element={<AdminRoute><AdminLayout><LocationManagement /></AdminLayout></AdminRoute>} />
-                        <Route path="/admin/categories" element={<AdminRoute><AdminLayout><CategoryManagement /></AdminLayout></AdminRoute>} />
-                        <Route path="/admin/content" element={<AdminRoute><AdminLayout><ContentManagement /></AdminLayout></AdminRoute>} />
-                        <Route path="/admin/notifications" element={<AdminRoute><AdminLayout><NotificationManagement /></AdminLayout></AdminRoute>} />
-                        <Route path="/admin/reviews" element={<AdminRoute><AdminLayout><ReviewModeration /></AdminLayout></AdminRoute>} />
-                        <Route path="/admin/settings" element={<AdminRoute><AdminLayout><SystemSettings /></AdminLayout></AdminRoute>} />
-                        <Route path="/admin/reports" element={<AdminRoute><AdminLayout><Reports /></AdminLayout></AdminRoute>} />
-                        <Route path="/admin/audit-logs" element={<AdminRoute><AdminLayout><AuditLogs /></AdminLayout></AdminRoute>} />
+                            {/* Admin routes */}
+                            <Route path="/admin/overview" element={<AdminRouteWrapper><AdminOverview /></AdminRouteWrapper>} />
+                            <Route path="/admin/users" element={<AdminRouteWrapper><UserManagement /></AdminRouteWrapper>} />
+                            <Route path="/admin/properties" element={<AdminRouteWrapper><PropertyManagement /></AdminRouteWrapper>} />
+                            <Route path="/admin/locations" element={<AdminRouteWrapper><LocationManagement /></AdminRouteWrapper>} />
+                            <Route path="/admin/categories" element={<AdminRouteWrapper><CategoryManagement /></AdminRouteWrapper>} />
+                            <Route path="/admin/content" element={<AdminRouteWrapper><ContentManagement /></AdminRouteWrapper>} />
+                            <Route path="/admin/notifications" element={<AdminRouteWrapper><NotificationManagement /></AdminRouteWrapper>} />
+                            <Route path="/admin/reviews" element={<AdminRouteWrapper><ReviewModeration /></AdminRouteWrapper>} />
+                            <Route path="/admin/testimonials" element={<AdminRouteWrapper><TestimonialManagement /></AdminRouteWrapper>} />
+                            <Route path="/admin/settings" element={<AdminRouteWrapper><SystemSettings /></AdminRouteWrapper>} />
+                            <Route path="/admin/reports" element={<AdminRouteWrapper><Reports /></AdminRouteWrapper>} />
+                            <Route path="/admin/audit-logs" element={<AdminRouteWrapper><AuditLogs /></AdminRouteWrapper>} />
 
-                            {/* Always keep last */}
+                            {/* 404 - Always last */}
                             <Route path="*" element={<NotFound />} />
                         </Routes>
+                    </Suspense>
                     </NavigationStateProvider>
                 </BrowserRouter>
                 </ThemeLoadingState>
@@ -135,6 +199,7 @@ const App = () => {
             </SocketProvider>
         </ThemeProvider>
     </QueryClientProvider>
+    </HelmetProvider>
     );
 };
 

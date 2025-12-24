@@ -1646,6 +1646,73 @@
   @apply focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2 focus-visible:ring-offset-background;
 }
 
+/* ====================================================================== */
+/* ----------------------- GLOBAL FOCUS STYLES -------------------------- */
+/* ====================================================================== */
+
+/* 
+ * Accessibility: Ensure all interactive elements have visible focus indicators
+ * Requirements: 10.4 - All interactive elements have visible focus indicators
+ */
+
+/* Base focus-visible styles for all interactive elements */
+@layer base {
+  /* Inputs, textareas, and selects */
+  input:focus-visible,
+  textarea:focus-visible,
+  select:focus-visible {
+    outline: none;
+    box-shadow: 0 0 0 2px hsl(var(--background)), 0 0 0 4px hsl(var(--primary) / 0.5);
+    border-color: hsl(var(--primary));
+  }
+
+  /* Buttons */
+  button:focus-visible {
+    outline: none;
+    box-shadow: 0 0 0 2px hsl(var(--background)), 0 0 0 4px hsl(var(--primary) / 0.5);
+  }
+
+  /* Links */
+  a:focus-visible {
+    outline: none;
+    box-shadow: 0 0 0 2px hsl(var(--background)), 0 0 0 4px hsl(var(--primary) / 0.5);
+    border-radius: 2px;
+  }
+
+  /* Checkboxes and radio buttons */
+  input[type="checkbox"]:focus-visible,
+  input[type="radio"]:focus-visible {
+    outline: none;
+    box-shadow: 0 0 0 2px hsl(var(--background)), 0 0 0 4px hsl(var(--primary) / 0.5);
+  }
+
+  /* Custom interactive elements with tabindex */
+  [tabindex]:not([tabindex="-1"]):focus-visible {
+    outline: none;
+    box-shadow: 0 0 0 2px hsl(var(--background)), 0 0 0 4px hsl(var(--primary) / 0.5);
+    border-radius: 4px;
+  }
+
+  /* Summary elements (for details/accordion) */
+  summary:focus-visible {
+    outline: none;
+    box-shadow: 0 0 0 2px hsl(var(--background)), 0 0 0 4px hsl(var(--primary) / 0.5);
+    border-radius: 4px;
+  }
+}
+
+/* High contrast mode - enhanced focus indicators */
+@media (prefers-contrast: high) {
+  input:focus-visible,
+  textarea:focus-visible,
+  select:focus-visible,
+  button:focus-visible,
+  a:focus-visible,
+  [tabindex]:not([tabindex="-1"]):focus-visible {
+    box-shadow: 0 0 0 3px hsl(var(--background)), 0 0 0 6px hsl(var(--primary));
+  }
+}
+
 /* High contrast mode support - Theme-aware */
 @media (prefers-contrast: high) {
   .property-card {

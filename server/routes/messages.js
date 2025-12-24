@@ -208,7 +208,7 @@ router.get("/conversations/:id",
 
             // Get conversation details
             const conversation = await Conversation.findById(conversationId)
-                .populate('participants', 'name email avatar')
+                .populate('participants', 'name email avatar phone')
                 .populate('property', 'title images price')
                 .select('-messages');
 
@@ -437,6 +437,43 @@ router.delete("/messages/:id",
                 success: false,
                 error: "INTERNAL_ERROR",
                 message: "Failed to delete message"
+            });
+        }
+    }
+);
+
+/**
+ * DELETE /conversations/:id
+ * Delete a conversation (soft delete)
+ */
+router.delete("/conversations/:id",
+    authenticateToken,
+    async (req, res) => {
+        try {
+            await connectDB();
+
+            const conversationId = req.params.id;
+            const userId = req.user._id.toString();
+
+            const result = await messageService.deleteConversation(conversationId, userId);
+
+            if (!result.success) {
+                const statusCode = result.code === 'CONVERSATION_NOT_FOUND' ? 404 :
+                    result.code === 'UNAUTHORIZED_ACCESS' ? 403 : 500;
+                return res.status(statusCode).json({
+                    success: false,
+                    error: result.code,
+                    message: result.error
+                });
+            }
+
+            sendSuccess(res, null, "Conversation deleted successfully");
+        } catch (error) {
+            console.error('Delete conversation error:', error);
+            res.status(500).json({
+                success: false,
+                error: "INTERNAL_ERROR",
+                message: "Failed to delete conversation"
             });
         }
     }

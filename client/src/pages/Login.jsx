@@ -85,12 +85,13 @@ export default function Login() {
                         <form onSubmit={handleSubmit} className="space-y-5">
                             {/* Email */}
                             <div className="space-y-2">
-                                <label className="block text-sm font-medium text-foreground">
+                                <label htmlFor="login-email" className="block text-sm font-medium text-foreground">
                                     Email Address
                                 </label>
                                 <div className="relative">
                                     <Mail className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-muted-foreground" />
                                     <Input
+                                        id="login-email"
                                         type="email"
                                         placeholder="you@example.com"
                                         value={email}
@@ -104,7 +105,7 @@ export default function Login() {
                             {/* Password */}
                             <div className="space-y-2">
                                 <div className="flex items-center justify-between">
-                                    <label className="block text-sm font-medium text-foreground">
+                                    <label htmlFor="login-password" className="block text-sm font-medium text-foreground">
                                         Password
                                     </label>
                                     <Link 
@@ -117,6 +118,7 @@ export default function Login() {
                                 <div className="relative">
                                     <Lock className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-muted-foreground" />
                                     <Input
+                                        id="login-password"
                                         type="password"
                                         placeholder="Enter your password"
                                         value={password}

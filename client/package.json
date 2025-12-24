@@ -1,0 +1,6 @@
+{
+  "dependencies": {
+    "react-helmet-async": "^2.0.5",
+    "web-vitals": "^5.1.0"
+  }
+}

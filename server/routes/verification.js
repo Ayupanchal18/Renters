@@ -325,7 +325,7 @@ router.get("/status", authenticateToken, async (req, res) => {
         // Use authenticated user from JWT token instead of x-user-id header
         const userId = req.user._id;
 
-        const user = await User.findById(userId).select('emailVerified phoneVerified emailVerifiedAt phoneVerifiedAt email phone');
+        const user = await User.findById(userId).select('emailVerified phoneVerified emailVerifiedAt phoneVerifiedAt email phone createdAt');
         if (!user) {
             return res.status(404).json({
                 success: false,
@@ -347,7 +347,8 @@ router.get("/status", authenticateToken, async (req, res) => {
                     verifiedAt: user.phoneVerifiedAt || null,
                     contact: user.phone || null
                 }
-            }
+            },
+            createdAt: user.createdAt || null
         });
 
     } catch (error) {

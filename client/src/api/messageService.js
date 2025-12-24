@@ -268,6 +268,35 @@ const messageService = {
     },
 
     /**
+     * Delete a conversation
+     * @param {string} conversationId - Conversation ID
+     * @returns {Promise<Object>} Response with deletion status
+     */
+    deleteConversation: async (conversationId) => {
+        try {
+            if (!conversationId) {
+                return createResponse(false, null, {
+                    code: 'INVALID_INPUT',
+                    message: 'Conversation ID is required'
+                });
+            }
+
+            const response = await fetch(`/api/messages/conversations/${conversationId}`, {
+                method: 'DELETE',
+                headers: getAuthHeaders()
+            });
+
+            return handleResponse(response);
+        } catch (error) {
+            console.error('Error deleting conversation:', error);
+            return createResponse(false, null, {
+                code: 'NETWORK_ERROR',
+                message: error.message || 'Failed to delete conversation'
+            });
+        }
+    },
+
+    /**
      * Get total unread message count for the user
      * Requirement 7.1: Fetch and display current unread message count
      * @returns {Promise<Object>} Response with unread count

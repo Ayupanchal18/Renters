@@ -8,6 +8,7 @@ import { ViewControls } from "../components/all_listing/view-controls";
 import { BackToTop } from "../components/ui/back-to-top";
 import Navbar from "./../components/Navbar";
 import Footer from "./../components/Footer";
+import SEOHead from "../components/seo/SEOHead";
 import { getAllProperties, appendProperties } from "../redux/slices/propertySlice";
 import { searchResults } from "../redux/slices/searchSlice";
 import propertyService from "../api/propertyService";
@@ -242,6 +243,12 @@ export default function ListingsPage() {
 
     return (
         <>
+            <SEOHead
+                title="Browse Property Listings"
+                description="Search and filter through thousands of verified rental properties. Find rooms, flats, houses, and PG accommodations that match your needs and budget."
+                url={typeof window !== 'undefined' ? `${window.location.origin}/listings` : 'https://renters.com/listings'}
+                type="website"
+            />
             <Navbar />
             <main className="min-h-screen bg-background">
                 <HeroSection onSearch={handleHeroSearch} />

@@ -52,33 +52,30 @@ const SecuritySection = React.memo(function SecuritySection({ isLoading = false,
 
     return (
         <>
-            <div className="bg-card rounded-2xl border border-border shadow-sm hover:shadow-md transition-shadow duration-300 overflow-hidden">
+            <div className="bg-card rounded-xl sm:rounded-2xl border border-border shadow-sm hover:shadow-md transition-shadow duration-300 overflow-hidden">
                 {/* Header */}
-                <div className="flex items-center justify-between p-6 border-b border-border bg-muted/30">
-                    <div className="flex items-center gap-3">
-                        <div className="p-2 bg-primary/10 rounded-xl">
-                            <Shield size={20} className="text-primary" />
+                <div className="flex items-center justify-between p-3 sm:p-4 border-b border-border bg-muted/30">
+                    <div className="flex items-center gap-2 sm:gap-3">
+                        <div className="p-1.5 sm:p-2 bg-primary/10 rounded-lg sm:rounded-xl">
+                            <Shield size={16} className="text-primary sm:w-5 sm:h-5" />
                         </div>
                         <div>
-                            <div className="flex items-center gap-2">
-                                <h3 className="text-lg font-bold text-foreground">Security & Login</h3>
-                                {loading && <InlineLoading text="" size="sm" />}
-                            </div>
-                            <p className="text-sm text-muted-foreground">Manage your account security</p>
+                            <h3 className="text-sm sm:text-base font-bold text-foreground">Security & Login</h3>
+                            <p className="text-xs text-muted-foreground hidden sm:block">Manage your account security</p>
                         </div>
                     </div>
                 </div>
 
-                <div className="p-6">
+                <div className="p-3 sm:p-4">
                     {/* Error state */}
                     {error && (
-                        <div className="mb-6 p-4 bg-destructive/10 border border-destructive/20 rounded-xl">
-                            <span className="text-sm text-destructive">{error}</span>
+                        <div className="mb-3 p-3 bg-destructive/10 border border-destructive/20 rounded-lg">
+                            <span className="text-xs text-destructive">{error}</span>
                         </div>
                     )}
 
-                    {/* Security Actions Grid */}
-                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 mb-6">
+                    {/* Security Actions */}
+                    <div className="space-y-2 mb-3">
                         {securityActions.map((action, idx) => {
                             const Icon = action.icon;
 
@@ -92,22 +89,19 @@ const SecuritySection = React.memo(function SecuritySection({ isLoading = false,
                                             setActiveModal(action.action);
                                         }
                                     }}
-                                    className={`group ${action.cardBg} border ${action.borderColor} rounded-xl p-4 hover:shadow-md transition-all duration-200 text-left hover:-translate-y-0.5`}
+                                    className={`group w-full ${action.cardBg} border ${action.borderColor} rounded-lg p-3 hover:shadow-sm transition-all duration-200 text-left`}
                                 >
                                     <div className="flex items-center justify-between">
-                                        <div className="flex items-center gap-3">
-                                            <div className={`${action.iconBg} p-2.5 rounded-xl text-white shadow-sm`}>
-                                                <Icon size={18} />
+                                        <div className="flex items-center gap-2.5">
+                                            <div className={`${action.iconBg} p-2 rounded-lg text-white`}>
+                                                <Icon size={14} />
                                             </div>
                                             <div>
-                                                <span className="font-semibold text-foreground block text-sm">{action.label}</span>
+                                                <span className="font-medium text-foreground block text-sm">{action.label}</span>
                                                 <span className="text-xs text-muted-foreground">{action.description}</span>
                                             </div>
                                         </div>
-                                        <ChevronRight 
-                                            size={18} 
-                                            className="text-muted-foreground opacity-0 group-hover:opacity-100 transition-all duration-200 transform group-hover:translate-x-0.5" 
-                                        />
+                                        <ChevronRight size={16} className="text-muted-foreground" />
                                     </div>
                                 </button>
                             );
@@ -115,15 +109,15 @@ const SecuritySection = React.memo(function SecuritySection({ isLoading = false,
                     </div>
 
                     {/* Security Information */}
-                    <div className="bg-muted/50 rounded-xl p-5">
-                        <h4 className="font-semibold text-foreground mb-4 flex items-center gap-2">
-                            <Calendar size={16} className="text-muted-foreground" />
+                    <div className="bg-muted/50 rounded-lg p-3">
+                        <h4 className="font-medium text-foreground text-sm mb-2 flex items-center gap-1.5">
+                            <Calendar size={14} className="text-muted-foreground" />
                             Security Information
                         </h4>
-                        <div className="space-y-3">
-                            <div className="flex items-center justify-between py-2 border-b border-border/50">
-                                <span className="text-sm text-muted-foreground">Account created</span>
-                                <span className="text-sm font-medium text-foreground">
+                        <div className="space-y-2">
+                            <div className="flex items-center justify-between py-1.5 border-b border-border/50">
+                                <span className="text-xs text-muted-foreground">Account created</span>
+                                <span className="text-xs font-medium text-foreground">
                                     {user?.accountCreatedAt 
                                         ? new Date(user.accountCreatedAt).toLocaleDateString()
                                         : user?.createdAt 
@@ -132,13 +126,13 @@ const SecuritySection = React.memo(function SecuritySection({ isLoading = false,
                                     }
                                 </span>
                             </div>
-                            <div className="flex items-center justify-between py-2">
-                                <span className="text-sm text-muted-foreground">Phone verified</span>
-                                <span className={`flex items-center gap-1.5 text-sm font-medium ${user?.phoneVerified ? 'text-success' : 'text-warning'}`}>
+                            <div className="flex items-center justify-between py-1.5">
+                                <span className="text-xs text-muted-foreground">Phone verified</span>
+                                <span className={`flex items-center gap-1 text-xs font-medium ${user?.phoneVerified ? 'text-success' : 'text-warning'}`}>
                                     {user?.phoneVerified ? (
-                                        <><CheckCircle size={14} /> Verified</>
+                                        <><CheckCircle size={12} /> Verified</>
                                     ) : (
-                                        <><XCircle size={14} /> Not verified</>
+                                        <><XCircle size={12} /> Not verified</>
                                     )}
                                 </span>
                             </div>

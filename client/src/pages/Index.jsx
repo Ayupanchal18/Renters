@@ -2,8 +2,8 @@ import React, { useState, useEffect, useCallback } from 'react';
 import { Button } from "../components/ui/button";
 import { Input } from "../components/ui/input";
 import { Badge } from "../components/ui/badge";
-import { FavoriteButton } from "../components/ui/favorite-button";
 import { BackToTop } from "../components/ui/back-to-top";
+import { PropertyCard } from "../components/all_listing/property-card";
 import { 
     MapPin, Search, Star, ArrowRight, Mail, CheckCircle2, 
     Zap, Shield, Clock, Users, Sparkles, Heart, ChevronDown, 
@@ -12,6 +12,9 @@ import {
 } from 'lucide-react';
 import Navbar from '../components/Navbar';
 import Footer from '../components/Footer';
+import SEOHead from '../components/seo/SEOHead';
+import JsonLd from '../components/seo/JsonLd';
+import { generateOrganization, generateWebsiteSchema } from '../utils/structuredData';
 import { useNavigate } from 'react-router-dom';
 import { getAllProperties } from '../redux/slices/propertySlice';
 import { useDispatch } from 'react-redux';
@@ -43,6 +46,7 @@ export default function Home() {
     const [isDetectingLocation, setIsDetectingLocation] = useState(false);
     const [activeTestimonial, setActiveTestimonial] = useState(0);
     const [wishlistIds, setWishlistIds] = useState(new Set());
+    const [testimonials, setTestimonials] = useState([]);
     const [errors, setErrors] = useState({
         location: "",
         type: "",
@@ -156,8 +160,8 @@ export default function Home() {
         },
     ];
 
-    // Testimonials
-    const testimonials = [
+    // Fallback testimonials (used if API fails)
+    const fallbackTestimonials = [
         {
             name: 'Rahul Sharma',
             role: 'Software Engineer',
@@ -204,6 +208,22 @@ export default function Home() {
         }
     }, []);
 
+    // Fetch testimonials from API
+    const fetchTestimonials = useCallback(async () => {
+        try {
+            const response = await fetch('/api/testimonials?limit=3');
+            const data = await response.json();
+            if (data.success && data.data?.length > 0) {
+                setTestimonials(data.data);
+            } else {
+                setTestimonials(fallbackTestimonials);
+            }
+        } catch (error) {
+            console.error('Failed to fetch testimonials:', error);
+            setTestimonials(fallbackTestimonials);
+        }
+    }, []);
+
     const getallProperties = async () => {
         setLoading(true);
         try {
@@ -220,18 +240,27 @@ export default function Home() {
     useEffect(() => {
         getallProperties();
         fetchWishlistIds();
-    }, [fetchWishlistIds]);
+        fetchTestimonials();
+    }, [fetchWishlistIds, fetchTestimonials]);
 
     // Auto-rotate testimonials
     useEffect(() => {
+        if (testimonials.length === 0) return;
         const interval = setInterval(() => {
             setActiveTestimonial((prev) => (prev + 1) % testimonials.length);
         }, 5000);
         return () => clearInterval(interval);
-    }, []);
+    }, [testimonials.length]);
 
     return (
         <>
+            <SEOHead
+                title="Find Rooms, Flats & Houses for Rent"
+                description="Discover thousands of verified rooms, apartments, and shared spaces. Find your perfect rental home with Renters - trusted by 100,000+ renters across 500+ cities."
+                url={typeof window !== 'undefined' ? window.location.origin : 'https://renters.com'}
+                type="website"
+            />
+            <JsonLd data={[generateOrganization(), generateWebsiteSchema()]} />
             <Navbar />
             <div className="min-h-screen bg-background">
                 {/* Hero Section */}
@@ -272,12 +301,13 @@ export default function Home() {
                                 <div className="grid grid-cols-1 md:grid-cols-12 gap-4 items-end">
                                     {/* Location */}
                                     <div className="md:col-span-4">
-                                        <label className="block text-sm font-medium text-foreground mb-2">
+                                        <label htmlFor="search-location" className="block text-sm font-medium text-foreground mb-2">
                                             Location
                                         </label>
                                         <div className="relative">
                                             <MapPin className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-muted-foreground" />
                                             <Input
+                                                id="search-location"
                                                 placeholder="City or neighborhood"
                                                 value={searchLocation}
                                                 onChange={(e) => {
@@ -328,11 +358,12 @@ export default function Home() {
 
                                     {/* Property Type */}
                                     <div className={`md:col-span-3 ${showTypeDropdown ? 'relative z-50' : 'relative z-20'}`}>
-                                        <label className="block text-sm font-medium text-foreground mb-2">Property Type</label>
+                                        <label htmlFor="search-type" className="block text-sm font-medium text-foreground mb-2">Property Type</label>
                                         <div className="relative">
                                             <button
+                                                id="search-type"
                                                 onClick={() => setShowTypeDropdown(!showTypeDropdown)}
-                                                className="w-full h-12 px-4 bg-background border border-border/50 rounded-lg text-left text-foreground hover:border-primary/50 transition-colors flex items-center justify-between"
+                                                className="w-full h-12 px-4 bg-background border border-border/50 rounded-lg text-left text-foreground hover:border-primary/50 transition-colors flex items-center justify-between focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2"
                                             >
                                                 <span className={searchType ? 'text-foreground' : 'text-muted-foreground'}>
                                                     {searchType ? typeOptions.find(o => o.value === searchType)?.label : 'Select type'}
@@ -363,10 +394,11 @@ export default function Home() {
 
                                     {/* Keywords */}
                                     <div className="md:col-span-3">
-                                        <label className="block text-sm font-medium text-foreground mb-2">Keywords</label>
+                                        <label htmlFor="search-keywords" className="block text-sm font-medium text-foreground mb-2">Keywords</label>
                                         <div className="relative">
                                             <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-muted-foreground" />
                                             <Input
+                                                id="search-keywords"
                                                 placeholder="Amenities, features..."
                                                 value={searchQuery}
                                                 onChange={(e) => setSearchQuery(e.target.value)}
@@ -469,11 +501,19 @@ export default function Home() {
                                 // Loading skeletons
                                 [...Array(6)].map((_, idx) => (
                                     <div key={idx} className="bg-card rounded-2xl overflow-hidden border border-border animate-pulse">
-                                        <div className="h-48 bg-muted" />
-                                        <div className="p-5 space-y-3">
+                                        <div className="h-52 bg-muted" />
+                                        <div className="p-4 space-y-3">
                                             <div className="h-5 bg-muted rounded w-3/4" />
                                             <div className="h-4 bg-muted rounded w-1/2" />
-                                            <div className="h-8 bg-muted rounded w-1/3" />
+                                            <div className="flex items-center justify-between py-3 border-y border-border">
+                                                <div className="h-4 bg-muted rounded w-16" />
+                                                <div className="h-4 bg-muted rounded w-16" />
+                                                <div className="h-4 bg-muted rounded w-16" />
+                                            </div>
+                                            <div className="flex gap-2">
+                                                <div className="h-9 bg-muted rounded-xl flex-1" />
+                                                <div className="h-9 bg-muted rounded-xl flex-1" />
+                                            </div>
                                         </div>
                                     </div>
                                 ))
@@ -484,84 +524,24 @@ export default function Home() {
                                 
                                 return filteredProperties.length > 0 ? (
                                     filteredProperties.slice(0, 6).map((property, index) => (
-                                    <div
-                                        key={property.id || property._id || `property-${index}`}
-                                        className="group bg-card rounded-2xl overflow-hidden border border-border hover:border-primary/30 hover:shadow-xl hover:shadow-primary/5 transition-all duration-300 cursor-pointer"
-                                        onClick={() => navigate(`/properties/${property.slug}`)}
-                                    >
-                                        {/* Image */}
-                                        <div className="relative h-48 overflow-hidden bg-muted">
-                                            <img
-                                                src={property?.photos?.length >= 1 ? property.photos[0] : "/placeholder.svg"}
-                                                alt={property.title}
-                                                className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
-                                            />
-                                            <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-transparent to-transparent opacity-0 group-hover:opacity-100 transition-opacity" />
-                                            
-                                            {/* Wishlist Button */}
-                                            <FavoriteButton
-                                                propertyId={property._id}
-                                                initialSaved={wishlistIds.has(property._id)}
-                                                size="default"
-                                                variant="floating"
-                                                className="absolute top-3 right-3"
-                                                onToggle={(isFavorited) => {
-                                                    setWishlistIds(prev => {
-                                                        const newSet = new Set(prev);
-                                                        if (isFavorited) {
-                                                            newSet.add(property._id);
-                                                        } else {
-                                                            newSet.delete(property._id);
-                                                        }
-                                                        return newSet;
-                                                    });
-                                                }}
-                                            />
-                                            
-                                            {/* Property Type Badge */}
-                                            <Badge className="absolute top-3 left-3 bg-primary/90 text-primary-foreground">
-                                                {property.propertyType || property.category || 'Property'}
-                                            </Badge>
-                                        </div>
-
-                                        {/* Content */}
-                                        <div className="p-5">
-                                            <h3 className="font-semibold text-foreground text-lg mb-1 line-clamp-1 group-hover:text-primary transition-colors">
-                                                {property.title}
-                                            </h3>
-                                            <div className="flex items-center text-muted-foreground text-sm mb-4">
-                                                <MapPin className="w-4 h-4 mr-1.5 text-primary/70" />
-                                                <span className="line-clamp-1">{property.address || property.locality || property.city}</span>
-                                            </div>
-
-                                            {/* Price */}
-                                            <div className="flex items-baseline gap-1 mb-4">
-                                                <span className="text-2xl font-bold text-primary">₹{property.monthlyRent?.toLocaleString()}</span>
-                                                <span className="text-muted-foreground text-sm">/month</span>
-                                            </div>
-
-                                            {/* Features */}
-                                            <div className="flex items-center gap-4 text-sm text-muted-foreground mb-4">
-                                                <div className="flex items-center gap-1.5">
-                                                    <Shield className="w-4 h-4 text-emerald-500" />
-                                                    <span>₹{property.securityDeposit?.toLocaleString()} deposit</span>
-                                                </div>
-                                            </div>
-
-                                            {/* CTA */}
-                                            <Button
-                                                className="w-full bg-primary text-primary-foreground hover:bg-primary/90 transition-all shadow-sm hover:shadow-md"
-                                                onClick={(e) => {
-                                                    e.stopPropagation();
-                                                    navigate(`/properties/${property.slug}`);
-                                                }}
-                                            >
-                                                View Details
-                                                <ArrowUpRight className="w-4 h-4 ml-2" />
-                                            </Button>
-                                        </div>
-                                    </div>
-                                ))
+                                        <PropertyCard
+                                            key={property.id || property._id || `property-${index}`}
+                                            property={{ ...property, featured: true }}
+                                            viewMode="grid"
+                                            initialSaved={wishlistIds.has(property._id)}
+                                            onWishlistChange={(propertyId, isFavorited) => {
+                                                setWishlistIds(prev => {
+                                                    const newSet = new Set(prev);
+                                                    if (isFavorited) {
+                                                        newSet.add(propertyId);
+                                                    } else {
+                                                        newSet.delete(propertyId);
+                                                    }
+                                                    return newSet;
+                                                });
+                                            }}
+                                        />
+                                    ))
                                 ) : (
                                     <div className="col-span-full text-center py-16">
                                         <Building2 className="w-16 h-16 text-muted-foreground/50 mx-auto mb-4" />
@@ -800,7 +780,9 @@ export default function Home() {
                             Get notified about new listings and rental tips delivered to your inbox.
                         </p>
                         <div className="flex flex-col sm:flex-row gap-3 max-w-md mx-auto">
+                            <label htmlFor="newsletter-email" className="sr-only">Email address</label>
                             <Input
+                                id="newsletter-email"
                                 type="email"
                                 placeholder="Enter your email"
                                 className="h-12 bg-card border border-border text-foreground placeholder:text-muted-foreground flex-1"

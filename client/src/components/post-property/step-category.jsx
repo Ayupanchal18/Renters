@@ -1,53 +1,72 @@
-import { Building2, Home, ShoppingCart, Users, Hotel } from 'lucide-react';
+import { useState, useEffect } from 'react';
+import { Building2, Home, ShoppingCart, Users, Hotel, Loader2 } from 'lucide-react';
 
-// Categories matching backend enum: ["room", "flat", "house", "pg", "hostel", "commercial"]
-const CATEGORIES = [
-    {
-        id: "room",
-        label: "Room",
-        description: "Single or shared rooms",
-        icon: Home,
-    },
-    {
-        id: "flat",
-        label: "Flat / Apartment",
-        description: "1BHK, 2BHK, 3BHK flats",
-        icon: Building2,
-    },
-    {
-        id: "house",
-        label: "House",
-        description: "Independent house or villa",
-        icon: Home,
-    },
-    {
-        id: "pg",
-        label: "PG (Paying Guest)",
-        description: "Paying guest accommodation",
-        icon: Users,
-    },
-    {
-        id: "hostel",
-        label: "Hostel",
-        description: "Hostel rooms and beds",
-        icon: Hotel,
-    },
-    {
-        id: "commercial",
-        label: "Commercial",
-        description: "Shop, Office, Warehouse",
-        icon: ShoppingCart,
-    },
+// Icon mapping for categories
+const ICON_MAP = {
+    Home: Home,
+    Building2: Building2,
+    Users: Users,
+    Hotel: Hotel,
+    ShoppingCart: ShoppingCart
+};
+
+// Fallback categories if API fails
+const FALLBACK_CATEGORIES = [
+    { id: "room", label: "Room", description: "Single or shared rooms", icon: Home },
+    { id: "flat", label: "Flat / Apartment", description: "1BHK, 2BHK, 3BHK flats", icon: Building2 },
+    { id: "house", label: "House", description: "Independent house or villa", icon: Home },
+    { id: "pg", label: "PG (Paying Guest)", description: "Paying guest accommodation", icon: Users },
+    { id: "hostel", label: "Hostel", description: "Hostel rooms and beds", icon: Hotel },
+    { id: "commercial", label: "Commercial", description: "Shop, Office, Warehouse", icon: ShoppingCart },
 ];
 
 export default function StepCategory({ formData, setFormData, validationErrors }) {
+    const [categories, setCategories] = useState([]);
+    const [loading, setLoading] = useState(true);
+
+    useEffect(() => {
+        const fetchCategories = async () => {
+            try {
+                const response = await fetch('/api/categories');
+                const data = await response.json();
+                
+                if (data.success && data.data.length > 0) {
+                    const mapped = data.data.map(cat => ({
+                        id: cat.slug,
+                        label: cat.name,
+                        description: cat.description || '',
+                        icon: ICON_MAP[cat.icon] || Home
+                    }));
+                    setCategories(mapped);
+                } else {
+                    setCategories(FALLBACK_CATEGORIES);
+                }
+            } catch (error) {
+                console.error('Error fetching categories:', error);
+                setCategories(FALLBACK_CATEGORIES);
+            } finally {
+                setLoading(false);
+            }
+        };
+
+        fetchCategories();
+    }, []);
+
+    if (loading) {
+        return (
+            <div className="flex items-center justify-center py-12">
+                <Loader2 className="h-8 w-8 animate-spin text-primary" />
+            </div>
+        );
+    }
+
     return (
         <div>
             <h2 className="text-2xl font-bold text-foreground mb-2">What are you listing?</h2>
             <p className="text-muted-foreground mb-8">Select the property type that best describes your listing</p>
 
             <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                {CATEGORIES.map((category) => {
+                {categories.map((category) => {
                     const Icon = category.icon;
                     const isSelected = formData.category === category.id;
 

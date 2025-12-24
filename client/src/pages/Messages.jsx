@@ -27,6 +27,7 @@ export default function Messages() {
         selectConversation,
         sendMessage,
         markAsRead,
+        deleteConversation,
         fetchConversations,
         setError
     } = useMessages({ autoConnect: true });
@@ -62,6 +63,20 @@ export default function Messages() {
         fetchConversations();
     };
 
+    // Handle delete conversation
+    const handleDeleteConversation = async () => {
+        if (!selectedConversation) return;
+        
+        const conversationId = selectedConversation._id || selectedConversation.id;
+        const result = await deleteConversation(conversationId);
+        
+        if (result.success) {
+            setShowMobileChat(false);
+        } else {
+            setError(result.error || 'Failed to delete conversation');
+        }
+    };
+
     // Transform conversation data for components that expect the old format
     const transformConversationForUI = useCallback((conv) => {
         if (!conv) return null;
@@ -76,7 +91,8 @@ export default function Messages() {
                     id: p._id || p.id,
                     name: p.name || p.fullName || 'Unknown User',
                     email: p.email || '',
-                    avatar: p.avatar || p.profileImage || null, // Remove external avatar service
+                    phone: p.phone || p.phoneNumber || null,
+                    avatar: p.avatar || p.profileImage || null,
                     isOnline: p.isOnline || false
                 };
             }
@@ -170,22 +186,20 @@ export default function Messages() {
         <>
             <Navbar />
             <div className="h-[90vh] bg-background flex flex-col">
-                {/* Mobile header */}
-                <div className="md:hidden bg-card border-b border-border px-4 py-3 flex items-center rounded-t-xl mx-4 mt-4">
-                    {showMobileChat && transformedSelectedConversation && (
+                {/* Mobile header - only show when in chat view */}
+                {showMobileChat && transformedSelectedConversation && (
+                    <div className="md:hidden bg-card border-b border-border px-4 py-3 flex items-center rounded-t-xl mx-4 mt-4">
                         <button
                             onClick={() => setShowMobileChat(false)}
                             className="mr-3 p-1 text-foreground hover:text-primary transition-colors"
                         >
                             <ChevronLeft className="w-6 h-6" />
                         </button>
-                    )}
-                    <h1 className="text-lg font-bold text-foreground">
-                        {showMobileChat && transformedSelectedConversation
-                            ? transformedSelectedConversation.participants[0]?.name
-                            : "Messages"}
-                    </h1>
-                </div>
+                        <h1 className="text-lg font-bold text-foreground">
+                            {transformedSelectedConversation.participants[0]?.name}
+                        </h1>
+                    </div>
+                )}
 
                 {/* Error Banner */}
                 {error && (
@@ -236,6 +250,7 @@ export default function Messages() {
                                 conversation={transformedSelectedConversation}
                                 currentUserId={currentUserId}
                                 onSendMessage={handleSendMessage}
+                                onDeleteConversation={handleDeleteConversation}
                                 sending={sending}
                             />
                         ) : (

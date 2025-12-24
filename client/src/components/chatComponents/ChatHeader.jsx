@@ -1,11 +1,21 @@
-import { Phone, Video, MoreVertical } from "lucide-react";
+import { Phone, MoreVertical, Trash2 } from "lucide-react";
 import { Button } from "../ui/button";
+import { useState } from "react";
 
-export function ChatHeader({ participant }) {
+export function ChatHeader({ participant, onDeleteConversation }) {
+    const [showMenu, setShowMenu] = useState(false);
+
     // Create a simple avatar fallback using CSS
     const getAvatarFallback = (name) => {
         const initials = (name || 'U').split(' ').map(n => n[0]).join('').toUpperCase().slice(0, 2);
         return initials;
+    };
+
+    const handleDeleteConversation = () => {
+        if (window.confirm('Are you sure you want to delete this conversation? This action cannot be undone.')) {
+            onDeleteConversation?.();
+        }
+        setShowMenu(false);
     };
 
     return (
@@ -42,15 +52,54 @@ export function ChatHeader({ participant }) {
             </div>
 
             <div className="flex items-center gap-0.5 sm:gap-1 flex-shrink-0">
-                <Button variant="ghost" size="icon" className="hover:bg-muted text-muted-foreground hover:text-foreground h-8 w-8 sm:h-10 sm:w-10">
-                    <Phone className="w-4 h-4 sm:w-5 sm:h-5" />
-                </Button>
-                <Button variant="ghost" size="icon" className="hover:bg-muted text-muted-foreground hover:text-foreground h-8 w-8 sm:h-10 sm:w-10">
-                    <Video className="w-4 h-4 sm:w-5 sm:h-5" />
-                </Button>
-                <Button variant="ghost" size="icon" className="hover:bg-muted text-muted-foreground hover:text-foreground h-8 w-8 sm:h-10 sm:w-10">
-                    <MoreVertical className="w-4 h-4 sm:w-5 sm:h-5" />
-                </Button>
+                {participant.phone ? (
+                    <a 
+                        href={`tel:${participant.phone}`}
+                        className="inline-flex items-center justify-center hover:bg-muted text-muted-foreground hover:text-foreground h-8 w-8 sm:h-10 sm:w-10 rounded-md transition-colors"
+                        title={`Call ${participant.phone}`}
+                    >
+                        <Phone className="w-4 h-4 sm:w-5 sm:h-5" />
+                    </a>
+                ) : (
+                    <Button 
+                        variant="ghost" 
+                        size="icon" 
+                        className="hover:bg-muted text-muted-foreground/50 cursor-not-allowed h-8 w-8 sm:h-10 sm:w-10"
+                        disabled
+                        title="Phone number not available"
+                    >
+                        <Phone className="w-4 h-4 sm:w-5 sm:h-5" />
+                    </Button>
+                )}
+                <div className="relative">
+                    <Button 
+                        variant="ghost" 
+                        size="icon" 
+                        className="hover:bg-muted text-muted-foreground hover:text-foreground h-8 w-8 sm:h-10 sm:w-10"
+                        onClick={() => setShowMenu(!showMenu)}
+                    >
+                        <MoreVertical className="w-4 h-4 sm:w-5 sm:h-5" />
+                    </Button>
+                    
+                    {/* Dropdown Menu */}
+                    {showMenu && (
+                        <>
+                            <div 
+                                className="fixed inset-0 z-40" 
+                                onClick={() => setShowMenu(false)}
+                            />
+                            <div className="absolute right-0 top-full mt-1 w-44 bg-card border border-border rounded-lg shadow-lg z-50 overflow-hidden">
+                                <button
+                                    onClick={handleDeleteConversation}
+                                    className="flex items-center gap-2.5 px-3 py-2.5 text-sm text-destructive hover:bg-destructive/10 w-full text-left transition-colors"
+                                >
+                                    <Trash2 size={14} />
+                                    Delete Conversation
+                                </button>
+                            </div>
+                        </>
+                    )}
+                </div>
             </div>
         </div>
     );
