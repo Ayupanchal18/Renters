@@ -19,6 +19,15 @@ async function startServer() {
         if (fs.existsSync(distPath)) {
             const files = fs.readdirSync(distPath);
             console.log(`📂 Dist folder contents: ${files.join(", ")}`);
+
+            // Check assets folder
+            const assetsPath = path.join(distPath, 'assets');
+            if (fs.existsSync(assetsPath)) {
+                const assetFiles = fs.readdirSync(assetsPath);
+                console.log(`📂 Assets folder contents: ${assetFiles.join(", ")}`);
+            } else {
+                console.error(`❌ Assets folder NOT FOUND at: ${assetsPath}`);
+            }
         } else {
             console.error(`❌ Dist folder NOT FOUND at: ${distPath}`);
         }
@@ -34,10 +43,25 @@ async function startServer() {
             }
         }));
 
+        // Explicitly serve assets folder
+        app.use('/assets', express.static(path.join(distPath, 'assets'), {
+            setHeaders: (res, filePath) => {
+                if (filePath.endsWith('.css')) {
+                    res.setHeader('Content-Type', 'text/css');
+                } else if (filePath.endsWith('.js')) {
+                    res.setHeader('Content-Type', 'application/javascript');
+                }
+            }
+        }));
+
         // Handle React Router - serve index.html for all non-API routes
         app.get("/{*splat}", (req, res) => {
-            if (req.path.startsWith("/api/") || req.path.startsWith("/health") || req.path.startsWith("/socket.io")) {
-                return res.status(404).json({ error: "API endpoint not found" });
+            // Skip static assets, API routes, and other special paths
+            if (req.path.startsWith("/assets/") ||
+                req.path.startsWith("/api/") ||
+                req.path.startsWith("/health") ||
+                req.path.startsWith("/socket.io")) {
+                return res.status(404).json({ error: "Not found" });
             }
             res.sendFile(path.join(distPath, "index.html"));
         });
