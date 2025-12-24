@@ -2,8 +2,8 @@ FROM node:22.16-alpine
 
 WORKDIR /app
 
-# Cache bust: v5 - Fix Express 5 route syntax
-RUN echo "Build version: 5"
+# Cache bust: v7 - Client-local tailwind config
+RUN echo "Build version: 7"
 
 # Verify Node version
 RUN node --version && npm --version
