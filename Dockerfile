@@ -2,8 +2,8 @@ FROM node:22.16-alpine
 
 WORKDIR /app
 
-# Cache bust: v2 - Force fresh Tailwind build
-RUN echo "Build version: 2"
+# Cache bust: v4 - Fix static file serving order
+RUN echo "Build version: 4"
 
 # Verify Node version
 RUN node --version && npm --version

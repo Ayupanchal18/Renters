@@ -1,13 +1,17 @@
 /** @type {import('tailwindcss').Config} */
+const path = require('path');
+
 module.exports = {
   darkMode: ["class"],
   content: [
-    // Paths from project root
-    "./client/src/**/*.{js,jsx,ts,tsx}",
-    "./client/index.html",
-    // Paths relative to client folder (when Vite root is ./client)
+    // Absolute paths to ensure files are found regardless of working directory
+    path.join(__dirname, "./client/src/**/*.{js,jsx,ts,tsx}"),
+    path.join(__dirname, "./client/index.html"),
+    // Relative paths for when Vite root is ./client
     "./src/**/*.{js,jsx,ts,tsx}",
     "./index.html",
+    "../client/src/**/*.{js,jsx,ts,tsx}",
+    "../client/index.html",
   ],
   prefix: "",
   theme: {

@@ -32,7 +32,7 @@ async function startServer() {
             console.error(`❌ Dist folder NOT FOUND at: ${distPath}`);
         }
 
-        // Serve static files with proper MIME types
+        // Serve static files with proper MIME types - MUST be before catch-all
         app.use(express.static(distPath, {
             setHeaders: (res, filePath) => {
                 if (filePath.endsWith('.css')) {
@@ -43,7 +43,7 @@ async function startServer() {
             }
         }));
 
-        // Explicitly serve assets folder
+        // Explicitly serve assets folder with higher priority
         app.use('/assets', express.static(path.join(distPath, 'assets'), {
             setHeaders: (res, filePath) => {
                 if (filePath.endsWith('.css')) {
@@ -55,13 +55,18 @@ async function startServer() {
         }));
 
         // Handle React Router - serve index.html for all non-API routes
-        app.get("/{*splat}", (req, res) => {
-            // Skip static assets, API routes, and other special paths
-            if (req.path.startsWith("/assets/") ||
-                req.path.startsWith("/api/") ||
+        // This MUST be after static file middleware
+        app.get("*", (req, res, next) => {
+            // Let static files pass through
+            if (req.path.includes('.')) {
+                return next();
+            }
+            // Skip API routes and other special paths
+            if (req.path.startsWith("/api/") ||
                 req.path.startsWith("/health") ||
-                req.path.startsWith("/socket.io")) {
-                return res.status(404).json({ error: "Not found" });
+                req.path.startsWith("/socket.io") ||
+                req.path.startsWith("/uploads")) {
+                return next();
             }
             res.sendFile(path.join(distPath, "index.html"));
         });
