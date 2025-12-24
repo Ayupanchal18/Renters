@@ -60,10 +60,10 @@ export default function ImageGallery({ images = [], title = "Property" }) {
 
     if (!hasImages) {
         return (
-            <div className="relative aspect-[16/9] lg:aspect-[21/9] rounded-2xl overflow-hidden bg-muted">
+            <div className="relative h-[280px] sm:h-[360px] lg:h-[420px] lg:rounded-2xl overflow-hidden bg-muted">
                 <div className="absolute inset-0 flex flex-col items-center justify-center text-muted-foreground">
-                    <ImageOff className="w-16 h-16 mb-4 opacity-40" />
-                    <p className="text-lg font-medium">No images available</p>
+                    <ImageOff className="w-12 h-12 mb-3 opacity-40" />
+                    <p className="text-base font-medium">No images available</p>
                     <p className="text-sm opacity-70">Photos will appear here when uploaded</p>
                 </div>
             </div>
@@ -72,12 +72,12 @@ export default function ImageGallery({ images = [], title = "Property" }) {
 
     return (
         <>
-            {/* Main Gallery */}
-            <div className="relative rounded-2xl overflow-hidden bg-slate-900">
+            {/* Main Gallery - Fixed height container */}
+            <div className="relative h-[280px] sm:h-[360px] lg:h-[420px] lg:rounded-2xl overflow-hidden bg-slate-900">
                 {displayImages.length === 1 ? (
                     // Single image layout
                     <div 
-                        className="aspect-[16/9] lg:aspect-[21/9] cursor-pointer group"
+                        className="h-full cursor-pointer group"
                         onClick={() => setIsModalOpen(true)}
                     >
                         <img
@@ -94,7 +94,7 @@ export default function ImageGallery({ images = [], title = "Property" }) {
                     </div>
                 ) : displayImages.length <= 3 ? (
                     // 2-3 images layout
-                    <div className="grid grid-cols-2 gap-1 aspect-[16/9] lg:aspect-[21/9]">
+                    <div className="grid grid-cols-2 gap-1 h-full">
                         <div 
                             className="relative cursor-pointer group"
                             onClick={() => { setCurrentIndex(0); setIsModalOpen(true); }}
@@ -127,7 +127,7 @@ export default function ImageGallery({ images = [], title = "Property" }) {
                     </div>
                 ) : (
                     // 4+ images layout - Bento grid
-                    <div className="grid grid-cols-4 grid-rows-2 gap-1 aspect-[16/9] lg:aspect-[21/9]">
+                    <div className="grid grid-cols-4 grid-rows-2 gap-1 h-full">
                         {/* Main large image */}
                         <div 
                             className="col-span-2 row-span-2 relative cursor-pointer group"

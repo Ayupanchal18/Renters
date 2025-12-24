@@ -8,6 +8,7 @@ export function ChatWindow({
     conversation,
     currentUserId,
     onSendMessage,
+    onDeleteConversation,
     sending = false,
 }) {
     const messagesEndRef = useRef(null);
@@ -101,7 +102,7 @@ export function ChatWindow({
 
     return (
         <div className="flex flex-col h-full bg-card rounded-r-xl overflow-hidden min-w-0">
-            <ChatHeader participant={participant} />
+            <ChatHeader participant={participant} onDeleteConversation={onDeleteConversation} />
 
             {/* Send Error Banner */}
             {sendError && (

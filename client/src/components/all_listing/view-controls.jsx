@@ -52,21 +52,34 @@ export function ViewControls({
                     </div>
                 </div>
 
-                {/* View Mode Toggle */}
-                <div className="flex items-center bg-muted rounded-xl p-1 gap-0.5">
+                {/* View Mode Toggle with sliding indicator */}
+                <div className="relative flex items-center bg-muted rounded-xl p-1 gap-0.5">
+                    {/* Sliding background indicator */}
+                    <div 
+                        className="absolute h-9 bg-card shadow-sm rounded-lg transition-all duration-300 ease-out"
+                        style={{
+                            width: 'calc(33.333% - 2px)',
+                            left: viewMode === "grid" 
+                                ? '4px' 
+                                : viewMode === "list" 
+                                    ? 'calc(33.333% + 2px)' 
+                                    : 'calc(66.666%)',
+                        }}
+                    />
+                    
                     <Button
                         variant="ghost"
                         size="sm"
                         onClick={() => onViewChange("grid")}
-                        className={`h-9 px-3 rounded-lg transition-all ${
+                        className={`relative z-10 h-9 px-3 rounded-lg transition-colors duration-200 ${
                             viewMode === "grid" 
-                                ? "bg-card shadow-sm text-primary" 
-                                : "text-muted-foreground hover:text-foreground hover:bg-transparent"
+                                ? "text-primary" 
+                                : "text-muted-foreground hover:text-foreground"
                         }`}
                         aria-label="Grid view"
                         aria-pressed={viewMode === "grid"}
                     >
-                        <LayoutGrid className="w-4 h-4" />
+                        <LayoutGrid className={`w-4 h-4 transition-transform duration-200 ${viewMode === "grid" ? "scale-110" : ""}`} />
                         <span className="ml-2 text-xs font-medium hidden sm:inline">Grid</span>
                     </Button>
 
@@ -74,15 +87,15 @@ export function ViewControls({
                         variant="ghost"
                         size="sm"
                         onClick={() => onViewChange("list")}
-                        className={`h-9 px-3 rounded-lg transition-all ${
+                        className={`relative z-10 h-9 px-3 rounded-lg transition-colors duration-200 ${
                             viewMode === "list" 
-                                ? "bg-card shadow-sm text-primary" 
-                                : "text-muted-foreground hover:text-foreground hover:bg-transparent"
+                                ? "text-primary" 
+                                : "text-muted-foreground hover:text-foreground"
                         }`}
                         aria-label="List view"
                         aria-pressed={viewMode === "list"}
                     >
-                        <List className="w-4 h-4" />
+                        <List className={`w-4 h-4 transition-transform duration-200 ${viewMode === "list" ? "scale-110" : ""}`} />
                         <span className="ml-2 text-xs font-medium hidden sm:inline">List</span>
                     </Button>
 
@@ -90,15 +103,15 @@ export function ViewControls({
                         variant="ghost"
                         size="sm"
                         onClick={() => onViewChange("map")}
-                        className={`h-9 px-3 rounded-lg transition-all ${
+                        className={`relative z-10 h-9 px-3 rounded-lg transition-colors duration-200 ${
                             viewMode === "map" 
-                                ? "bg-card shadow-sm text-primary" 
-                                : "text-muted-foreground hover:text-foreground hover:bg-transparent"
+                                ? "text-primary" 
+                                : "text-muted-foreground hover:text-foreground"
                         }`}
                         aria-label="Map view"
                         aria-pressed={viewMode === "map"}
                     >
-                        <Map className="w-4 h-4" />
+                        <Map className={`w-4 h-4 transition-transform duration-200 ${viewMode === "map" ? "scale-110" : ""}`} />
                         <span className="ml-2 text-xs font-medium hidden sm:inline">Map</span>
                     </Button>
                 </div>

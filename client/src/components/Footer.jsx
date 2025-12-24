@@ -47,8 +47,8 @@ export default function Footer() {
     return (
         <footer className="bg-card border-t border-border">
             {/* Main Footer Content */}
-            <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 lg:py-10">
-                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-12 gap-6 lg:gap-8">
+            <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6 lg:py-8">
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-12 gap-4 lg:gap-6">
                     
                     {/* Brand Section */}
                     <div className="lg:col-span-4">
@@ -81,16 +81,16 @@ export default function Footer() {
                     </div>
 
                     {/* Links Sections */}
-                    <div className="lg:col-span-5 grid grid-cols-3 gap-6">
+                    <div className="lg:col-span-5 grid grid-cols-3 gap-4 sm:gap-6">
                         {/* Explore */}
                         <div>
-                            <h4 className="font-semibold text-foreground mb-4 text-sm">Explore</h4>
-                            <ul className="space-y-2">
+                            <h4 className="font-semibold text-foreground mb-2 sm:mb-3 text-sm">Explore</h4>
+                            <ul className="space-y-1 sm:space-y-1.5">
                                 {footerLinks.explore.map((link) => (
                                     <li key={link.label}>
                                         <Link
                                             to={link.to}
-                                            className="text-sm text-muted-foreground hover:text-primary transition-colors"
+                                            className="text-xs sm:text-sm text-muted-foreground hover:text-primary transition-colors"
                                         >
                                             {link.label}
                                         </Link>
@@ -101,13 +101,13 @@ export default function Footer() {
 
                         {/* Company */}
                         <div>
-                            <h4 className="font-semibold text-foreground mb-4 text-sm">Company</h4>
-                            <ul className="space-y-2">
+                            <h4 className="font-semibold text-foreground mb-2 sm:mb-3 text-sm">Company</h4>
+                            <ul className="space-y-1 sm:space-y-1.5">
                                 {footerLinks.company.map((link) => (
                                     <li key={link.label}>
                                         <Link
                                             to={link.to}
-                                            className="text-sm text-muted-foreground hover:text-primary transition-colors"
+                                            className="text-xs sm:text-sm text-muted-foreground hover:text-primary transition-colors"
                                         >
                                             {link.label}
                                         </Link>
@@ -118,13 +118,13 @@ export default function Footer() {
 
                         {/* Legal */}
                         <div>
-                            <h4 className="font-semibold text-foreground mb-4 text-sm">Legal</h4>
-                            <ul className="space-y-2">
+                            <h4 className="font-semibold text-foreground mb-2 sm:mb-3 text-sm">Legal</h4>
+                            <ul className="space-y-1 sm:space-y-1.5">
                                 {footerLinks.legal.map((link) => (
                                     <li key={link.label}>
                                         <Link
                                             to={link.to}
-                                            className="text-sm text-muted-foreground hover:text-primary transition-colors"
+                                            className="text-xs sm:text-sm text-muted-foreground hover:text-primary transition-colors"
                                         >
                                             {link.label}
                                         </Link>
@@ -136,36 +136,36 @@ export default function Footer() {
 
                     {/* Newsletter Section */}
                     <div className="lg:col-span-3">
-                        <h4 className="font-semibold text-foreground mb-4 text-sm">Stay Updated</h4>
-                        <p className="text-sm text-muted-foreground mb-4">
-                            Get the latest listings and tips delivered to your inbox.
+                        <h4 className="font-semibold text-foreground mb-2 sm:mb-3 text-sm">Stay Updated</h4>
+                        <p className="text-xs text-muted-foreground mb-3">
+                            Get the latest listings delivered to your inbox.
                         </p>
-                        <form className="space-y-3" onSubmit={(e) => e.preventDefault()}>
+                        <form className="space-y-2" onSubmit={(e) => e.preventDefault()}>
                             <Input
                                 type="email"
                                 placeholder="Enter your email"
-                                className="h-10 bg-background border-border text-sm"
+                                className="h-9 bg-background border-border text-sm"
                             />
-                            <Button className="w-full h-10 text-sm font-medium">
+                            <Button className="w-full h-9 text-sm font-medium">
                                 Subscribe
-                                <ArrowRight className="h-4 w-4 ml-2" />
+                                <ArrowRight className="h-3.5 w-3.5 ml-1.5" />
                             </Button>
                         </form>
                         
                         {/* Contact Info */}
-                        <div className="mt-6 space-y-2">
+                        <div className="mt-4 space-y-1.5">
                             <a 
                                 href="mailto:info@renters.com" 
-                                className="flex items-center gap-2 text-sm text-muted-foreground hover:text-primary transition-colors"
+                                className="flex items-center gap-1.5 text-xs text-muted-foreground hover:text-primary transition-colors"
                             >
-                                <Mail className="h-4 w-4" />
+                                <Mail className="h-3.5 w-3.5" />
                                 info@renters.com
                             </a>
                             <a 
                                 href="tel:+919876543210" 
-                                className="flex items-center gap-2 text-sm text-muted-foreground hover:text-primary transition-colors"
+                                className="flex items-center gap-1.5 text-xs text-muted-foreground hover:text-primary transition-colors"
                             >
-                                <Phone className="h-4 w-4" />
+                                <Phone className="h-3.5 w-3.5" />
                                 +91 98765 43210
                             </a>
                         </div>

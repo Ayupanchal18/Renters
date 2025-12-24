@@ -17,33 +17,33 @@ export default function PersonalInfoSection({ user, onEdit }) {
     };
 
     return (
-        <div className="bg-card rounded-2xl border border-border shadow-sm hover:shadow-md transition-shadow duration-300 overflow-hidden h-full">
+        <div className="bg-card rounded-xl sm:rounded-2xl border border-border shadow-sm hover:shadow-md transition-shadow duration-300 overflow-hidden h-full">
             {/* Header */}
-            <div className="flex items-center justify-between p-6 border-b border-border bg-muted/30">
-                <div className="flex items-center gap-3">
-                    <div className="p-2 bg-primary/10 rounded-xl">
-                        <Sparkles size={20} className="text-primary" />
+            <div className="flex items-center justify-between p-3 sm:p-4 border-b border-border bg-muted/30">
+                <div className="flex items-center gap-2 sm:gap-3">
+                    <div className="p-1.5 sm:p-2 bg-primary/10 rounded-lg sm:rounded-xl">
+                        <Sparkles size={16} className="text-primary sm:w-5 sm:h-5" />
                     </div>
                     <div>
-                        <h3 className="text-lg font-bold text-foreground">
+                        <h3 className="text-sm sm:text-base font-bold text-foreground">
                             Personal Information
                         </h3>
-                        <p className="text-sm text-muted-foreground">Your profile details</p>
+                        <p className="text-xs text-muted-foreground hidden sm:block">Your profile details</p>
                     </div>
                 </div>
 
                 <button
                     onClick={() => setOpenModal(true)}
-                    className="group inline-flex items-center gap-1.5 text-primary hover:bg-primary hover:text-primary-foreground px-3 py-2 rounded-xl transition-all duration-200 border border-primary/20 hover:border-primary whitespace-nowrap flex-shrink-0"
+                    className="group inline-flex items-center gap-1 text-primary hover:bg-primary hover:text-primary-foreground px-2 sm:px-3 py-1.5 sm:py-2 rounded-lg sm:rounded-xl transition-all duration-200 border border-primary/20 hover:border-primary"
                 >
-                    <Edit2 size={14} className="transition-transform group-hover:rotate-12 flex-shrink-0" />
-                    <span className="text-sm font-semibold whitespace-nowrap">Edit</span>
+                    <Edit2 size={12} className="sm:w-3.5 sm:h-3.5" />
+                    <span className="text-xs sm:text-sm font-semibold">Edit</span>
                 </button>
             </div>
 
             {/* Info Grid */}
-            <div className="p-6">
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+            <div className="p-3 sm:p-4">
+                <div className="space-y-2 sm:space-y-3">
                     {info.map((item, idx) => {
                         const Icon = item.icon;
                         const isEmpty = item.value === "Not specified" || item.value === "Not provided";
@@ -51,16 +51,16 @@ export default function PersonalInfoSection({ user, onEdit }) {
                         return (
                             <div 
                                 key={idx} 
-                                className="group flex items-center gap-4 p-4 rounded-xl bg-muted/40 hover:bg-muted/70 transition-colors duration-200"
+                                className="flex items-center gap-3 p-2.5 sm:p-3 rounded-lg bg-muted/40"
                             >
-                                <div className={`${item.color} p-2.5 rounded-xl text-white shadow-sm`}>
-                                    <Icon size={18} />
+                                <div className={`${item.color} p-2 rounded-lg text-white`}>
+                                    <Icon size={14} className="sm:w-4 sm:h-4" />
                                 </div>
                                 <div className="flex-1 min-w-0">
-                                    <p className="text-muted-foreground text-xs font-medium uppercase tracking-wide mb-0.5">
+                                    <p className="text-muted-foreground text-[10px] sm:text-xs font-medium uppercase tracking-wide">
                                         {item.label}
                                     </p>
-                                    <p className={`font-semibold truncate no-underline decoration-transparent ${isEmpty ? "text-muted-foreground/60 italic" : "text-foreground"}`}>
+                                    <p className={`text-sm font-medium truncate ${isEmpty ? "text-muted-foreground/60 italic" : "text-foreground"}`}>
                                         {item.value}
                                     </p>
                                 </div>
@@ -68,14 +68,6 @@ export default function PersonalInfoSection({ user, onEdit }) {
                         );
                     })}
                 </div>
-
-                {/* About Section */}
-                {user.about && (
-                    <div className="mt-6 pt-6 border-t border-border">
-                        <p className="text-muted-foreground text-xs font-medium uppercase tracking-wide mb-2">About You</p>
-                        <p className="text-foreground leading-relaxed">{user.about}</p>
-                    </div>
-                )}
             </div>
 
             <EditModal

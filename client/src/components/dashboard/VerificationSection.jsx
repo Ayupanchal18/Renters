@@ -277,24 +277,21 @@ const VerificationSection = React.memo(function VerificationSection({
 
     return (
         <>
-            <div className="bg-card rounded-2xl border border-border shadow-sm hover:shadow-md transition-shadow duration-300 overflow-hidden h-full">
+            <div className="bg-card rounded-xl sm:rounded-2xl border border-border shadow-sm hover:shadow-md transition-shadow duration-300 overflow-hidden h-full">
                 {/* Header */}
-                <div className="flex items-center justify-between p-6 border-b border-border bg-muted/30">
-                    <div className="flex items-center gap-3">
-                        <div className="p-2 bg-primary/10 rounded-xl">
-                            <BadgeCheck size={20} className="text-primary" />
+                <div className="flex items-center justify-between p-3 sm:p-4 border-b border-border bg-muted/30">
+                    <div className="flex items-center gap-2 sm:gap-3">
+                        <div className="p-1.5 sm:p-2 bg-primary/10 rounded-lg sm:rounded-xl">
+                            <BadgeCheck size={16} className="text-primary sm:w-5 sm:h-5" />
                         </div>
                         <div>
-                            <div className="flex items-center gap-2">
-                                <h3 className="text-lg font-bold text-foreground">Verification Status</h3>
-                                {isLoading && <InlineLoading text="" size="sm" />}
-                            </div>
-                            <p className="text-sm text-muted-foreground">Verify your identity</p>
+                            <h3 className="text-sm sm:text-base font-bold text-foreground">Verification Status</h3>
+                            <p className="text-xs text-muted-foreground hidden sm:block">Verify your identity</p>
                         </div>
                     </div>
                 </div>
 
-                <div className="p-6">
+                <div className="p-3 sm:p-4">
                     {/* Enhanced Error state with user-friendly messaging */}
                     {error && (
                         <div className="mb-6 p-4 bg-destructive/10 border border-destructive/20 rounded-xl">
@@ -369,20 +366,20 @@ const VerificationSection = React.memo(function VerificationSection({
                     </div>
                 )}
 
-                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                    <div className="grid grid-cols-1 gap-2 sm:gap-3">
                         {verifications.map((item, idx) => (
                             <div
                                 key={idx}
-                                className={`${getStatusColor(item.isVerified)} border rounded-xl p-4 transition-all duration-200 hover:shadow-sm`}
+                                className={`${getStatusColor(item.isVerified)} border rounded-lg sm:rounded-xl p-3 sm:p-4 transition-all duration-200`}
                             >
-                                <div className="flex items-center justify-between mb-3">
-                                    <div className="flex items-center gap-2.5">
-                                        <div className={`p-2 rounded-lg ${item.isVerified ? 'bg-success/10' : 'bg-muted'}`}>
+                                <div className="flex items-center justify-between mb-2">
+                                    <div className="flex items-center gap-2">
+                                        <div className={`p-1.5 rounded-lg ${item.isVerified ? 'bg-success/10' : 'bg-muted'}`}>
                                             {item.icon}
                                         </div>
-                                        <span className="font-semibold text-foreground text-sm">{item.label}</span>
+                                        <span className="font-medium text-foreground text-sm">{item.label}</span>
                                     </div>
-                                    <div className={`flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-medium ${
+                                    <div className={`flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-medium ${
                                         item.isVerified 
                                             ? 'bg-success/10 text-success' 
                                             : 'bg-muted text-muted-foreground'
@@ -392,9 +389,9 @@ const VerificationSection = React.memo(function VerificationSection({
                                     </div>
                                 </div>
                                 
-                                {/* Show contact info if available */}
+                                {/* Contact info */}
                                 {item.contact && (
-                                    <div className="text-xs text-muted-foreground mb-3 font-mono bg-muted/50 px-2 py-1 rounded">
+                                    <div className="text-xs text-muted-foreground mb-2 font-mono bg-muted/50 px-2 py-1 rounded truncate">
                                         {item.type === 'phone' 
                                             ? item.contact.replace(/(\+?\d{1,3})\d+(\d{4})/, '$1****$2')
                                             : item.contact
@@ -408,7 +405,7 @@ const VerificationSection = React.memo(function VerificationSection({
                                         size="sm"
                                         variant="outline"
                                         onClick={() => handleInitiateVerification(item.type)}
-                                        className="w-full text-xs border-primary/30 text-primary hover:bg-primary hover:text-primary-foreground"
+                                        className="w-full text-xs border-primary/30 text-primary hover:bg-primary hover:text-primary-foreground h-8"
                                         isLoading={initiatingVerification[item.type]}
                                         loadingText="Starting..."
                                     >
@@ -416,24 +413,17 @@ const VerificationSection = React.memo(function VerificationSection({
                                     </LoadingButton>
                                 )}
 
-                                {/* Show verified date if available */}
+                                {/* Verified date */}
                                 {item.isVerified && item.verifiedAt && (
-                                    <div className="text-xs text-success font-medium mt-2">
+                                    <div className="text-xs text-success font-medium">
                                         Verified {new Date(item.verifiedAt).toLocaleDateString()}
                                     </div>
                                 )}
 
-                                {/* Show message for unavailable verifications */}
+                                {/* Missing contact message */}
                                 {!item.canVerify && !item.isVerified && item.type && (
                                     <div className="text-xs text-muted-foreground">
-                                        Add your {item.type} to enable verification
-                                    </div>
-                                )}
-
-                                {/* Show message for not implemented verifications */}
-                                {!item.type && (
-                                    <div className="text-xs text-muted-foreground">
-                                        Coming soon
+                                        Add your {item.type} to verify
                                     </div>
                                 )}
                             </div>

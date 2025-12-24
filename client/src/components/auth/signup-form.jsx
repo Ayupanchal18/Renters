@@ -160,12 +160,13 @@ export default function SignupForm() {
                     <div className="grid md:grid-cols-2 gap-4">
                         {/* Name */}
                         <div className="space-y-1.5">
-                            <label className="block text-sm font-medium text-foreground">
+                            <label htmlFor="signup-name" className="block text-sm font-medium text-foreground">
                                 Full Name
                             </label>
                             <div className="relative">
                                 <User className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
                                 <input
+                                    id="signup-name"
                                     type="text"
                                     name="name"
                                     value={formData.name}
@@ -181,12 +182,13 @@ export default function SignupForm() {
 
                         {/* Email */}
                         <div className="space-y-1.5">
-                            <label className="block text-sm font-medium text-foreground">
+                            <label htmlFor="signup-email" className="block text-sm font-medium text-foreground">
                                 Email
                             </label>
                             <div className="relative">
                                 <Mail className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
                                 <input
+                                    id="signup-email"
                                     type="email"
                                     name="email"
                                     value={formData.email}
@@ -202,12 +204,13 @@ export default function SignupForm() {
 
                         {/* Phone */}
                         <div className="space-y-1.5">
-                            <label className="block text-sm font-medium text-foreground">
+                            <label htmlFor="signup-phone" className="block text-sm font-medium text-foreground">
                                 Phone Number
                             </label>
                             <div className="relative">
                                 <Phone className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
                                 <input
+                                    id="signup-phone"
                                     type="tel"
                                     name="phone"
                                     value={formData.phone}
@@ -223,10 +226,11 @@ export default function SignupForm() {
 
                         {/* User Type */}
                         <div className="space-y-1.5">
-                            <label className="block text-sm font-medium text-foreground">
+                            <label htmlFor="signup-userType" className="block text-sm font-medium text-foreground">
                                 I am a
                             </label>
                             <select
+                                id="signup-userType"
                                 name="userType"
                                 value={formData.userType}
                                 onChange={handleChange}
@@ -243,12 +247,13 @@ export default function SignupForm() {
 
                         {/* Address */}
                         <div className="md:col-span-2 space-y-1.5">
-                            <label className="block text-sm font-medium text-foreground">
+                            <label htmlFor="signup-address" className="block text-sm font-medium text-foreground">
                                 Address
                             </label>
                             <div className="relative">
                                 <MapPin className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
                                 <input
+                                    id="signup-address"
                                     type="text"
                                     name="address"
                                     value={formData.address}
@@ -264,12 +269,13 @@ export default function SignupForm() {
 
                         {/* Password */}
                         <div className="md:col-span-2 space-y-1.5">
-                            <label className="block text-sm font-medium text-foreground">
+                            <label htmlFor="signup-password" className="block text-sm font-medium text-foreground">
                                 Password
                             </label>
                             <div className="relative">
                                 <Lock className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
                                 <input
+                                    id="signup-password"
                                     type="password"
                                     name="password"
                                     value={formData.password}
@@ -299,12 +305,13 @@ export default function SignupForm() {
 
                         {/* Confirm Password */}
                         <div className="md:col-span-2 space-y-1.5">
-                            <label className="block text-sm font-medium text-foreground">
+                            <label htmlFor="signup-confirmPassword" className="block text-sm font-medium text-foreground">
                                 Confirm Password
                             </label>
                             <div className="relative">
                                 <Lock className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
                                 <input
+                                    id="signup-confirmPassword"
                                     type="password"
                                     name="confirmPassword"
                                     value={formData.confirmPassword}
@@ -320,8 +327,9 @@ export default function SignupForm() {
                     </div>
 
                     {/* Terms */}
-                    <label className="flex items-start gap-3 cursor-pointer select-none">
+                    <label htmlFor="signup-agreeToTerms" className="flex items-start gap-3 cursor-pointer select-none">
                         <input
+                            id="signup-agreeToTerms"
                             type="checkbox"
                             name="agreeToTerms"
                             checked={formData.agreeToTerms}

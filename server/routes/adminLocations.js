@@ -117,8 +117,11 @@ router.get("/", requireAdmin, async (req, res) => {
     try {
         await connectDB();
 
+        console.log('Admin locations GET - Query params:', req.query);
+
         const queryResult = locationListQuerySchema.safeParse(req.query);
         if (!queryResult.success) {
+            console.log('Validation failed:', queryResult.error.errors);
             return res.status(400).json({
                 success: false,
                 error: "VALIDATION_ERROR",
@@ -130,6 +133,8 @@ router.get("/", requireAdmin, async (req, res) => {
         const { page, limit, search, type, parentId, isVisible, sortBy, sortOrder } = queryResult.data;
 
         const query = buildSearchQuery(search, type, parentId, isVisible);
+        console.log('Built query:', query);
+
         const sort = { [sortBy]: sortOrder === 'asc' ? 1 : -1 };
         const skip = (page - 1) * limit;
 
@@ -142,6 +147,8 @@ router.get("/", requireAdmin, async (req, res) => {
                 .lean(),
             Location.countDocuments(query)
         ]);
+
+        console.log('Found locations:', locations.length, 'Total:', total);
 
         res.json({
             success: true,

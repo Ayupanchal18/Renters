@@ -303,55 +303,105 @@ const CategoryManagement = () => {
 
   // Render categories list
   const renderCategories = () => (
-    <div className="divide-y">
+    <div>
       {categoriesLoading ? (
         <div className="flex items-center justify-center py-12">
           <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
         </div>
       ) : categories.length > 0 ? (
-        categories.map(category => (
-          <div
-            key={category._id}
-            className="flex items-center gap-3 py-3 px-4 hover:bg-muted/50"
-          >
-            <GripVertical className="h-4 w-4 text-muted-foreground cursor-grab" />
-            <div className="flex-1">
-              <div className="font-medium">{category.name}</div>
-              {category.description && (
-                <div className="text-sm text-muted-foreground line-clamp-1">
-                  {category.description}
+        <>
+          {/* Desktop Table View */}
+          <div className="hidden md:block divide-y">
+            {categories.map(category => (
+              <div
+                key={category._id}
+                className="flex items-center gap-3 py-3 px-4 hover:bg-muted/50"
+              >
+                <GripVertical className="h-4 w-4 text-muted-foreground cursor-grab" />
+                <div className="flex-1 min-w-0">
+                  <div className="font-medium">{category.name}</div>
+                  {category.description && (
+                    <div className="text-sm text-muted-foreground line-clamp-1">
+                      {category.description}
+                    </div>
+                  )}
                 </div>
-              )}
-            </div>
-            <Badge variant="outline" className="text-xs">
-              {category.slug}
-            </Badge>
-            <Badge variant={category.isActive ? 'default' : 'secondary'}>
-              {category.isActive ? 'Active' : 'Inactive'}
-            </Badge>
-            <span className="text-sm text-muted-foreground">
-              Order: {category.order}
-            </span>
-            <div className="flex items-center gap-1">
-              <Button
-                variant="ghost"
-                size="icon"
-                className="h-8 w-8"
-                onClick={() => handleEditCategory(category)}
-              >
-                <Edit className="h-4 w-4" />
-              </Button>
-              <Button
-                variant="ghost"
-                size="icon"
-                className="h-8 w-8 text-destructive hover:text-destructive"
-                onClick={() => handleDeleteCategory(category)}
-              >
-                <Trash2 className="h-4 w-4" />
-              </Button>
-            </div>
+                <Badge variant="outline" className="text-xs shrink-0">
+                  {category.slug}
+                </Badge>
+                <Badge variant={category.isActive ? 'default' : 'secondary'} className="shrink-0">
+                  {category.isActive ? 'Active' : 'Inactive'}
+                </Badge>
+                <span className="text-sm text-muted-foreground shrink-0">
+                  Order: {category.order}
+                </span>
+                <div className="flex items-center gap-1 shrink-0">
+                  <Button
+                    variant="ghost"
+                    size="icon"
+                    className="h-8 w-8"
+                    onClick={() => handleEditCategory(category)}
+                  >
+                    <Edit className="h-4 w-4" />
+                  </Button>
+                  <Button
+                    variant="ghost"
+                    size="icon"
+                    className="h-8 w-8 text-destructive hover:text-destructive"
+                    onClick={() => handleDeleteCategory(category)}
+                  >
+                    <Trash2 className="h-4 w-4" />
+                  </Button>
+                </div>
+              </div>
+            ))}
           </div>
-        ))
+
+          {/* Mobile Card View */}
+          <div className="md:hidden divide-y">
+            {categories.map(category => (
+              <div key={category._id} className="p-4 space-y-3">
+                <div className="flex items-start justify-between gap-3">
+                  <div className="min-w-0 flex-1">
+                    <p className="font-medium">{category.name}</p>
+                    {category.description && (
+                      <p className="text-sm text-muted-foreground line-clamp-2 mt-1">
+                        {category.description}
+                      </p>
+                    )}
+                  </div>
+                  <Badge variant={category.isActive ? 'default' : 'secondary'} className="shrink-0 text-xs">
+                    {category.isActive ? 'Active' : 'Inactive'}
+                  </Badge>
+                </div>
+                <div className="flex items-center gap-2 text-sm text-muted-foreground">
+                  <Badge variant="outline" className="text-xs">{category.slug}</Badge>
+                  <span>•</span>
+                  <span>Order: {category.order}</span>
+                </div>
+                <div className="flex items-center gap-2">
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    className="flex-1"
+                    onClick={() => handleEditCategory(category)}
+                  >
+                    <Edit className="h-4 w-4 mr-2" />
+                    Edit
+                  </Button>
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    className="text-destructive hover:text-destructive"
+                    onClick={() => handleDeleteCategory(category)}
+                  >
+                    <Trash2 className="h-4 w-4" />
+                  </Button>
+                </div>
+              </div>
+            ))}
+          </div>
+        </>
       ) : (
         <div className="py-12 text-center text-muted-foreground">
           No categories found. Click "Add Category" to create one.
@@ -382,18 +432,20 @@ const CategoryManagement = () => {
               <h3 className="text-sm font-semibold text-muted-foreground uppercase tracking-wide mb-2 px-4">
                 {AMENITY_CATEGORIES.find(c => c.value === category)?.label || category}
               </h3>
-              <div className="divide-y border rounded-lg">
+              
+              {/* Desktop View */}
+              <div className="hidden sm:block divide-y border rounded-lg">
                 {items.map(amenity => (
                   <div
                     key={amenity._id}
                     className="flex items-center gap-3 py-2 px-4 hover:bg-muted/50"
                   >
-                    <Sparkles className="h-4 w-4 text-muted-foreground" />
+                    <Sparkles className="h-4 w-4 text-muted-foreground shrink-0" />
                     <span className="flex-1 font-medium">{amenity.name}</span>
-                    <Badge variant={amenity.isActive ? 'default' : 'secondary'} className="text-xs">
+                    <Badge variant={amenity.isActive ? 'default' : 'secondary'} className="text-xs shrink-0">
                       {amenity.isActive ? 'Active' : 'Inactive'}
                     </Badge>
-                    <div className="flex items-center gap-1">
+                    <div className="flex items-center gap-1 shrink-0">
                       <Button
                         variant="ghost"
                         size="icon"
@@ -414,6 +466,42 @@ const CategoryManagement = () => {
                   </div>
                 ))}
               </div>
+
+              {/* Mobile View */}
+              <div className="sm:hidden divide-y border rounded-lg">
+                {items.map(amenity => (
+                  <div key={amenity._id} className="p-3 space-y-2">
+                    <div className="flex items-center justify-between gap-2">
+                      <div className="flex items-center gap-2 min-w-0">
+                        <Sparkles className="h-4 w-4 text-muted-foreground shrink-0" />
+                        <span className="font-medium truncate">{amenity.name}</span>
+                      </div>
+                      <Badge variant={amenity.isActive ? 'default' : 'secondary'} className="text-xs shrink-0">
+                        {amenity.isActive ? 'Active' : 'Inactive'}
+                      </Badge>
+                    </div>
+                    <div className="flex items-center gap-2">
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        className="flex-1 h-8"
+                        onClick={() => handleEditAmenity(amenity)}
+                      >
+                        <Edit className="h-3.5 w-3.5 mr-1.5" />
+                        Edit
+                      </Button>
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        className="h-8 text-destructive hover:text-destructive"
+                        onClick={() => handleDeleteAmenity(amenity)}
+                      >
+                        <Trash2 className="h-3.5 w-3.5" />
+                      </Button>
+                    </div>
+                  </div>
+                ))}
+              </div>
             </div>
           ))
         ) : (
@@ -426,21 +514,22 @@ const CategoryManagement = () => {
   };
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-4 sm:space-y-6">
       {/* Header */}
-      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+      <div className="flex flex-col gap-4">
         <div>
-          <h1 className="text-2xl font-bold text-foreground flex items-center gap-2">
-            <Tags className="h-6 w-6" />
+          <h1 className="text-xl sm:text-2xl font-bold text-foreground flex items-center gap-2">
+            <Tags className="h-5 w-5 sm:h-6 sm:w-6" />
             Category & Amenity Management
           </h1>
-          <p className="text-muted-foreground">
+          <p className="text-sm text-muted-foreground">
             Manage property categories and amenities
           </p>
         </div>
-        <div className="flex items-center gap-2">
+        <div className="flex flex-wrap items-center gap-2">
           <Button
             variant="outline"
+            size="sm"
             onClick={handleRefresh}
             disabled={refreshing}
           >
@@ -448,12 +537,12 @@ const CategoryManagement = () => {
             Refresh
           </Button>
           {activeTab === 'categories' ? (
-            <Button onClick={handleCreateCategory}>
+            <Button size="sm" onClick={handleCreateCategory}>
               <Plus className="h-4 w-4 mr-2" />
               Add Category
             </Button>
           ) : (
-            <Button onClick={handleCreateAmenity}>
+            <Button size="sm" onClick={handleCreateAmenity}>
               <Plus className="h-4 w-4 mr-2" />
               Add Amenity
             </Button>
@@ -489,16 +578,16 @@ const CategoryManagement = () => {
 
       {/* Filters */}
       <Card>
-        <CardHeader className="pb-3">
-          <CardTitle className="text-base flex items-center gap-2">
+        <CardHeader className="pb-3 px-4 sm:px-6">
+          <CardTitle className="text-sm sm:text-base flex items-center gap-2">
             <Filter className="h-4 w-4" />
             Filters
           </CardTitle>
         </CardHeader>
-        <CardContent>
-          <div className="flex flex-col sm:flex-row gap-4">
+        <CardContent className="px-4 sm:px-6">
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4">
             {/* Search */}
-            <div className="relative flex-1">
+            <div className="relative sm:col-span-2 lg:col-span-1">
               <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
               <Input
                 placeholder={`Search ${activeTab}...`}
@@ -510,7 +599,7 @@ const CategoryManagement = () => {
             
             {/* Status Filter */}
             <Select value={statusFilter} onValueChange={setStatusFilter}>
-              <SelectTrigger className="w-full sm:w-[150px]">
+              <SelectTrigger>
                 <SelectValue placeholder="All Status" />
               </SelectTrigger>
               <SelectContent>
@@ -523,7 +612,7 @@ const CategoryManagement = () => {
             {/* Amenity Category Filter (only for amenities tab) */}
             {activeTab === 'amenities' && (
               <Select value={amenityCategoryFilter} onValueChange={setAmenityCategoryFilter}>
-                <SelectTrigger className="w-full sm:w-[150px]">
+                <SelectTrigger>
                   <SelectValue placeholder="All Categories" />
                 </SelectTrigger>
                 <SelectContent>
@@ -539,7 +628,7 @@ const CategoryManagement = () => {
             
             {/* Clear Filters */}
             {hasActiveFilters && (
-              <Button variant="ghost" onClick={clearFilters} className="shrink-0">
+              <Button variant="ghost" onClick={clearFilters} className="w-full sm:w-auto">
                 <X className="h-4 w-4 mr-2" />
                 Clear
               </Button>
@@ -781,11 +870,11 @@ const CategoryFormModal = ({ open, onOpenChange, category, mode, onSaved }) => {
             <label htmlFor="cat-active" className="text-sm font-medium">Active</label>
           </div>
           
-          <DialogFooter className="pt-4">
-            <Button type="button" variant="outline" onClick={() => onOpenChange(false)} disabled={loading}>
+          <DialogFooter className="pt-4 flex-col sm:flex-row gap-2">
+            <Button type="button" variant="outline" onClick={() => onOpenChange(false)} disabled={loading} className="w-full sm:w-auto">
               Cancel
             </Button>
-            <Button type="submit" disabled={loading}>
+            <Button type="submit" disabled={loading} className="w-full sm:w-auto">
               {loading && <Loader2 className="h-4 w-4 mr-2 animate-spin" />}
               {isEdit ? 'Save Changes' : 'Create Category'}
             </Button>
@@ -986,11 +1075,11 @@ const AmenityFormModal = ({ open, onOpenChange, amenity, mode, onSaved }) => {
             <label htmlFor="amenity-active" className="text-sm font-medium">Active</label>
           </div>
           
-          <DialogFooter className="pt-4">
-            <Button type="button" variant="outline" onClick={() => onOpenChange(false)} disabled={loading}>
+          <DialogFooter className="pt-4 flex-col sm:flex-row gap-2">
+            <Button type="button" variant="outline" onClick={() => onOpenChange(false)} disabled={loading} className="w-full sm:w-auto">
               Cancel
             </Button>
-            <Button type="submit" disabled={loading}>
+            <Button type="submit" disabled={loading} className="w-full sm:w-auto">
               {loading && <Loader2 className="h-4 w-4 mr-2 animate-spin" />}
               {isEdit ? 'Save Changes' : 'Create Amenity'}
             </Button>

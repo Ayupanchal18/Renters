@@ -4,6 +4,7 @@ import { useState } from 'react'
 import { Mail, Phone, MapPin, Clock, Send } from 'lucide-react'
 import Navbar from './../components/Navbar';
 import Footer from './../components/Footer';
+import SEOHead from '../components/seo/SEOHead';
 
 export default function ContactPage() {
     const [formData, setFormData] = useState({
@@ -42,6 +43,12 @@ export default function ContactPage() {
 
     return (
         <>
+            <SEOHead
+                title="Contact Us"
+                description="Get in touch with Renters support team. We're here to help with your rental property questions, account issues, and technical support."
+                url={typeof window !== 'undefined' ? `${window.location.origin}/contact` : 'https://renters.com/contact'}
+                type="website"
+            />
             <Navbar />
             <div className="min-h-screen bg-background text-foreground">
                 {/* Hero Section */}
@@ -121,60 +128,64 @@ export default function ContactPage() {
 
                             {/* Name */}
                             <div>
-                                <label className="block text-sm font-medium mb-2">
+                                <label htmlFor="contact-name" className="block text-sm font-medium mb-2">
                                     Full Name <span className="text-destructive">*</span>
                                 </label>
                                 <input
+                                    id="contact-name"
                                     type="text"
                                     name="name"
                                     value={formData.name}
                                     onChange={handleChange}
                                     required
                                     placeholder="John Doe"
-                                    className="w-full px-4 py-3 rounded-lg bg-input border border-border focus:ring-2 focus:ring-primary/50 transition"
+                                    className="w-full px-4 py-3 rounded-lg bg-input border border-border focus:ring-2 focus:ring-primary/50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2 transition"
                                 />
                             </div>
 
                             {/* Email */}
                             <div>
-                                <label className="block text-sm font-medium mb-2">
+                                <label htmlFor="contact-email" className="block text-sm font-medium mb-2">
                                     Email Address <span className="text-destructive">*</span>
                                 </label>
                                 <input
+                                    id="contact-email"
                                     type="email"
                                     name="email"
                                     value={formData.email}
                                     onChange={handleChange}
                                     required
                                     placeholder="john@example.com"
-                                    className="w-full px-4 py-3 rounded-lg bg-input border border-border focus:ring-2 focus:ring-primary/50 transition"
+                                    className="w-full px-4 py-3 rounded-lg bg-input border border-border focus:ring-2 focus:ring-primary/50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2 transition"
                                 />
                             </div>
 
                             {/* Phone */}
                             <div>
-                                <label className="block text-sm font-medium mb-2">Phone Number</label>
+                                <label htmlFor="contact-phone" className="block text-sm font-medium mb-2">Phone Number</label>
                                 <input
+                                    id="contact-phone"
                                     type="tel"
                                     name="phone"
                                     value={formData.phone}
                                     onChange={handleChange}
                                     placeholder="+1 (555) 123-4567"
-                                    className="w-full px-4 py-3 rounded-lg bg-input border border-border focus:ring-2 focus:ring-primary/50 transition"
+                                    className="w-full px-4 py-3 rounded-lg bg-input border border-border focus:ring-2 focus:ring-primary/50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2 transition"
                                 />
                             </div>
 
                             {/* Category */}
                             <div>
-                                <label className="block text-sm font-medium mb-2">
+                                <label htmlFor="contact-category" className="block text-sm font-medium mb-2">
                                     Inquiry Category <span className="text-destructive">*</span>
                                 </label>
                                 <select
+                                    id="contact-category"
                                     name="category"
                                     value={formData.category}
                                     onChange={handleChange}
                                     required
-                                    className="w-full px-4 py-3 rounded-lg bg-input border border-border focus:ring-2 focus:ring-primary/50 cursor-pointer transition"
+                                    className="w-full px-4 py-3 rounded-lg bg-input border border-border focus:ring-2 focus:ring-primary/50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2 cursor-pointer transition"
                                 >
                                     <option value="general">General Inquiry</option>
                                     <option value="property">Property Issue</option>
@@ -186,17 +197,18 @@ export default function ContactPage() {
 
                             {/* Message */}
                             <div>
-                                <label className="block text-sm font-medium mb-2">
+                                <label htmlFor="contact-message" className="block text-sm font-medium mb-2">
                                     Message <span className="text-destructive">*</span>
                                 </label>
                                 <textarea
+                                    id="contact-message"
                                     name="message"
                                     value={formData.message}
                                     onChange={handleChange}
                                     required
                                     rows="6"
                                     placeholder="Tell us how we can help..."
-                                    className="w-full px-4 py-3 rounded-lg bg-input border border-border focus:ring-2 focus:ring-primary/50 resize-none transition"
+                                    className="w-full px-4 py-3 rounded-lg bg-input border border-border focus:ring-2 focus:ring-primary/50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2 resize-none transition"
                                 ></textarea>
                             </div>
 

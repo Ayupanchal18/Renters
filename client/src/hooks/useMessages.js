@@ -468,6 +468,42 @@ export function useMessages(options = {}) {
     }, []);
 
     /**
+     * Delete a conversation
+     * @param {string} conversationId - Conversation ID (optional, uses selected if not provided)
+     */
+    const deleteConversation = useCallback(async (conversationId = null) => {
+        const convId = conversationId ||
+            selectedConversationRef.current?._id ||
+            selectedConversationRef.current?.id;
+
+        if (!convId) {
+            return { success: false, error: { message: 'No conversation specified' } };
+        }
+
+        try {
+            const response = await messageService.deleteConversation(convId);
+
+            if (response.success && mountedRef.current) {
+                // Remove conversation from local state
+                setConversations(prev => prev.filter(conv =>
+                    (conv._id || conv.id) !== convId
+                ));
+
+                // Clear selected conversation if it was deleted
+                if (selectedConversationRef.current &&
+                    (selectedConversationRef.current._id || selectedConversationRef.current.id) === convId) {
+                    setSelectedConversation(null);
+                    setMessages([]);
+                }
+            }
+
+            return response;
+        } catch (err) {
+            return { success: false, error: { message: err.message } };
+        }
+    }, []);
+
+    /**
      * Send typing indicator
      * @param {boolean} isTyping - Whether user is typing
      */
@@ -613,6 +649,7 @@ export function useMessages(options = {}) {
         markAsRead,
         createConversation,
         deleteMessage,
+        deleteConversation,
         sendTypingIndicator,
         retryFetchConversations,
 

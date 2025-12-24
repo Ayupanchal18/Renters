@@ -1,5 +1,6 @@
 import Footer from "../components/Footer";
 import Navbar from "../components/Navbar";
+import SEOHead from "../components/seo/SEOHead";
 import { faqs } from "../data/mock";
 import { Accordion, AccordionItem, AccordionTrigger, AccordionContent } from "../components/ui/accordion";
 import { HelpCircle } from "lucide-react";
@@ -7,6 +8,12 @@ import { HelpCircle } from "lucide-react";
 export default function FAQs() {
     return (
         <div className="min-h-screen bg-background text-foreground">
+            <SEOHead
+                title="Frequently Asked Questions"
+                description="Find answers to common questions about listing properties, verification, fees, and using the Renters platform. Get help with your rental journey."
+                url={typeof window !== 'undefined' ? `${window.location.origin}/faqs` : 'https://renters.com/faqs'}
+                type="website"
+            />
             <Navbar />
 
             {/* Hero Section */}

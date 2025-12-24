@@ -94,6 +94,8 @@ export default async function createServer(devMode = false) {
         app.use("/api/notifications", (await safeImport("routes/notifications.js")).default);
         app.use("/api/search", (await safeImport("routes/search.js")).default);
         app.use("/api/categories", (await safeImport("routes/publicCategories.js")).default);
+        app.use("/api/locations", (await safeImport("routes/publicLocations.js")).default);
+        app.use("/api/testimonials", (await safeImport("routes/publicTestimonials.js")).default);
 
         // -------------------------
         //   ADMIN ROUTES
@@ -113,6 +115,7 @@ export default async function createServer(devMode = false) {
         app.use("/api/admin/reports", (await safeImport("routes/adminReports.js")).default);
         app.use("/api/admin/audit-logs", (await safeImport("routes/adminAuditLogs.js")).default);
         app.use("/api/admin/messages", (await safeImport("routes/adminMessages.js")).default);
+        app.use("/api/admin/testimonials", (await safeImport("routes/adminTestimonials.js")).default);
 
         app.use("/api/upload", (await safeImport("routes/upload.js")).default);
         app.use("/api/audit", (await safeImport("routes/audit.js")).default);
@@ -124,6 +127,10 @@ export default async function createServer(devMode = false) {
         app.use("/api/alerts", (await safeImport("routes/alertRoutes.js")).default);
         app.use("/api/nearby", (await safeImport("routes/nearby.js")).default);
         app.use("/api/properties", propertiesRouter);
+
+        // SEO Routes - sitemap.xml for search engine crawlers
+        // Requirements: 8.1 - Generate XML sitemap
+        app.use("/sitemap.xml", (await safeImport("routes/sitemap.js")).default);
 
     } catch (err) {
         console.warn("Failed to load routes:", err);

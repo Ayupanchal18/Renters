@@ -84,25 +84,170 @@ export function useUserProfile() {
         return { total, verified, percentage };
     }, [userQuery.data]);
 
-    // Get profile completion status
+    // Get profile completion status with weighted scoring
     const getProfileCompletion = useCallback(() => {
         const user = userQuery.data;
-        if (!user) return { total: 0, completed: 0, percentage: 0, missing: [] };
+        if (!user) return { total: 100, completed: 0, percentage: 0, missing: [], breakdown: [] };
 
-        const fields = [
-            { key: 'name', label: 'Full Name', value: user.name },
-            { key: 'email', label: 'Email Address', value: user.email },
-            { key: 'phone', label: 'Phone Number', value: user.phone },
-            { key: 'address', label: 'Address', value: user.address },
-            { key: 'avatar', label: 'Profile Picture', value: user.avatar }
+        /**
+         * Weighted Profile Completion System
+         * 
+         * Categories and their weights (total = 100%):
+         * - Basic Info (35%): Essential profile data
+         * - Verification (40%): Trust & security - most important
+         * - Profile Enhancement (15%): Optional but valuable
+         * - Privacy Setup (10%): Account preferences
+         */
+        const completionItems = [
+            // Basic Info - 35% total
+            {
+                key: 'name',
+                label: 'Full Name',
+                category: 'Basic Info',
+                weight: 10,
+                isComplete: !!(user.name && user.name.trim()),
+                priority: 'required'
+            },
+            {
+                key: 'email',
+                label: 'Email Address',
+                category: 'Basic Info',
+                weight: 10,
+                isComplete: !!(user.email && user.email.trim()),
+                priority: 'required'
+            },
+            {
+                key: 'phone',
+                label: 'Phone Number',
+                category: 'Basic Info',
+                weight: 10,
+                isComplete: !!(user.phone && user.phone.trim()),
+                priority: 'required'
+            },
+            {
+                key: 'address',
+                label: 'Address',
+                category: 'Basic Info',
+                weight: 5,
+                isComplete: !!(user.address && user.address.trim()),
+                priority: 'recommended'
+            },
+
+            // Verification - 40% total (most important for trust)
+            {
+                key: 'emailVerified',
+                label: 'Email Verification',
+                category: 'Verification',
+                weight: 20,
+                isComplete: !!user.emailVerified,
+                priority: 'required'
+            },
+            {
+                key: 'phoneVerified',
+                label: 'Phone Verification',
+                category: 'Verification',
+                weight: 20,
+                isComplete: !!user.phoneVerified,
+                priority: 'required'
+            },
+
+            // Profile Enhancement - 15% total
+            {
+                key: 'avatar',
+                label: 'Profile Picture',
+                category: 'Profile Enhancement',
+                weight: 10,
+                isComplete: !!(user.avatar && user.avatar.trim()),
+                priority: 'recommended'
+            },
+            {
+                key: 'userType',
+                label: 'Account Type',
+                category: 'Profile Enhancement',
+                weight: 5,
+                isComplete: !!(user.userType && user.userType !== 'buyer'), // Default is buyer, so selecting something specific counts
+                priority: 'optional'
+            },
+
+            // Privacy Setup - 10% total
+            {
+                key: 'privacyPolicy',
+                label: 'Privacy Policy Accepted',
+                category: 'Privacy Setup',
+                weight: 5,
+                isComplete: !!user.privacyPolicyAcceptedAt,
+                priority: 'recommended'
+            },
+            {
+                key: 'terms',
+                label: 'Terms Accepted',
+                category: 'Privacy Setup',
+                weight: 5,
+                isComplete: !!user.termsAcceptedAt,
+                priority: 'recommended'
+            },
         ];
 
-        const completed = fields.filter(field => field.value && field.value.trim() !== '').length;
-        const total = fields.length;
-        const percentage = total > 0 ? Math.round((completed / total) * 100) : 0;
-        const missing = fields.filter(field => !field.value || field.value.trim() === '').map(field => field.label);
+        // Calculate weighted percentage
+        const totalWeight = completionItems.reduce((sum, item) => sum + item.weight, 0);
+        const completedWeight = completionItems
+            .filter(item => item.isComplete)
+            .reduce((sum, item) => sum + item.weight, 0);
 
-        return { total, completed, percentage, missing };
+        const percentage = Math.round((completedWeight / totalWeight) * 100);
+
+        // Get missing items sorted by priority and weight
+        const priorityOrder = { required: 0, recommended: 1, optional: 2 };
+        const missing = completionItems
+            .filter(item => !item.isComplete)
+            .sort((a, b) => {
+                const priorityDiff = priorityOrder[a.priority] - priorityOrder[b.priority];
+                if (priorityDiff !== 0) return priorityDiff;
+                return b.weight - a.weight; // Higher weight first within same priority
+            })
+            .map(item => ({
+                label: item.label,
+                category: item.category,
+                weight: item.weight,
+                priority: item.priority
+            }));
+
+        // Category breakdown for detailed view
+        const categories = ['Basic Info', 'Verification', 'Profile Enhancement', 'Privacy Setup'];
+        const breakdown = categories.map(category => {
+            const categoryItems = completionItems.filter(item => item.category === category);
+            const categoryTotal = categoryItems.reduce((sum, item) => sum + item.weight, 0);
+            const categoryCompleted = categoryItems
+                .filter(item => item.isComplete)
+                .reduce((sum, item) => sum + item.weight, 0);
+
+            return {
+                category,
+                total: categoryTotal,
+                completed: categoryCompleted,
+                percentage: categoryTotal > 0 ? Math.round((categoryCompleted / categoryTotal) * 100) : 0,
+                items: categoryItems.map(item => ({
+                    label: item.label,
+                    isComplete: item.isComplete,
+                    weight: item.weight,
+                    priority: item.priority
+                }))
+            };
+        });
+
+        return {
+            total: totalWeight,
+            completed: completedWeight,
+            percentage,
+            missing,
+            breakdown,
+            // Quick access helpers
+            nextStep: missing[0] || null,
+            isComplete: percentage === 100,
+            requiredComplete: completionItems
+                .filter(item => item.priority === 'required')
+                .every(item => item.isComplete)
+        };
     }, [userQuery.data]);
 
     // Get user statistics

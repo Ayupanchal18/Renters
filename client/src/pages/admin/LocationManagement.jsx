@@ -33,27 +33,11 @@ import {
   Trash2,
   Eye,
   EyeOff,
-  ChevronRight,
-  ChevronDown,
   Loader2,
   Building,
   Map,
   Globe
 } from 'lucide-react';
-
-/**
- * Location Management Page
- * 
- * Admin page for managing locations with:
- * - Location tree view
- * - CRUD operations for cities, areas, and states
- * - Visibility toggle
- * 
- * Requirements: 5.1 - Add city, area, or state to the system
- * Requirements: 5.2 - Update the location record
- * Requirements: 5.3 - Remove location only if no properties reference it
- * Requirements: 5.6 - Show or hide location in user-facing interfaces
- */
 
 const API_BASE = '/api/admin/locations';
 
@@ -66,9 +50,7 @@ const LOCATION_TYPES = [
 const LocationManagement = () => {
   const navigate = useNavigate();
   
-  // Data state
   const [locations, setLocations] = useState([]);
-  const [treeData, setTreeData] = useState([]);
   const [pagination, setPagination] = useState({
     page: 1,
     limit: 50,
@@ -76,27 +58,19 @@ const LocationManagement = () => {
     totalPages: 0
   });
   
-  // Loading and error state
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
   const [refreshing, setRefreshing] = useState(false);
   
-  // Filter state
   const [search, setSearch] = useState('');
   const [typeFilter, setTypeFilter] = useState('all');
   const [visibilityFilter, setVisibilityFilter] = useState('all');
-  const [viewMode, setViewMode] = useState('tree'); // 'tree' or 'list'
   
-  // Modal state
   const [formOpen, setFormOpen] = useState(false);
   const [selectedLocation, setSelectedLocation] = useState(null);
   const [formMode, setFormMode] = useState('create');
   const [parentLocation, setParentLocation] = useState(null);
-  
-  // Tree expansion state
-  const [expandedNodes, setExpandedNodes] = useState(new Set());
 
-  // Debounced search
   const [debouncedSearch, setDebouncedSearch] = useState('');
   
   useEffect(() => {
@@ -106,7 +80,6 @@ const LocationManagement = () => {
     return () => clearTimeout(timer);
   }, [search]);
 
-  // Fetch locations list
   const fetchLocations = useCallback(async () => {
     try {
       setLoading(true);
@@ -136,50 +109,29 @@ const LocationManagement = () => {
       const data = await response.json();
       
       if (data.success) {
-        setLocations(data.data.locations);
-        setPagination(data.data.pagination);
+        setLocations(data.data.locations || []);
+        setPagination(data.data.pagination || { page: 1, limit: 100, total: 0, totalPages: 0 });
       } else {
         throw new Error(data.message || 'Failed to fetch locations');
       }
     } catch (err) {
       console.error('Error fetching locations:', err);
-      setError(err.message);
+      setError(err.message || 'Failed to load locations');
     } finally {
       setLoading(false);
     }
   }, [navigate, debouncedSearch, typeFilter, visibilityFilter]);
 
-  // Fetch tree data
-  const fetchTreeData = useCallback(async () => {
-    try {
-      const response = await authenticatedFetch(`${API_BASE}/tree`, {
-        headers: getHeaders()
-      }, navigate);
-      
-      const data = await response.json();
-      
-      if (data.success) {
-        setTreeData(data.data);
-      }
-    } catch (err) {
-      console.error('Error fetching tree data:', err);
-    }
-  }, [navigate]);
-
-  // Initial load
   useEffect(() => {
     fetchLocations();
-    fetchTreeData();
-  }, [debouncedSearch, typeFilter, visibilityFilter]);
+  }, [fetchLocations]);
 
-  // Refresh handler
   const handleRefresh = async () => {
     setRefreshing(true);
-    await Promise.all([fetchLocations(), fetchTreeData()]);
+    await fetchLocations();
     setRefreshing(false);
   };
 
-  // Clear filters
   const clearFilters = () => {
     setSearch('');
     setTypeFilter('all');
@@ -188,20 +140,6 @@ const LocationManagement = () => {
 
   const hasActiveFilters = search || typeFilter !== 'all' || visibilityFilter !== 'all';
 
-  // Tree node toggle
-  const toggleNode = (nodeId) => {
-    setExpandedNodes(prev => {
-      const newSet = new Set(prev);
-      if (newSet.has(nodeId)) {
-        newSet.delete(nodeId);
-      } else {
-        newSet.add(nodeId);
-      }
-      return newSet;
-    });
-  };
-
-  // Location actions
   const handleCreate = (parent = null) => {
     setSelectedLocation(null);
     setParentLocation(parent);
@@ -268,189 +206,12 @@ const LocationManagement = () => {
     handleRefresh();
   };
 
-  // Get type icon
   const getTypeIcon = (type) => {
     const typeConfig = LOCATION_TYPES.find(t => t.value === type);
     return typeConfig?.icon || MapPin;
   };
 
-  // Render tree node
-  const renderTreeNode = (node, level = 0) => {
-    const hasChildren = node.children && node.children.length > 0;
-    const isExpanded = expandedNodes.has(node._id);
-    const TypeIcon = getTypeIcon(node.type);
-    
-    return (
-      <div key={node._id}>
-        <div
-          className={cn(
-            "flex items-center gap-2 py-2 px-3 hover:bg-muted/50 rounded-md group",
-            level > 0 && "ml-6"
-          )}
-        >
-          {/* Expand/Collapse button */}
-          <button
-            onClick={() => toggleNode(node._id)}
-            className={cn(
-              "p-1 rounded hover:bg-muted",
-              !hasChildren && "invisible"
-            )}
-          >
-            {isExpanded ? (
-              <ChevronDown className="h-4 w-4" />
-            ) : (
-              <ChevronRight className="h-4 w-4" />
-            )}
-          </button>
-          
-          {/* Type icon */}
-          <TypeIcon className="h-4 w-4 text-muted-foreground" />
-          
-          {/* Name */}
-          <span className="flex-1 font-medium">{node.name}</span>
-          
-          {/* Type badge */}
-          <Badge variant="outline" className="text-xs capitalize">
-            {node.type}
-          </Badge>
-          
-          {/* Visibility indicator */}
-          {!node.isVisible && (
-            <Badge variant="secondary" className="text-xs">
-              Hidden
-            </Badge>
-          )}
-          
-          {/* Property count */}
-          {node.propertyCount > 0 && (
-            <span className="text-xs text-muted-foreground">
-              {node.propertyCount} properties
-            </span>
-          )}
-          
-          {/* Actions */}
-          <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
-            <Button
-              variant="ghost"
-              size="icon"
-              className="h-7 w-7"
-              onClick={() => handleCreate(node)}
-              title="Add child location"
-            >
-              <Plus className="h-3.5 w-3.5" />
-            </Button>
-            <Button
-              variant="ghost"
-              size="icon"
-              className="h-7 w-7"
-              onClick={() => handleEdit(node)}
-              title="Edit location"
-            >
-              <Edit className="h-3.5 w-3.5" />
-            </Button>
-            <Button
-              variant="ghost"
-              size="icon"
-              className="h-7 w-7"
-              onClick={() => handleToggleVisibility(node)}
-              title={node.isVisible ? 'Hide location' : 'Show location'}
-            >
-              {node.isVisible ? (
-                <EyeOff className="h-3.5 w-3.5" />
-              ) : (
-                <Eye className="h-3.5 w-3.5" />
-              )}
-            </Button>
-            <Button
-              variant="ghost"
-              size="icon"
-              className="h-7 w-7 text-destructive hover:text-destructive"
-              onClick={() => handleDelete(node)}
-              title="Delete location"
-            >
-              <Trash2 className="h-3.5 w-3.5" />
-            </Button>
-          </div>
-        </div>
-        
-        {/* Children */}
-        {hasChildren && isExpanded && (
-          <div className="border-l ml-5">
-            {node.children.map(child => renderTreeNode(child, level + 1))}
-          </div>
-        )}
-      </div>
-    );
-  };
-
-  // Render list view
-  const renderListView = () => (
-    <div className="divide-y">
-      {locations.map(location => {
-        const TypeIcon = getTypeIcon(location.type);
-        return (
-          <div
-            key={location._id}
-            className="flex items-center gap-3 py-3 px-4 hover:bg-muted/50"
-          >
-            <TypeIcon className="h-5 w-5 text-muted-foreground" />
-            <div className="flex-1">
-              <div className="font-medium">{location.name}</div>
-              {location.parentId && (
-                <div className="text-sm text-muted-foreground">
-                  Parent: {location.parentId.name || 'Unknown'}
-                </div>
-              )}
-            </div>
-            <Badge variant="outline" className="capitalize">
-              {location.type}
-            </Badge>
-            {!location.isVisible && (
-              <Badge variant="secondary">Hidden</Badge>
-            )}
-            <div className="flex items-center gap-1">
-              <Button
-                variant="ghost"
-                size="icon"
-                className="h-8 w-8"
-                onClick={() => handleEdit(location)}
-              >
-                <Edit className="h-4 w-4" />
-              </Button>
-              <Button
-                variant="ghost"
-                size="icon"
-                className="h-8 w-8"
-                onClick={() => handleToggleVisibility(location)}
-              >
-                {location.isVisible ? (
-                  <EyeOff className="h-4 w-4" />
-                ) : (
-                  <Eye className="h-4 w-4" />
-                )}
-              </Button>
-              <Button
-                variant="ghost"
-                size="icon"
-                className="h-8 w-8 text-destructive hover:text-destructive"
-                onClick={() => handleDelete(location)}
-              >
-                <Trash2 className="h-4 w-4" />
-              </Button>
-            </div>
-          </div>
-        );
-      })}
-      {locations.length === 0 && !loading && (
-        <div className="py-12 text-center text-muted-foreground">
-          No locations found
-        </div>
-      )}
-    </div>
-  );
-
-  // Error state
-  if (error && locations.length === 0 && treeData.length === 0) {
+  if (error && locations.length === 0) {
     return (
       <div className="flex flex-col items-center justify-center py-12">
         <AlertCircle className="h-12 w-12 text-destructive mb-4" />
@@ -465,28 +226,29 @@ const LocationManagement = () => {
   }
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-4 sm:space-y-6">
       {/* Header */}
-      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+      <div className="flex flex-col gap-4">
         <div>
-          <h1 className="text-2xl font-bold text-foreground flex items-center gap-2">
-            <MapPin className="h-6 w-6" />
+          <h1 className="text-xl sm:text-2xl font-bold text-foreground flex items-center gap-2">
+            <MapPin className="h-5 w-5 sm:h-6 sm:w-6" />
             Location Management
           </h1>
-          <p className="text-muted-foreground">
-            Manage cities, areas, and states for property listings
+          <p className="text-sm text-muted-foreground">
+            Manage cities for property listings
           </p>
         </div>
-        <div className="flex items-center gap-2">
+        <div className="flex flex-wrap items-center gap-2">
           <Button
             variant="outline"
+            size="sm"
             onClick={handleRefresh}
             disabled={refreshing}
           >
             <RefreshCw className={cn('h-4 w-4 mr-2', refreshing && 'animate-spin')} />
             Refresh
           </Button>
-          <Button onClick={() => handleCreate()}>
+          <Button size="sm" onClick={() => handleCreate()}>
             <Plus className="h-4 w-4 mr-2" />
             Add Location
           </Button>
@@ -495,16 +257,16 @@ const LocationManagement = () => {
 
       {/* Filters */}
       <Card>
-        <CardHeader className="pb-3">
-          <CardTitle className="text-base flex items-center gap-2">
+        <CardHeader className="pb-3 px-4 sm:px-6">
+          <CardTitle className="text-sm sm:text-base flex items-center gap-2">
             <Filter className="h-4 w-4" />
             Filters
           </CardTitle>
         </CardHeader>
-        <CardContent>
-          <div className="flex flex-col sm:flex-row gap-4">
+        <CardContent className="px-4 sm:px-6">
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4">
             {/* Search */}
-            <div className="relative flex-1">
+            <div className="relative sm:col-span-2 lg:col-span-1">
               <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
               <Input
                 placeholder="Search locations..."
@@ -516,7 +278,7 @@ const LocationManagement = () => {
             
             {/* Type Filter */}
             <Select value={typeFilter} onValueChange={setTypeFilter}>
-              <SelectTrigger className="w-full sm:w-[150px]">
+              <SelectTrigger>
                 <SelectValue placeholder="All Types" />
               </SelectTrigger>
               <SelectContent>
@@ -529,7 +291,7 @@ const LocationManagement = () => {
             
             {/* Visibility Filter */}
             <Select value={visibilityFilter} onValueChange={setVisibilityFilter}>
-              <SelectTrigger className="w-full sm:w-[150px]">
+              <SelectTrigger>
                 <SelectValue placeholder="All Visibility" />
               </SelectTrigger>
               <SelectContent>
@@ -538,30 +300,10 @@ const LocationManagement = () => {
                 <SelectItem value="hidden">Hidden</SelectItem>
               </SelectContent>
             </Select>
-
-            {/* View Mode Toggle */}
-            <div className="flex items-center border rounded-md">
-              <Button
-                variant={viewMode === 'tree' ? 'secondary' : 'ghost'}
-                size="sm"
-                onClick={() => setViewMode('tree')}
-                className="rounded-r-none"
-              >
-                Tree
-              </Button>
-              <Button
-                variant={viewMode === 'list' ? 'secondary' : 'ghost'}
-                size="sm"
-                onClick={() => setViewMode('list')}
-                className="rounded-l-none"
-              >
-                List
-              </Button>
-            </div>
             
             {/* Clear Filters */}
             {hasActiveFilters && (
-              <Button variant="ghost" onClick={clearFilters} className="shrink-0">
+              <Button variant="ghost" onClick={clearFilters} className="w-full sm:w-auto">
                 <X className="h-4 w-4 mr-2" />
                 Clear
               </Button>
@@ -571,40 +313,178 @@ const LocationManagement = () => {
       </Card>
 
       {/* Error Banner */}
-      {error && (locations.length > 0 || treeData.length > 0) && (
-        <div className="bg-destructive/10 border border-destructive/20 rounded-lg p-4 flex items-center gap-3">
+      {error && locations.length > 0 && (
+        <div className="bg-destructive/10 border border-destructive/20 rounded-lg p-3 sm:p-4 flex items-center gap-3">
           <AlertCircle className="h-5 w-5 text-destructive shrink-0" />
-          <p className="text-sm text-destructive">{error}</p>
+          <p className="text-sm text-destructive flex-1">{error}</p>
           <Button
             variant="ghost"
             size="sm"
             onClick={() => setError(null)}
-            className="ml-auto"
           >
             Dismiss
           </Button>
         </div>
       )}
 
-      {/* Location Content */}
+      {/* Location List */}
       <Card>
-        <CardContent className="p-4">
+        <CardContent className="p-0">
           {loading ? (
             <div className="flex items-center justify-center py-12">
               <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
             </div>
-          ) : viewMode === 'tree' ? (
-            <div className="space-y-1">
-              {treeData.length > 0 ? (
-                treeData.map(node => renderTreeNode(node))
-              ) : (
-                <div className="py-12 text-center text-muted-foreground">
-                  No locations found. Click "Add Location" to create one.
-                </div>
-              )}
+          ) : locations.length === 0 ? (
+            <div className="py-12 text-center text-muted-foreground">
+              No locations found. Click "Add Location" to create one.
             </div>
           ) : (
-            renderListView()
+            <>
+              {/* Desktop Table View */}
+              <div className="hidden md:block overflow-x-auto">
+                <table className="w-full">
+                  <thead className="bg-muted/50">
+                    <tr>
+                      <th className="text-left px-4 py-3 text-sm font-medium text-muted-foreground">Name</th>
+                      <th className="text-left px-4 py-3 text-sm font-medium text-muted-foreground">Type</th>
+                      <th className="text-left px-4 py-3 text-sm font-medium text-muted-foreground">Parent</th>
+                      <th className="text-left px-4 py-3 text-sm font-medium text-muted-foreground">Status</th>
+                      <th className="text-right px-4 py-3 text-sm font-medium text-muted-foreground">Actions</th>
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y divide-border">
+                    {locations.map(location => {
+                      const TypeIcon = getTypeIcon(location.type);
+                      return (
+                        <tr key={location._id} className="hover:bg-muted/50">
+                          <td className="px-4 py-3">
+                            <div className="flex items-center gap-3">
+                              <TypeIcon className="h-5 w-5 text-muted-foreground" />
+                              <span className="font-medium">{location.name}</span>
+                            </div>
+                          </td>
+                          <td className="px-4 py-3">
+                            <Badge variant="outline" className="capitalize">
+                              {location.type}
+                            </Badge>
+                          </td>
+                          <td className="px-4 py-3 text-muted-foreground">
+                            {location.parentId?.name || '-'}
+                          </td>
+                          <td className="px-4 py-3">
+                            {location.isVisible ? (
+                              <Badge className="bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-400">
+                                Visible
+                              </Badge>
+                            ) : (
+                              <Badge variant="secondary">Hidden</Badge>
+                            )}
+                          </td>
+                          <td className="px-4 py-3">
+                            <div className="flex items-center justify-end gap-1">
+                              <Button
+                                variant="ghost"
+                                size="icon"
+                                className="h-8 w-8"
+                                onClick={() => handleEdit(location)}
+                              >
+                                <Edit className="h-4 w-4" />
+                              </Button>
+                              <Button
+                                variant="ghost"
+                                size="icon"
+                                className="h-8 w-8"
+                                onClick={() => handleToggleVisibility(location)}
+                              >
+                                {location.isVisible ? (
+                                  <EyeOff className="h-4 w-4" />
+                                ) : (
+                                  <Eye className="h-4 w-4" />
+                                )}
+                              </Button>
+                              <Button
+                                variant="ghost"
+                                size="icon"
+                                className="h-8 w-8 text-destructive hover:text-destructive"
+                                onClick={() => handleDelete(location)}
+                              >
+                                <Trash2 className="h-4 w-4" />
+                              </Button>
+                            </div>
+                          </td>
+                        </tr>
+                      );
+                    })}
+                  </tbody>
+                </table>
+              </div>
+
+              {/* Mobile Card View */}
+              <div className="md:hidden divide-y divide-border">
+                {locations.map(location => {
+                  const TypeIcon = getTypeIcon(location.type);
+                  return (
+                    <div key={location._id} className="p-4 space-y-3">
+                      <div className="flex items-start justify-between gap-3">
+                        <div className="flex items-center gap-3 min-w-0">
+                          <TypeIcon className="h-5 w-5 text-muted-foreground shrink-0" />
+                          <div className="min-w-0">
+                            <p className="font-medium truncate">{location.name}</p>
+                            {location.parentId?.name && (
+                              <p className="text-sm text-muted-foreground truncate">
+                                Parent: {location.parentId.name}
+                              </p>
+                            )}
+                          </div>
+                        </div>
+                        <div className="flex items-center gap-2 shrink-0">
+                          <Badge variant="outline" className="capitalize text-xs">
+                            {location.type}
+                          </Badge>
+                          {location.isVisible ? (
+                            <Badge className="bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-400 text-xs">
+                              Visible
+                            </Badge>
+                          ) : (
+                            <Badge variant="secondary" className="text-xs">Hidden</Badge>
+                          )}
+                        </div>
+                      </div>
+                      <div className="flex items-center gap-2">
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          className="flex-1"
+                          onClick={() => handleEdit(location)}
+                        >
+                          <Edit className="h-4 w-4 mr-2" />
+                          Edit
+                        </Button>
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          onClick={() => handleToggleVisibility(location)}
+                        >
+                          {location.isVisible ? (
+                            <EyeOff className="h-4 w-4" />
+                          ) : (
+                            <Eye className="h-4 w-4" />
+                          )}
+                        </Button>
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          className="text-destructive hover:text-destructive"
+                          onClick={() => handleDelete(location)}
+                        >
+                          <Trash2 className="h-4 w-4" />
+                        </Button>
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+            </>
           )}
         </CardContent>
       </Card>
@@ -651,7 +531,7 @@ const LocationFormModal = ({ open, onOpenChange, location, parentLocation, mode,
       } else {
         setFormData({
           name: '',
-          type: parentLocation ? (parentLocation.type === 'state' ? 'city' : 'area') : 'state',
+          type: parentLocation ? (parentLocation.type === 'state' ? 'city' : 'area') : 'city',
           parentId: parentLocation?._id || '',
           isVisible: true
         });
@@ -722,7 +602,6 @@ const LocationFormModal = ({ open, onOpenChange, location, parentLocation, mode,
     }
   };
 
-  // Get available parent locations based on type
   const getParentOptions = () => {
     if (formData.type === 'state') return [];
     if (formData.type === 'city') {
@@ -733,7 +612,7 @@ const LocationFormModal = ({ open, onOpenChange, location, parentLocation, mode,
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="sm:max-w-[450px]">
+      <DialogContent className="sm:max-w-[450px] max-h-[90vh] overflow-y-auto">
         <DialogHeader>
           <DialogTitle>{isEdit ? 'Edit Location' : 'Add New Location'}</DialogTitle>
           <DialogDescription>
@@ -826,16 +705,17 @@ const LocationFormModal = ({ open, onOpenChange, location, parentLocation, mode,
             </label>
           </div>
           
-          <DialogFooter className="pt-4">
+          <DialogFooter className="pt-4 flex-col sm:flex-row gap-2">
             <Button
               type="button"
               variant="outline"
               onClick={() => onOpenChange(false)}
               disabled={loading}
+              className="w-full sm:w-auto"
             >
               Cancel
             </Button>
-            <Button type="submit" disabled={loading}>
+            <Button type="submit" disabled={loading} className="w-full sm:w-auto">
               {loading && <Loader2 className="h-4 w-4 mr-2 animate-spin" />}
               {isEdit ? 'Save Changes' : 'Create Location'}
             </Button>

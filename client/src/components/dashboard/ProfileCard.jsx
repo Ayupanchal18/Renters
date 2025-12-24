@@ -1,18 +1,10 @@
 import React from "react";
-import { User, Plus, TrendingUp, ChevronRight } from "lucide-react";
+import { User, Plus, TrendingUp, ChevronRight, AlertCircle } from "lucide-react";
+import { getCompletionStatusText, getCompletionColor } from "../../utils/profileCompletion";
 
-export default function ProfileCard({ user, completion = 45, onPostProperty }) {
-    const getCompletionColor = (value) => {
-        if (value >= 80) return "from-success to-success/80";
-        if (value >= 50) return "from-warning to-warning/80";
-        return "from-secondary to-secondary/80";
-    };
-
-    const getCompletionText = (value) => {
-        if (value >= 80) return "Almost complete!";
-        if (value >= 50) return "Good progress";
-        return "Let's complete your profile";
-    };
+export default function ProfileCard({ user, completion = 0, completionData, onPostProperty }) {
+    const completionColor = getCompletionColor(completion);
+    const completionText = getCompletionStatusText(completion);
 
     return (
         <div className="relative overflow-hidden bg-gradient-to-br from-primary via-primary/95 to-primary/85 rounded-2xl p-6 shadow-lg h-full">
@@ -24,7 +16,11 @@ export default function ProfileCard({ user, completion = 45, onPostProperty }) {
                 {/* User Info */}
                 <div className="flex items-center gap-4 mb-6">
                     <div className="w-14 h-14 bg-white/20 backdrop-blur-sm rounded-xl flex items-center justify-center ring-2 ring-white/30">
-                        <User size={28} className="text-white" />
+                        {user.avatar ? (
+                            <img src={user.avatar} alt={user.name} className="w-full h-full rounded-xl object-cover" />
+                        ) : (
+                            <User size={28} className="text-white" />
+                        )}
                     </div>
                     <div>
                         <h2 className="text-xl font-bold text-white">{user.name}</h2>
@@ -43,11 +39,29 @@ export default function ProfileCard({ user, completion = 45, onPostProperty }) {
                     </div>
                     <div className="w-full bg-white/20 rounded-full h-2.5 mb-2">
                         <div
-                            className={`bg-gradient-to-r ${getCompletionColor(completion)} rounded-full h-2.5 transition-all duration-500 ease-out`}
+                            className={`bg-gradient-to-r ${completionColor} rounded-full h-2.5 transition-all duration-500 ease-out`}
                             style={{ width: `${completion}%` }}
                         />
                     </div>
-                    <p className="text-xs text-white/60">{getCompletionText(completion)}</p>
+                    <p className="text-xs text-white/60">{completionText}</p>
+                    
+                    {/* Next Step Hint */}
+                    {completionData?.nextStep && completion < 100 && (
+                        <div className="mt-3 pt-3 border-t border-white/10">
+                            <div className="flex items-start gap-2">
+                                <AlertCircle size={14} className="text-white/70 mt-0.5 flex-shrink-0" />
+                                <div>
+                                    <p className="text-xs text-white/70">Next step:</p>
+                                    <p className="text-xs font-medium text-white/90">
+                                        {completionData.nextStep.label}
+                                        <span className="text-white/50 ml-1">
+                                            (+{completionData.nextStep.weight}%)
+                                        </span>
+                                    </p>
+                                </div>
+                            </div>
+                        </div>
+                    )}
                 </div>
 
                 {/* Post Property Button */}
