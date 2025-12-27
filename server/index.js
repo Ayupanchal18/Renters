@@ -33,7 +33,7 @@ export default async function createServer(devMode = false) {
     // Trust proxy for proper IP detection behind reverse proxies
     app.set('trust proxy', 1);
 
-    // CORS configuration - restrict origins in production
+    // CORS configuration
     const isDevelopment = devMode || process.env.NODE_ENV === 'development';
     const defaultDevOrigins = [
         'http://localhost:8080',
@@ -46,7 +46,7 @@ export default async function createServer(devMode = false) {
 
     const allowedOrigins = process.env.ALLOWED_ORIGINS
         ? process.env.ALLOWED_ORIGINS.split(',').map(o => o.trim())
-        : (isDevelopment ? defaultDevOrigins : []);
+        : defaultDevOrigins;
 
     app.use(cors({
         origin: (origin, callback) => {
@@ -54,17 +54,34 @@ export default async function createServer(devMode = false) {
             if (!origin) {
                 return callback(null, true);
             }
+
             // In development, allow all localhost origins
             if (isDevelopment && (origin.includes('localhost') || origin.includes('127.0.0.1'))) {
                 return callback(null, true);
             }
+
+            // Allow Railway deployment origins (production)
+            if (origin.includes('.railway.app')) {
+                return callback(null, true);
+            }
+
+            // Allow Netlify deployment origins
+            if (origin.includes('.netlify.app')) {
+                return callback(null, true);
+            }
+
+            // Allow Vercel deployment origins
+            if (origin.includes('.vercel.app')) {
+                return callback(null, true);
+            }
+
             // Check if origin is in allowed list or wildcard is set
             if (allowedOrigins.includes(origin) || allowedOrigins.includes('*')) {
-                callback(null, true);
-            } else {
-                console.warn(`CORS blocked origin: ${origin}. Allowed: ${allowedOrigins.join(', ') || 'none'}`);
-                callback(new Error('Not allowed by CORS'));
+                return callback(null, true);
             }
+
+            console.warn(`CORS blocked origin: ${origin}. Allowed: ${allowedOrigins.join(', ') || 'none'}`);
+            callback(new Error('Not allowed by CORS'));
         },
         credentials: true, // Allow cookies
         methods: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'OPTIONS'],
