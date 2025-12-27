@@ -3,6 +3,50 @@
  * Used by both frontend and backend for consistency
  */
 
+// Listing type enum - rent vs buy
+export const LISTING_TYPES = {
+    RENT: 'rent',
+    BUY: 'buy'
+};
+
+// Listing type display labels
+export const LISTING_TYPE_LABELS = {
+    rent: 'For Rent',
+    buy: 'For Sale'
+};
+
+// Rent-specific filter configuration
+export const RENT_FILTERS = {
+    priceField: 'monthlyRent',
+    priceLabel: 'Monthly Rent',
+    additionalFilters: ['preferredTenants', 'leaseDuration', 'furnished']
+};
+
+// Buy-specific filter configuration
+export const BUY_FILTERS = {
+    priceField: 'sellingPrice',
+    priceLabel: 'Price',
+    additionalFilters: ['possessionStatus', 'loanAvailable', 'pricePerSqft']
+};
+
+// Preferred tenants enum (rent-specific)
+export const PREFERRED_TENANTS = ['family', 'bachelor', 'any'];
+
+export const PREFERRED_TENANTS_LABELS = {
+    family: 'Family',
+    bachelor: 'Bachelor',
+    any: 'Any'
+};
+
+// Possession status enum (buy-specific)
+export const POSSESSION_STATUS = ['ready', 'under_construction', 'resale'];
+
+export const POSSESSION_STATUS_LABELS = {
+    ready: 'Ready to Move',
+    under_construction: 'Under Construction',
+    resale: 'Resale'
+};
+
 // Property category enum - matches MongoDB schema
 export const PROPERTY_CATEGORIES = ['room', 'flat', 'house', 'pg', 'hostel', 'commercial'];
 

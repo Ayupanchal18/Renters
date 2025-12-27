@@ -343,29 +343,29 @@ import {
     X,
     AlertCircle
 } from "lucide-react";
-import { 
-    getSearchSuggestions, 
-    getRecentSearches, 
+import {
+    getSearchSuggestions,
+    getRecentSearches,
     addToSearchHistory,
     clearSuggestions,
     setCurrentQuery
 } from "../../redux/slices/searchSlice";
 import searchService from "../../api/searchService";
-import { 
-    FILTER_PROPERTY_TYPE_OPTIONS, 
-    normalizePropertyType, 
-    getPropertyTypeLabel 
+import {
+    FILTER_PROPERTY_TYPE_OPTIONS,
+    normalizePropertyType,
+    getPropertyTypeLabel
 } from "../../utils/propertyTypeStandardization";
-import { 
-    getCurrentLocation, 
-    validateLocationInput, 
+import {
+    getCurrentLocation,
+    validateLocationInput,
     getLocationSuggestions,
-    formatLocationForDisplay 
+    formatLocationForDisplay
 } from "../../utils/locationStandardization";
-import { 
-    validateSearchParameters, 
-    normalizeSearchParameters, 
-    convertToApiPayload 
+import {
+    validateSearchParameters,
+    normalizeSearchParameters,
+    convertToApiPayload
 } from "../../utils/searchParameterStandardization";
 
 // Mock data for autocomplete suggestions (fallback)
@@ -378,17 +378,35 @@ const MOCK_SUGGESTIONS = [
     { id: 6, text: "Studio near University", type: "keyword" },
 ];
 
+import { useNavigate, useLocation } from "react-router-dom";
+
 export function HeroSection({ onSearch }) {
     const dispatch = useDispatch();
-    const { 
-        searchSuggestions, 
-        isSuggestionsLoading, 
-        recentSearches, 
-        searchHistory 
+    const navigate = useNavigate();
+    const location = useLocation();
+    const {
+        searchSuggestions,
+        isSuggestionsLoading,
+        recentSearches,
+        searchHistory
     } = useSelector(state => state.searchResults);
 
+    // Determine active tab from current route
+    const currentPath = location.pathname;
+    const initialTab = currentPath.includes('buy') ? 'buy' : 'rent';
+
     // --- State Management ---
-    const [activeTab, setActiveTab] = useState("rent"); // rent, buy, commercial
+    const [activeTab, setActiveTab] = useState(initialTab);
+
+    // Handle tab change with navigation
+    const handleTabChange = (tab) => {
+        setActiveTab(tab);
+        if (tab === 'buy' && !currentPath.includes('buy')) {
+            navigate('/buy-properties');
+        } else if (tab === 'rent' && !currentPath.includes('rent')) {
+            navigate('/rent-properties');
+        }
+    };
 
     // Universal Search State (we treat this as Location)
     const [locationInput, setLocationInput] = useState("");
@@ -409,7 +427,7 @@ export function HeroSection({ onSearch }) {
 
     // Validation errors
     const [errors, setErrors] = useState({ location: "", type: "", query: "" });
-    
+
     // Input validation states
     const [inputValidation, setInputValidation] = useState({
         location: { isValid: true, message: "" },
@@ -437,13 +455,13 @@ export function HeroSection({ onSearch }) {
         if (value.length > 200) {
             return { isValid: false, message: "Keywords must be less than 200 characters" };
         }
-        
+
         // Use the search service validation
         const validation = searchService.validateQuery(value);
         if (!validation.isValid) {
             return { isValid: false, message: validation.errors[0] };
         }
-        
+
         return { isValid: true, message: "" };
     };
 
@@ -472,19 +490,19 @@ export function HeroSection({ onSearch }) {
             suggestionTimeoutRef.current = setTimeout(() => {
                 // Try to get suggestions from Redux store first
                 dispatch(getSearchSuggestions(val));
-                
+
                 // Use standardized location suggestions
                 const locationSuggestions = getLocationSuggestions(val, 5).map(loc => ({
                     id: `loc-${loc.city}-${loc.state}`,
                     text: loc.formatted,
                     type: 'location'
                 }));
-                
+
                 // Combine with mock keyword suggestions
                 const keywordSuggestions = MOCK_SUGGESTIONS.filter(item =>
                     item.text.toLowerCase().includes(val.toLowerCase()) && item.type !== 'location'
                 );
-                
+
                 setSuggestions([...locationSuggestions, ...keywordSuggestions]);
                 setShowSuggestions(true);
                 setShowRecentSearches(false);
@@ -518,7 +536,7 @@ export function HeroSection({ onSearch }) {
     const handleSelectSuggestion = (text, type = 'suggestion') => {
         if (type === 'recent') {
             // For recent searches, populate both location and keywords
-            const recentSearch = searchHistory.find(search => 
+            const recentSearch = searchHistory.find(search =>
                 search.query === text || search.location === text
             );
             if (recentSearch) {
@@ -530,15 +548,15 @@ export function HeroSection({ onSearch }) {
         } else {
             setLocationInput(text);
         }
-        
+
         setShowSuggestions(false);
         setShowRecentSearches(false);
         setErrors(prev => ({ ...prev, location: "" }));
-        
+
         // Update current query in Redux
-        dispatch(setCurrentQuery({ 
-            query: keywordInput, 
-            location: text 
+        dispatch(setCurrentQuery({
+            query: keywordInput,
+            location: text
         }));
     };
 
@@ -557,7 +575,7 @@ export function HeroSection({ onSearch }) {
 
         try {
             const location = await getCurrentLocation();
-            
+
             if (location && location.formatted) {
                 setLocationInput(location.formatted);
                 setErrors(prev => ({ ...prev, location: "" }));
@@ -611,16 +629,16 @@ export function HeroSection({ onSearch }) {
 
         // Validate using standardized validation
         const validation = validateSearchParameters(searchParams);
-        
+
         // Update input validation states
         setInputValidation({
-            location: { 
-                isValid: !validation.errors.location, 
-                message: validation.errors.location || "" 
+            location: {
+                isValid: !validation.errors.location,
+                message: validation.errors.location || ""
             },
-            keywords: { 
-                isValid: !validation.errors.keywords, 
-                message: validation.errors.keywords || "" 
+            keywords: {
+                isValid: !validation.errors.keywords,
+                message: validation.errors.keywords || ""
             }
         });
 
@@ -708,7 +726,7 @@ export function HeroSection({ onSearch }) {
                     {/* Tabs (Rent/Buy/Commercial) */}
                     <div className="relative flex items-center bg-slate-100 dark:bg-slate-700 rounded-full p-1 mb-4 w-fit">
                         {/* Sliding Background Pill */}
-                        <div 
+                        <div
                             className={`absolute top-1 bottom-1 rounded-full bg-white dark:bg-indigo-600 shadow-sm transition-all duration-300 ease-in-out border border-slate-200 dark:border-indigo-500/50`}
                             style={{
                                 left: '4px',
@@ -716,11 +734,11 @@ export function HeroSection({ onSearch }) {
                                 transform: activeTab === 'rent' ? 'translateX(0)' : 'translateX(100%)'
                             }}
                         />
-                        
+
                         {['rent', 'buy'].map((tab) => (
                             <button
                                 key={tab}
-                                onClick={() => setActiveTab(tab)}
+                                onClick={() => handleTabChange(tab)}
                                 className={`
                                     relative z-10 px-8 py-2 rounded-full text-sm font-semibold transition-colors capitalize whitespace-nowrap min-w-[100px]
                                    ${activeTab === tab
@@ -740,9 +758,9 @@ export function HeroSection({ onSearch }) {
                         <div className="md:col-span-5 relative group">
                             <div className={`
                                 flex items-center px-4 h-14 bg-slate-50 dark:bg-slate-700 rounded-xl border-2 transition-all
-                               ${(showSuggestions || showRecentSearches) ? 'border-indigo-500 rounded-b-none' : 
-                                 !inputValidation.location.isValid ? 'border-red-500' : 
-                                 'border-transparent group-hover:border-slate-200 dark:group-hover:border-slate-600'}
+                               ${(showSuggestions || showRecentSearches) ? 'border-indigo-500 rounded-b-none' :
+                                    !inputValidation.location.isValid ? 'border-red-500' :
+                                        'border-transparent group-hover:border-slate-200 dark:group-hover:border-slate-600'}
                             `}>
                                 <Search className="w-5 h-5 text-slate-400 dark:text-slate-500 mr-3 flex-shrink-0" />
                                 <div className="flex-1">
@@ -789,7 +807,7 @@ export function HeroSection({ onSearch }) {
                             {/* Enhanced Autocomplete Dropdown */}
                             {(showSuggestions || showRecentSearches) && (
                                 <div className="absolute top-full left-0 right-0 bg-white dark:bg-slate-800 border border-t-0 border-indigo-100 dark:border-slate-700 rounded-b-xl shadow-xl z-50 overflow-hidden max-h-80 overflow-y-auto">
-                                    
+
                                     {/* Recent Searches Section */}
                                     {showRecentSearches && searchHistory.length > 0 && (
                                         <div>
@@ -825,7 +843,7 @@ export function HeroSection({ onSearch }) {
                                                     <span className="text-xs font-semibold text-slate-600 dark:text-slate-400 uppercase tracking-wider">Suggestions</span>
                                                 </div>
                                             )}
-                                            
+
                                             {/* API Suggestions */}
                                             {searchSuggestions.length > 0 ? (
                                                 searchSuggestions.map((suggestion, index) => (
@@ -958,7 +976,7 @@ export function HeroSection({ onSearch }) {
                                         className="w-full bg-transparent border-none p-0 text-sm font-semibold text-slate-900 dark:text-slate-100 focus:ring-0 placeholder:text-slate-400 dark:placeholder:text-slate-500 truncate outline-none"
                                     />
                                 </div>
-                                
+
                                 {/* Clear button */}
                                 {keywordInput && (
                                     <button
@@ -986,25 +1004,26 @@ export function HeroSection({ onSearch }) {
                             )}
                         </div>
 
-                        {/* 4. Search Button (Spans 1 column on desktop) */}
-                        <div className="md:col-span-1 flex gap-2">
+                        {/* 4. Search Button */}
+                        <div className="md:col-span-1 flex items-center gap-2">
                             <button
                                 onClick={handleSearchSubmit}
                                 disabled={!inputValidation.location.isValid || !inputValidation.keywords.isValid}
-                                className="flex-1 h-14 rounded-xl bg-indigo-600 hover:bg-indigo-700 disabled:bg-slate-300 dark:disabled:bg-slate-600 disabled:cursor-not-allowed text-white shadow-lg shadow-indigo-200 dark:shadow-indigo-900/30 flex items-center justify-center transition-colors"
+                                className="flex-1 md:flex-none h-12 md:h-12 md:w-12 px-6 md:px-0 rounded-xl md:rounded-full bg-primary hover:bg-primary/90 disabled:bg-muted disabled:cursor-not-allowed text-primary-foreground shadow-lg shadow-primary/20 flex items-center justify-center gap-2 transition-all hover:scale-105"
+                                title="Search"
                             >
                                 <Search className="w-5 h-5" />
-                                <span className="md:hidden ml-2 font-bold">Search</span>
+                                <span className="md:hidden font-semibold text-sm">Search</span>
                             </button>
-                            
+
                             {/* Clear All Button (visible when there's input) */}
                             {(locationInput || keywordInput) && (
                                 <button
                                     onClick={handleClearSearch}
-                                    className="h-14 px-3 rounded-xl bg-slate-200 dark:bg-slate-600 hover:bg-slate-300 dark:hover:bg-slate-500 text-slate-600 dark:text-slate-300 flex items-center justify-center transition-colors"
+                                    className="h-12 md:h-10 w-12 md:w-10 rounded-xl md:rounded-full bg-slate-100 dark:bg-slate-700 hover:bg-slate-200 dark:hover:bg-slate-600 text-slate-500 dark:text-slate-400 flex items-center justify-center transition-all hover:scale-105"
                                     title="Clear all"
                                 >
-                                    <X className="w-5 h-5" />
+                                    <X className="w-5 h-5 md:w-4 md:h-4" />
                                 </button>
                             )}
                         </div>

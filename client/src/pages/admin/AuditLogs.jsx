@@ -94,51 +94,53 @@ const LogDetailsModal = ({ log, onClose }) => {
   if (!log) return null;
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50">
-      <div className="bg-background rounded-lg shadow-lg max-w-2xl w-full mx-4 max-h-[80vh] overflow-hidden">
+    <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center bg-black/50">
+      <div className="bg-background rounded-t-xl sm:rounded-lg shadow-lg w-full sm:max-w-2xl sm:mx-4 max-h-[90vh] sm:max-h-[80vh] overflow-hidden">
         <div className="flex items-center justify-between p-4 border-b">
-          <h3 className="text-lg font-semibold flex items-center gap-2">
-            <Eye className="h-5 w-5" />
-            Audit Log Details
+          <h3 className="text-base sm:text-lg font-semibold flex items-center gap-2">
+            <Eye className="h-4 w-4 sm:h-5 sm:w-5" />
+            Log Details
           </h3>
-          <Button variant="ghost" size="icon" onClick={onClose}>
+          <Button variant="ghost" size="icon" onClick={onClose} className="h-8 w-8">
             <X className="h-4 w-4" />
           </Button>
         </div>
         <div className="p-4 overflow-y-auto max-h-[60vh] space-y-4">
-          <div className="grid grid-cols-2 gap-4">
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
             <div>
-              <label className="text-sm font-medium text-muted-foreground">Action</label>
-              <Badge className={cn('mt-1', ACTION_COLORS[log.action] || 'bg-gray-100')}>
-                {log.action}
-              </Badge>
+              <label className="text-xs sm:text-sm font-medium text-muted-foreground">Action</label>
+              <div className="mt-1">
+                <Badge className={cn(ACTION_COLORS[log.action] || 'bg-gray-100')}>
+                  {log.action}
+                </Badge>
+              </div>
             </div>
             <div>
-              <label className="text-sm font-medium text-muted-foreground">Resource Type</label>
-              <p className="mt-1 capitalize">{log.resourceType}</p>
+              <label className="text-xs sm:text-sm font-medium text-muted-foreground">Resource Type</label>
+              <p className="mt-1 text-sm sm:text-base capitalize">{log.resourceType}</p>
             </div>
             <div>
-              <label className="text-sm font-medium text-muted-foreground">Admin</label>
-              <p className="mt-1">{log.adminId?.name || log.adminId?.email || 'Unknown'}</p>
+              <label className="text-xs sm:text-sm font-medium text-muted-foreground">Admin</label>
+              <p className="mt-1 text-sm sm:text-base truncate">{log.adminId?.name || log.adminId?.email || 'Unknown'}</p>
             </div>
             <div>
-              <label className="text-sm font-medium text-muted-foreground">Timestamp</label>
-              <p className="mt-1">{formatTimestamp(log.timestamp)}</p>
+              <label className="text-xs sm:text-sm font-medium text-muted-foreground">Timestamp</label>
+              <p className="mt-1 text-sm sm:text-base">{formatTimestamp(log.timestamp)}</p>
             </div>
-            <div>
-              <label className="text-sm font-medium text-muted-foreground">Resource ID</label>
-              <p className="mt-1 font-mono text-sm">{log.resourceId || 'N/A'}</p>
+            <div className="sm:col-span-2">
+              <label className="text-xs sm:text-sm font-medium text-muted-foreground">Resource ID</label>
+              <p className="mt-1 font-mono text-xs sm:text-sm break-all">{log.resourceId || 'N/A'}</p>
             </div>
-            <div>
-              <label className="text-sm font-medium text-muted-foreground">IP Address</label>
-              <p className="mt-1 font-mono text-sm">{log.ipAddress || 'N/A'}</p>
+            <div className="sm:col-span-2">
+              <label className="text-xs sm:text-sm font-medium text-muted-foreground">IP Address</label>
+              <p className="mt-1 font-mono text-xs sm:text-sm">{log.ipAddress || 'N/A'}</p>
             </div>
           </div>
           
           {log.changes && Object.keys(log.changes).length > 0 && (
             <div>
-              <label className="text-sm font-medium text-muted-foreground">Changes</label>
-              <pre className="mt-1 p-3 bg-muted rounded-lg text-sm overflow-x-auto">
+              <label className="text-xs sm:text-sm font-medium text-muted-foreground">Changes</label>
+              <pre className="mt-1 p-3 bg-muted rounded-lg text-xs overflow-x-auto">
                 {JSON.stringify(log.changes, null, 2)}
               </pre>
             </div>
@@ -146,8 +148,8 @@ const LogDetailsModal = ({ log, onClose }) => {
           
           {log.previousValues && Object.keys(log.previousValues).length > 0 && (
             <div>
-              <label className="text-sm font-medium text-muted-foreground">Previous Values</label>
-              <pre className="mt-1 p-3 bg-muted rounded-lg text-sm overflow-x-auto">
+              <label className="text-xs sm:text-sm font-medium text-muted-foreground">Previous Values</label>
+              <pre className="mt-1 p-3 bg-muted rounded-lg text-xs overflow-x-auto">
                 {JSON.stringify(log.previousValues, null, 2)}
               </pre>
             </div>
@@ -155,8 +157,8 @@ const LogDetailsModal = ({ log, onClose }) => {
           
           {log.userAgent && (
             <div>
-              <label className="text-sm font-medium text-muted-foreground">User Agent</label>
-              <p className="mt-1 text-sm text-muted-foreground break-all">{log.userAgent}</p>
+              <label className="text-xs sm:text-sm font-medium text-muted-foreground">User Agent</label>
+              <p className="mt-1 text-xs text-muted-foreground break-all">{log.userAgent}</p>
             </div>
           )}
         </div>
@@ -168,7 +170,7 @@ const LogDetailsModal = ({ log, onClose }) => {
   );
 };
 
-// Audit Log Table Row Component
+// Audit Log Table Row Component (Desktop)
 const AuditLogRow = ({ log, onViewDetails }) => {
   const ResourceIcon = RESOURCE_ICONS[log.resourceType] || Activity;
   
@@ -176,27 +178,27 @@ const AuditLogRow = ({ log, onViewDetails }) => {
     <tr className="border-b last:border-0 hover:bg-muted/50 transition-colors">
       <td className="py-3 px-4">
         <div className="flex items-center gap-2">
-          <Clock className="h-4 w-4 text-muted-foreground" />
-          <span className="text-sm">{formatTimestamp(log.timestamp)}</span>
+          <Clock className="h-4 w-4 text-muted-foreground flex-shrink-0" />
+          <span className="text-sm whitespace-nowrap">{formatTimestamp(log.timestamp)}</span>
         </div>
       </td>
       <td className="py-3 px-4">
         <div className="flex items-center gap-2">
-          <User className="h-4 w-4 text-muted-foreground" />
-          <div>
-            <p className="text-sm font-medium">{log.adminId?.name || 'Unknown'}</p>
-            <p className="text-xs text-muted-foreground">{log.adminId?.email || ''}</p>
+          <User className="h-4 w-4 text-muted-foreground flex-shrink-0" />
+          <div className="min-w-0">
+            <p className="text-sm font-medium truncate">{log.adminId?.name || 'Unknown'}</p>
+            <p className="text-xs text-muted-foreground truncate">{log.adminId?.email || ''}</p>
           </div>
         </div>
       </td>
       <td className="py-3 px-4">
-        <Badge className={cn('text-xs', ACTION_COLORS[log.action] || 'bg-gray-100')}>
+        <Badge className={cn('text-xs whitespace-nowrap', ACTION_COLORS[log.action] || 'bg-gray-100')}>
           {log.action}
         </Badge>
       </td>
       <td className="py-3 px-4">
         <div className="flex items-center gap-2">
-          <ResourceIcon className="h-4 w-4 text-muted-foreground" />
+          <ResourceIcon className="h-4 w-4 text-muted-foreground flex-shrink-0" />
           <span className="text-sm capitalize">{log.resourceType}</span>
         </div>
       </td>
@@ -212,6 +214,52 @@ const AuditLogRow = ({ log, onViewDetails }) => {
         </Button>
       </td>
     </tr>
+  );
+};
+
+// Audit Log Card Component (Mobile)
+const AuditLogCard = ({ log, onViewDetails }) => {
+  const ResourceIcon = RESOURCE_ICONS[log.resourceType] || Activity;
+  
+  return (
+    <div className="p-4 border-b last:border-0 space-y-3">
+      {/* Header: Action Badge + View Button */}
+      <div className="flex items-center justify-between">
+        <Badge className={cn('text-xs', ACTION_COLORS[log.action] || 'bg-gray-100')}>
+          {log.action}
+        </Badge>
+        <Button variant="ghost" size="sm" onClick={() => onViewDetails(log)} className="h-8 px-2">
+          <Eye className="h-4 w-4 mr-1" />
+          View
+        </Button>
+      </div>
+      
+      {/* Admin Info */}
+      <div className="flex items-center gap-2">
+        <User className="h-4 w-4 text-muted-foreground flex-shrink-0" />
+        <div className="min-w-0 flex-1">
+          <p className="text-sm font-medium truncate">{log.adminId?.name || 'Unknown'}</p>
+          <p className="text-xs text-muted-foreground truncate">{log.adminId?.email || ''}</p>
+        </div>
+      </div>
+      
+      {/* Resource Info */}
+      <div className="flex items-center gap-4 text-sm">
+        <div className="flex items-center gap-1.5">
+          <ResourceIcon className="h-4 w-4 text-muted-foreground" />
+          <span className="capitalize text-muted-foreground">{log.resourceType}</span>
+        </div>
+        <span className="font-mono text-xs text-muted-foreground truncate flex-1">
+          {log.resourceId ? `ID: ${log.resourceId.slice(0, 12)}...` : ''}
+        </span>
+      </div>
+      
+      {/* Timestamp */}
+      <div className="flex items-center gap-1.5 text-xs text-muted-foreground">
+        <Clock className="h-3.5 w-3.5" />
+        <span>{formatTimestamp(log.timestamp)}</span>
+      </div>
+    </div>
   );
 };
 
@@ -557,8 +605,8 @@ const AuditLogs = () => {
         <CardHeader className="pb-3">
           <div className="flex items-center justify-between">
             <CardTitle className="text-base">Activity Logs</CardTitle>
-            <Badge variant="secondary">
-              {pagination.total.toLocaleString()} total logs
+            <Badge variant="secondary" className="text-xs">
+              {pagination.total.toLocaleString()} total
             </Badge>
           </div>
         </CardHeader>
@@ -578,34 +626,48 @@ const AuditLogs = () => {
               )}
             </div>
           ) : (
-            <div className="overflow-x-auto">
-              <table className="w-full">
-                <thead>
-                  <tr className="border-b bg-muted/50">
-                    <th className="text-left py-3 px-4 text-sm font-medium text-muted-foreground">Timestamp</th>
-                    <th className="text-left py-3 px-4 text-sm font-medium text-muted-foreground">Admin</th>
-                    <th className="text-left py-3 px-4 text-sm font-medium text-muted-foreground">Action</th>
-                    <th className="text-left py-3 px-4 text-sm font-medium text-muted-foreground">Resource</th>
-                    <th className="text-left py-3 px-4 text-sm font-medium text-muted-foreground">Resource ID</th>
-                    <th className="text-left py-3 px-4 text-sm font-medium text-muted-foreground">Details</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {logs.map((log) => (
-                    <AuditLogRow
-                      key={log._id}
-                      log={log}
-                      onViewDetails={setSelectedLog}
-                    />
-                  ))}
-                </tbody>
-              </table>
-            </div>
+            <>
+              {/* Mobile Card View */}
+              <div className="md:hidden">
+                {logs.map((log) => (
+                  <AuditLogCard
+                    key={log._id}
+                    log={log}
+                    onViewDetails={setSelectedLog}
+                  />
+                ))}
+              </div>
+              
+              {/* Desktop Table View */}
+              <div className="hidden md:block overflow-x-auto">
+                <table className="w-full">
+                  <thead>
+                    <tr className="border-b bg-muted/50">
+                      <th className="text-left py-3 px-4 text-sm font-medium text-muted-foreground">Timestamp</th>
+                      <th className="text-left py-3 px-4 text-sm font-medium text-muted-foreground">Admin</th>
+                      <th className="text-left py-3 px-4 text-sm font-medium text-muted-foreground">Action</th>
+                      <th className="text-left py-3 px-4 text-sm font-medium text-muted-foreground">Resource</th>
+                      <th className="text-left py-3 px-4 text-sm font-medium text-muted-foreground">Resource ID</th>
+                      <th className="text-left py-3 px-4 text-sm font-medium text-muted-foreground">Details</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {logs.map((log) => (
+                      <AuditLogRow
+                        key={log._id}
+                        log={log}
+                        onViewDetails={setSelectedLog}
+                      />
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            </>
           )}
 
           {/* Pagination */}
           {pagination.totalPages > 1 && (
-            <div className="flex items-center justify-between p-4 border-t">
+            <div className="flex flex-col sm:flex-row items-center justify-between gap-3 p-4 border-t">
               <p className="text-sm text-muted-foreground">
                 Page {pagination.page} of {pagination.totalPages}
               </p>
@@ -616,8 +678,8 @@ const AuditLogs = () => {
                   onClick={() => handlePageChange(pagination.page - 1)}
                   disabled={pagination.page <= 1 || loading}
                 >
-                  <ChevronLeft className="h-4 w-4 mr-1" />
-                  Previous
+                  <ChevronLeft className="h-4 w-4 sm:mr-1" />
+                  <span className="hidden sm:inline">Previous</span>
                 </Button>
                 <Button
                   variant="outline"
@@ -625,8 +687,8 @@ const AuditLogs = () => {
                   onClick={() => handlePageChange(pagination.page + 1)}
                   disabled={pagination.page >= pagination.totalPages || loading}
                 >
-                  Next
-                  <ChevronRight className="h-4 w-4 ml-1" />
+                  <span className="hidden sm:inline">Next</span>
+                  <ChevronRight className="h-4 w-4 sm:ml-1" />
                 </Button>
               </div>
             </div>

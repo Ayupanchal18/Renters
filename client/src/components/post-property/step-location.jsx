@@ -38,22 +38,22 @@ export default function StepLocation({ formData, setFormData, validationErrors }
     }, []);
 
     return (
-        <div className="space-y-6">
-            <h2 className="text-2xl font-bold text-foreground mb-6 flex items-center gap-2">
-                <MapPin size={28} className="text-primary" />
+        <div className="space-y-5 sm:space-y-6">
+            <h2 className="text-xl sm:text-2xl font-bold text-foreground flex items-center gap-2">
+                <MapPin size={24} className="text-primary" />
                 Property Location
             </h2>
 
             {/* City */}
             <div className="space-y-2">
-                <Label htmlFor="city" className="text-foreground font-semibold">City *</Label>
+                <Label htmlFor="city" className="text-foreground font-semibold text-sm sm:text-base">City *</Label>
                 <div className="relative">
                     <select
                         id="city"
                         value={formData.city}
                         onChange={(e) => setFormData({ ...formData, city: e.target.value })}
                         disabled={loading}
-                        className={`w-full px-4 py-2 border rounded-lg bg-background text-foreground focus:outline-none focus:ring-2 focus:ring-ring ${validationErrors.city ? "border-destructive" : "border-input"
+                        className={`w-full px-3 sm:px-4 py-2.5 sm:py-2 border rounded-lg bg-background text-foreground text-sm sm:text-base focus:outline-none focus:ring-2 focus:ring-ring ${validationErrors.city ? "border-destructive" : "border-input"
                             } ${loading ? "opacity-50" : ""}`}
                     >
                         <option value="">{loading ? "Loading cities..." : "Select city"}</option>
@@ -68,31 +68,31 @@ export default function StepLocation({ formData, setFormData, validationErrors }
                     )}
                 </div>
                 {validationErrors.city && (
-                    <p className="text-destructive text-sm">{validationErrors.city}</p>
+                    <p className="text-destructive text-xs sm:text-sm">{validationErrors.city}</p>
                 )}
             </div>
 
             {/* Full Address */}
             <div className="space-y-2">
-                <Label htmlFor="address" className="text-foreground font-semibold">Full Address *</Label>
+                <Label htmlFor="address" className="text-foreground font-semibold text-sm sm:text-base">Full Address *</Label>
                 <textarea
                     id="address"
                     placeholder="Enter complete address including building, street, area"
                     value={formData.address}
                     onChange={(e) => setFormData({ ...formData, address: e.target.value })}
-                    rows={4}
-                    className={`w-full px-4 py-2 border rounded-lg bg-background text-foreground focus:outline-none focus:ring-2 focus:ring-ring resize-none ${validationErrors.address ? "border-destructive" : "border-input"
+                    rows={3}
+                    className={`w-full px-3 sm:px-4 py-2.5 sm:py-2 border rounded-lg bg-background text-foreground text-sm sm:text-base focus:outline-none focus:ring-2 focus:ring-ring resize-none ${validationErrors.address ? "border-destructive" : "border-input"
                         }`}
                 />
                 {validationErrors.address && (
-                    <p className="text-destructive text-sm">{validationErrors.address}</p>
+                    <p className="text-destructive text-xs sm:text-sm">{validationErrors.address}</p>
                 )}
             </div>
 
             {/* Map Location */}
             <div className="space-y-2">
-                <Label htmlFor="mapLocation" className="text-foreground font-semibold">
-                    Map Location (Optional)
+                <Label htmlFor="mapLocation" className="text-foreground font-semibold text-sm sm:text-base">
+                    Map Location <span className="text-muted-foreground font-normal">(Optional)</span>
                 </Label>
                 <div className="flex gap-2">
                     <Input
@@ -100,7 +100,7 @@ export default function StepLocation({ formData, setFormData, validationErrors }
                         placeholder="Latitude, Longitude"
                         value={formData.mapLocation}
                         onChange={(e) => setFormData({ ...formData, mapLocation: e.target.value })}
-                        className="flex-1 text-xs sm:text-sm"
+                        className="flex-1 text-sm"
                     />
                     <Button
                         type="button"
@@ -125,8 +125,8 @@ export default function StepLocation({ formData, setFormData, validationErrors }
                         className="whitespace-nowrap flex items-center gap-1.5 text-xs sm:text-sm px-3"
                     >
                         <Navigation size={14} />
-                        <span className="hidden sm:inline">Use My Location</span>
-                        <span className="sm:hidden">Location</span>
+                        <span className="hidden sm:inline">Use Location</span>
+                        <span className="sm:hidden">GPS</span>
                     </Button>
                 </div>
             </div>

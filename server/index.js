@@ -86,6 +86,8 @@ export default async function createServer(devMode = false) {
     try {
         app.use("/api/auth", (await safeImport("routes/auth.js")).default);
         app.use("/api/verification", (await safeImport("routes/verification.js")).default);
+        app.use("/api/properties/rent", (await safeImport("routes/rentProperties.js")).default);
+        app.use("/api/properties/buy", (await safeImport("routes/buyProperties.js")).default);
         app.use("/api/properties", (await safeImport("routes/properties.js")).default);
         app.use("/api/users", (await safeImport("routes/users.js")).default);
         app.use("/api/wishlist", (await safeImport("routes/wishlist.js")).default);

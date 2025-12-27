@@ -22,8 +22,11 @@ import {
   RefreshCw,
   AlertCircle,
   Filter,
-  X
+  X,
+  Home,
+  ShoppingCart
 } from 'lucide-react';
+import { LISTING_TYPES, LISTING_TYPE_LABELS } from '@shared/propertyTypes';
 
 /**
  * Property Management Page
@@ -62,6 +65,7 @@ const PropertyManagement = () => {
   const [categoryFilter, setCategoryFilter] = useState('all');
   const [statusFilter, setStatusFilter] = useState('all');
   const [featuredFilter, setFeaturedFilter] = useState('all');
+  const [listingTypeFilter, setListingTypeFilter] = useState('all');
   const [sortBy, setSortBy] = useState('createdAt');
   const [sortOrder, setSortOrder] = useState('desc');
   
@@ -106,6 +110,9 @@ const PropertyManagement = () => {
       if (featuredFilter && featuredFilter !== 'all') {
         params.append('featured', featuredFilter === 'featured' ? 'true' : 'false');
       }
+      if (listingTypeFilter && listingTypeFilter !== 'all') {
+        params.append('listingType', listingTypeFilter);
+      }
       
       const response = await authenticatedFetch(`${API_BASE}?${params}`, {
         headers: getHeaders()
@@ -125,12 +132,12 @@ const PropertyManagement = () => {
     } finally {
       setLoading(false);
     }
-  }, [navigate, pagination.limit, debouncedSearch, categoryFilter, statusFilter, featuredFilter, sortBy, sortOrder]);
+  }, [navigate, pagination.limit, debouncedSearch, categoryFilter, statusFilter, featuredFilter, listingTypeFilter, sortBy, sortOrder]);
 
   // Initial load and filter changes
   useEffect(() => {
     fetchProperties(1);
-  }, [debouncedSearch, categoryFilter, statusFilter, featuredFilter, sortBy, sortOrder]);
+  }, [debouncedSearch, categoryFilter, statusFilter, featuredFilter, listingTypeFilter, sortBy, sortOrder]);
 
   // Refresh handler
   const handleRefresh = async () => {
@@ -160,11 +167,12 @@ const PropertyManagement = () => {
     setCategoryFilter('all');
     setStatusFilter('all');
     setFeaturedFilter('all');
+    setListingTypeFilter('all');
     setSortBy('createdAt');
     setSortOrder('desc');
   };
 
-  const hasActiveFilters = search || categoryFilter !== 'all' || statusFilter !== 'all' || featuredFilter !== 'all';
+  const hasActiveFilters = search || categoryFilter !== 'all' || statusFilter !== 'all' || featuredFilter !== 'all' || listingTypeFilter !== 'all';
 
   // Property actions
   const handleCreateProperty = () => {
@@ -347,6 +355,28 @@ const PropertyManagement = () => {
                 <SelectItem value="all">All Properties</SelectItem>
                 <SelectItem value="featured">Featured Only</SelectItem>
                 <SelectItem value="regular">Regular Only</SelectItem>
+              </SelectContent>
+            </Select>
+
+            {/* Listing Type Filter */}
+            <Select value={listingTypeFilter} onValueChange={setListingTypeFilter}>
+              <SelectTrigger className="w-full sm:w-[150px]">
+                <SelectValue placeholder="All Types" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">All Types</SelectItem>
+                <SelectItem value={LISTING_TYPES.RENT}>
+                  <span className="flex items-center gap-2">
+                    <Home className="h-3 w-3" />
+                    {LISTING_TYPE_LABELS.rent}
+                  </span>
+                </SelectItem>
+                <SelectItem value={LISTING_TYPES.BUY}>
+                  <span className="flex items-center gap-2">
+                    <ShoppingCart className="h-3 w-3" />
+                    {LISTING_TYPE_LABELS.buy}
+                  </span>
+                </SelectItem>
               </SelectContent>
             </Select>
             

@@ -7,13 +7,15 @@
  * @see https://schema.org/BreadcrumbList
  */
 
+import { LISTING_TYPES } from '@shared/propertyTypes.js';
+
 /**
  * Default site configuration for structured data
  */
 const siteConfig = {
     siteName: 'Renters',
     siteUrl: typeof window !== 'undefined' ? window.location.origin : 'https://renters.com',
-    defaultDescription: 'Find rooms, flats, houses & halls for rent',
+    defaultDescription: 'Find rooms, flats, houses & halls for rent or sale',
     defaultImage: '/property_image/placeholder-logo.png',
     contactEmail: 'contact@renters.com',
     contactPhone: '+91-XXXXXXXXXX'
@@ -21,15 +23,18 @@ const siteConfig = {
 
 /**
  * Generates RealEstateListing schema for a property
+ * Handles both rent and buy properties based on listingType
  * 
  * @param {Object} property - Property object from database
  * @param {string} property.title - Property title
  * @param {string} property.description - Property description
  * @param {string} property.slug - URL slug for the property
+ * @param {string} property.listingType - 'rent' or 'buy'
  * @param {string[]} property.photos - Array of photo URLs
  * @param {string} property.city - City name
  * @param {string} property.address - Full address
- * @param {number} property.monthlyRent - Monthly rent price
+ * @param {number} property.monthlyRent - Monthly rent price (rent properties)
+ * @param {number} property.sellingPrice - Selling price (buy properties)
  * @param {string} property.category - Property category (room, flat, house, etc.)
  * @param {string} property.propertyType - Specific property type
  * @param {number} property.bedrooms - Number of bedrooms
@@ -46,7 +51,12 @@ export function generatePropertySchema(property) {
     }
 
     const baseUrl = siteConfig.siteUrl;
-    const propertyUrl = `${baseUrl}/properties/${property.slug || property._id}`;
+    const listingType = property.listingType || LISTING_TYPES.RENT;
+
+    // Generate URL based on listing type (Requirements 9.1, 9.2)
+    const propertyUrl = listingType === LISTING_TYPES.BUY
+        ? `${baseUrl}/buy/${property.slug || property._id}`
+        : `${baseUrl}/rent/${property.slug || property._id}`;
 
     // Get the first valid image or use default
     const primaryImage = property.photos?.[0] || siteConfig.defaultImage;
@@ -75,7 +85,194 @@ export function generatePropertySchema(property) {
         };
     }
 
-    // Add price/offer information
+    // Add price/offer information based on listing type
+    if (listingType === LISTING_TYPES.BUY && property.sellingPrice) {
+        schema.offers = {
+            '@type': 'Offer',
+            price: property.sellingPrice,
+            priceCurrency: 'INR',
+            availability: property.status === 'active'
+                ? 'https://schema.org/InStock'
+                : 'https://schema.org/OutOfStock',
+            validFrom: property.availableFrom,
+            priceSpecification: {
+                '@type': 'PriceSpecification',
+                price: property.sellingPrice,
+                priceCurrency: 'INR',
+                valueAddedTaxIncluded: false
+            }
+        };
+    } else if (property.monthlyRent) {
+        schema.offers = {
+            '@type': 'Offer',
+            price: property.monthlyRent,
+            priceCurrency: 'INR',
+            availability: property.status === 'active'
+                ? 'https://schema.org/InStock'
+                : 'https://schema.org/OutOfStock',
+            validFrom: property.availableFrom,
+            priceSpecification: {
+                '@type': 'UnitPriceSpecification',
+                price: property.monthlyRent,
+                priceCurrency: 'INR',
+                unitText: 'month',
+                referenceQuantity: {
+                    '@type': 'QuantitativeValue',
+                    value: 1,
+                    unitCode: 'MON'
+                }
+            }
+        };
+    }
+
+    // Add property details
+    schema.additionalProperty = [];
+
+    // Add listing type as a property
+    schema.additionalProperty.push({
+        '@type': 'PropertyValue',
+        name: 'Listing Type',
+        value: listingType === LISTING_TYPES.BUY ? 'For Sale' : 'For Rent'
+    });
+
+    if (property.bedrooms) {
+        schema.additionalProperty.push({
+            '@type': 'PropertyValue',
+            name: 'Bedrooms',
+            value: property.bedrooms
+        });
+    }
+
+    if (property.bathrooms) {
+        schema.additionalProperty.push({
+            '@type': 'PropertyValue',
+            name: 'Bathrooms',
+            value: property.bathrooms
+        });
+    }
+
+    if (property.builtUpArea) {
+        schema.additionalProperty.push({
+            '@type': 'PropertyValue',
+            name: 'Area',
+            value: property.builtUpArea,
+            unitText: 'sq ft'
+        });
+    }
+
+    if (property.propertyType) {
+        schema.additionalProperty.push({
+            '@type': 'PropertyValue',
+            name: 'Property Type',
+            value: property.propertyType
+        });
+    }
+
+    if (property.furnishing) {
+        schema.additionalProperty.push({
+            '@type': 'PropertyValue',
+            name: 'Furnishing',
+            value: property.furnishing
+        });
+    }
+
+    // Add listing-type-specific properties
+    if (listingType === LISTING_TYPES.BUY) {
+        if (property.pricePerSqft) {
+            schema.additionalProperty.push({
+                '@type': 'PropertyValue',
+                name: 'Price per Sq Ft',
+                value: property.pricePerSqft,
+                unitText: 'INR/sq ft'
+            });
+        }
+        if (property.possessionStatus) {
+            schema.additionalProperty.push({
+                '@type': 'PropertyValue',
+                name: 'Possession Status',
+                value: property.possessionStatus
+            });
+        }
+        if (property.loanAvailable !== undefined) {
+            schema.additionalProperty.push({
+                '@type': 'PropertyValue',
+                name: 'Loan Available',
+                value: property.loanAvailable ? 'Yes' : 'No'
+            });
+        }
+    } else {
+        // Rent-specific properties
+        if (property.securityDeposit) {
+            schema.additionalProperty.push({
+                '@type': 'PropertyValue',
+                name: 'Security Deposit',
+                value: property.securityDeposit,
+                unitText: 'INR'
+            });
+        }
+        if (property.preferredTenants) {
+            schema.additionalProperty.push({
+                '@type': 'PropertyValue',
+                name: 'Preferred Tenants',
+                value: property.preferredTenants
+            });
+        }
+        if (property.leaseDuration) {
+            schema.additionalProperty.push({
+                '@type': 'PropertyValue',
+                name: 'Lease Duration',
+                value: property.leaseDuration
+            });
+        }
+    }
+
+    return schema;
+}
+
+/**
+ * Generates RealEstateListing schema specifically for rent properties
+ * Requirements: 9.5
+ * 
+ * @param {Object} property - Rent property object from database
+ * @returns {Object} JSON-LD RealEstateListing schema for rent property
+ */
+export function generateRentPropertySchema(property) {
+    if (!property) {
+        console.warn('generateRentPropertySchema: No property provided');
+        return null;
+    }
+
+    const baseUrl = siteConfig.siteUrl;
+    const propertyUrl = `${baseUrl}/rent/${property.slug || property._id}`;
+
+    const images = property.photos?.length > 0
+        ? property.photos
+        : [siteConfig.defaultImage];
+
+    const schema = {
+        '@context': 'https://schema.org',
+        '@type': 'RealEstateListing',
+        '@id': propertyUrl,
+        name: property.title || 'Property for Rent',
+        description: property.description || `${property.propertyType || 'Property'} available for rent in ${property.city || 'India'}`,
+        url: propertyUrl,
+        image: images,
+        datePosted: property.createdAt,
+        dateModified: property.updatedAt,
+        category: 'Rental'
+    };
+
+    // Add address
+    if (property.city || property.address) {
+        schema.address = {
+            '@type': 'PostalAddress',
+            streetAddress: property.address || '',
+            addressLocality: property.city || '',
+            addressCountry: 'IN'
+        };
+    }
+
+    // Add rent-specific offer with monthly pricing
     if (property.monthlyRent) {
         schema.offers = {
             '@type': 'Offer',
@@ -84,54 +281,265 @@ export function generatePropertySchema(property) {
             availability: property.status === 'active'
                 ? 'https://schema.org/InStock'
                 : 'https://schema.org/OutOfStock',
-            validFrom: property.availableFrom
+            validFrom: property.availableFrom,
+            priceSpecification: {
+                '@type': 'UnitPriceSpecification',
+                price: property.monthlyRent,
+                priceCurrency: 'INR',
+                unitText: 'month',
+                referenceQuantity: {
+                    '@type': 'QuantitativeValue',
+                    value: 1,
+                    unitCode: 'MON'
+                }
+            }
         };
     }
 
-    // Add property details
-    if (property.bedrooms || property.bathrooms || property.builtUpArea) {
-        schema.additionalProperty = [];
-
-        if (property.bedrooms) {
-            schema.additionalProperty.push({
-                '@type': 'PropertyValue',
-                name: 'Bedrooms',
-                value: property.bedrooms
-            });
+    // Add rent-specific additional properties
+    schema.additionalProperty = [
+        {
+            '@type': 'PropertyValue',
+            name: 'Listing Type',
+            value: 'For Rent'
         }
+    ];
 
-        if (property.bathrooms) {
-            schema.additionalProperty.push({
-                '@type': 'PropertyValue',
-                name: 'Bathrooms',
-                value: property.bathrooms
-            });
-        }
+    if (property.bedrooms) {
+        schema.additionalProperty.push({
+            '@type': 'PropertyValue',
+            name: 'Bedrooms',
+            value: property.bedrooms
+        });
+    }
 
-        if (property.builtUpArea) {
-            schema.additionalProperty.push({
-                '@type': 'PropertyValue',
-                name: 'Area',
-                value: property.builtUpArea,
-                unitText: 'sq ft'
-            });
-        }
+    if (property.bathrooms) {
+        schema.additionalProperty.push({
+            '@type': 'PropertyValue',
+            name: 'Bathrooms',
+            value: property.bathrooms
+        });
+    }
 
-        if (property.propertyType) {
-            schema.additionalProperty.push({
-                '@type': 'PropertyValue',
-                name: 'Property Type',
-                value: property.propertyType
-            });
-        }
+    if (property.builtUpArea) {
+        schema.additionalProperty.push({
+            '@type': 'PropertyValue',
+            name: 'Area',
+            value: property.builtUpArea,
+            unitText: 'sq ft'
+        });
+    }
 
-        if (property.furnishing) {
-            schema.additionalProperty.push({
-                '@type': 'PropertyValue',
-                name: 'Furnishing',
-                value: property.furnishing
-            });
+    if (property.propertyType) {
+        schema.additionalProperty.push({
+            '@type': 'PropertyValue',
+            name: 'Property Type',
+            value: property.propertyType
+        });
+    }
+
+    if (property.furnishing) {
+        schema.additionalProperty.push({
+            '@type': 'PropertyValue',
+            name: 'Furnishing',
+            value: property.furnishing
+        });
+    }
+
+    if (property.securityDeposit) {
+        schema.additionalProperty.push({
+            '@type': 'PropertyValue',
+            name: 'Security Deposit',
+            value: property.securityDeposit,
+            unitText: 'INR'
+        });
+    }
+
+    if (property.maintenanceCharge) {
+        schema.additionalProperty.push({
+            '@type': 'PropertyValue',
+            name: 'Maintenance Charge',
+            value: property.maintenanceCharge,
+            unitText: 'INR/month'
+        });
+    }
+
+    if (property.preferredTenants) {
+        schema.additionalProperty.push({
+            '@type': 'PropertyValue',
+            name: 'Preferred Tenants',
+            value: property.preferredTenants
+        });
+    }
+
+    if (property.leaseDuration) {
+        schema.additionalProperty.push({
+            '@type': 'PropertyValue',
+            name: 'Lease Duration',
+            value: property.leaseDuration
+        });
+    }
+
+    if (property.rentNegotiable !== undefined) {
+        schema.additionalProperty.push({
+            '@type': 'PropertyValue',
+            name: 'Rent Negotiable',
+            value: property.rentNegotiable ? 'Yes' : 'No'
+        });
+    }
+
+    return schema;
+}
+
+/**
+ * Generates RealEstateListing schema specifically for buy/sale properties
+ * Requirements: 9.5
+ * 
+ * @param {Object} property - Buy property object from database
+ * @returns {Object} JSON-LD RealEstateListing schema for buy property
+ */
+export function generateBuyPropertySchema(property) {
+    if (!property) {
+        console.warn('generateBuyPropertySchema: No property provided');
+        return null;
+    }
+
+    const baseUrl = siteConfig.siteUrl;
+    const propertyUrl = `${baseUrl}/buy/${property.slug || property._id}`;
+
+    const images = property.photos?.length > 0
+        ? property.photos
+        : [siteConfig.defaultImage];
+
+    const schema = {
+        '@context': 'https://schema.org',
+        '@type': 'RealEstateListing',
+        '@id': propertyUrl,
+        name: property.title || 'Property for Sale',
+        description: property.description || `${property.propertyType || 'Property'} available for sale in ${property.city || 'India'}`,
+        url: propertyUrl,
+        image: images,
+        datePosted: property.createdAt,
+        dateModified: property.updatedAt,
+        category: 'Sale'
+    };
+
+    // Add address
+    if (property.city || property.address) {
+        schema.address = {
+            '@type': 'PostalAddress',
+            streetAddress: property.address || '',
+            addressLocality: property.city || '',
+            addressCountry: 'IN'
+        };
+    }
+
+    // Add buy-specific offer with selling price
+    if (property.sellingPrice) {
+        schema.offers = {
+            '@type': 'Offer',
+            price: property.sellingPrice,
+            priceCurrency: 'INR',
+            availability: property.status === 'active'
+                ? 'https://schema.org/InStock'
+                : 'https://schema.org/OutOfStock',
+            validFrom: property.availableFrom,
+            priceSpecification: {
+                '@type': 'PriceSpecification',
+                price: property.sellingPrice,
+                priceCurrency: 'INR',
+                valueAddedTaxIncluded: false
+            }
+        };
+    }
+
+    // Add buy-specific additional properties
+    schema.additionalProperty = [
+        {
+            '@type': 'PropertyValue',
+            name: 'Listing Type',
+            value: 'For Sale'
         }
+    ];
+
+    if (property.bedrooms) {
+        schema.additionalProperty.push({
+            '@type': 'PropertyValue',
+            name: 'Bedrooms',
+            value: property.bedrooms
+        });
+    }
+
+    if (property.bathrooms) {
+        schema.additionalProperty.push({
+            '@type': 'PropertyValue',
+            name: 'Bathrooms',
+            value: property.bathrooms
+        });
+    }
+
+    if (property.builtUpArea) {
+        schema.additionalProperty.push({
+            '@type': 'PropertyValue',
+            name: 'Area',
+            value: property.builtUpArea,
+            unitText: 'sq ft'
+        });
+    }
+
+    if (property.propertyType) {
+        schema.additionalProperty.push({
+            '@type': 'PropertyValue',
+            name: 'Property Type',
+            value: property.propertyType
+        });
+    }
+
+    if (property.furnishing) {
+        schema.additionalProperty.push({
+            '@type': 'PropertyValue',
+            name: 'Furnishing',
+            value: property.furnishing
+        });
+    }
+
+    if (property.pricePerSqft) {
+        schema.additionalProperty.push({
+            '@type': 'PropertyValue',
+            name: 'Price per Sq Ft',
+            value: property.pricePerSqft,
+            unitText: 'INR/sq ft'
+        });
+    }
+
+    if (property.possessionStatus) {
+        const possessionLabels = {
+            ready: 'Ready to Move',
+            under_construction: 'Under Construction',
+            resale: 'Resale'
+        };
+        schema.additionalProperty.push({
+            '@type': 'PropertyValue',
+            name: 'Possession Status',
+            value: possessionLabels[property.possessionStatus] || property.possessionStatus
+        });
+    }
+
+    if (property.bookingAmount) {
+        schema.additionalProperty.push({
+            '@type': 'PropertyValue',
+            name: 'Booking Amount',
+            value: property.bookingAmount,
+            unitText: 'INR'
+        });
+    }
+
+    if (property.loanAvailable !== undefined) {
+        schema.additionalProperty.push({
+            '@type': 'PropertyValue',
+            name: 'Loan Available',
+            value: property.loanAvailable ? 'Yes' : 'No'
+        });
     }
 
     return schema;
@@ -255,6 +663,8 @@ export function generateLocalBusiness(options = {}) {
 
 export default {
     generatePropertySchema,
+    generateRentPropertySchema,
+    generateBuyPropertySchema,
     generateBreadcrumbs,
     generateOrganization,
     generateWebsiteSchema,

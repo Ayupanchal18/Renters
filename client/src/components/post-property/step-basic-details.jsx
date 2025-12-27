@@ -14,32 +14,32 @@ export default function StepBasicDetails({ formData, setFormData, validationErro
     const types = PROPERTY_TYPES[formData.category] || [];
 
     return (
-        <div className="space-y-6">
-            <h2 className="text-2xl font-bold text-foreground mb-6">Basic Details</h2>
+        <div className="space-y-5 sm:space-y-6">
+            <h2 className="text-xl sm:text-2xl font-bold text-foreground">Basic Details</h2>
 
             {/* Title */}
             <div className="space-y-2">
-                <Label htmlFor="title" className="text-foreground font-semibold">Property Title *</Label>
+                <Label htmlFor="title" className="text-foreground font-semibold text-sm sm:text-base">Property Title *</Label>
                 <Input
                     id="title"
                     placeholder="e.g., Spacious 2 BHK Apartment in Downtown"
                     value={formData.title}
                     onChange={(e) => setFormData({ ...formData, title: e.target.value })}
-                    className={validationErrors.title ? "border-destructive" : ""}
+                    className={`text-sm sm:text-base ${validationErrors.title ? "border-destructive" : ""}`}
                 />
                 {validationErrors.title && (
-                    <p className="text-destructive text-sm">{validationErrors.title}</p>
+                    <p className="text-destructive text-xs sm:text-sm">{validationErrors.title}</p>
                 )}
             </div>
 
             {/* Property Type */}
             <div className="space-y-2">
-                <Label htmlFor="propertyType" className="text-foreground font-semibold">Property Type *</Label>
+                <Label htmlFor="propertyType" className="text-foreground font-semibold text-sm sm:text-base">Property Type *</Label>
                 <select
                     id="propertyType"
                     value={formData.propertyType}
                     onChange={(e) => setFormData({ ...formData, propertyType: e.target.value })}
-                    className={`w-full px-4 py-2 border rounded-lg bg-background text-foreground focus:outline-none focus:ring-2 focus:ring-ring ${validationErrors.propertyType ? "border-destructive" : "border-input"
+                    className={`w-full px-3 sm:px-4 py-2.5 sm:py-2 border rounded-lg bg-background text-foreground text-sm sm:text-base focus:outline-none focus:ring-2 focus:ring-ring ${validationErrors.propertyType ? "border-destructive" : "border-input"
                         }`}
                 >
                     <option value="">Select property type</option>
@@ -50,16 +50,23 @@ export default function StepBasicDetails({ formData, setFormData, validationErro
                     ))}
                 </select>
                 {validationErrors.propertyType && (
-                    <p className="text-destructive text-sm">{validationErrors.propertyType}</p>
+                    <p className="text-destructive text-xs sm:text-sm">{validationErrors.propertyType}</p>
                 )}
             </div>
 
             {/* Furnishing */}
             <div className="space-y-3">
-                <Label className="text-foreground font-semibold">Furnishing Status *</Label>
-                <div className="flex flex-wrap gap-4">
+                <Label className="text-foreground font-semibold text-sm sm:text-base">Furnishing Status *</Label>
+                <div className="grid grid-cols-1 xs:grid-cols-3 gap-2 sm:gap-3">
                     {["unfurnished", "semi", "fully"].map((option) => (
-                        <label key={option} className="flex items-center gap-2 cursor-pointer">
+                        <label 
+                            key={option} 
+                            className={`flex items-center gap-2 p-3 rounded-lg border-2 cursor-pointer transition-all ${
+                                formData.furnishing === option 
+                                    ? "border-primary bg-primary/5" 
+                                    : "border-border hover:border-primary/50"
+                            }`}
+                        >
                             <input
                                 type="radio"
                                 name="furnishing"
@@ -68,7 +75,7 @@ export default function StepBasicDetails({ formData, setFormData, validationErro
                                 onChange={(e) => setFormData({ ...formData, furnishing: e.target.value })}
                                 className="w-4 h-4 text-primary accent-primary"
                             />
-                            <span className="text-foreground capitalize">
+                            <span className="text-foreground text-sm sm:text-base">
                                 {option === "semi"
                                     ? "Semi-Furnished"
                                     : option === "fully"
@@ -79,23 +86,23 @@ export default function StepBasicDetails({ formData, setFormData, validationErro
                     ))}
                 </div>
                 {validationErrors.furnishing && (
-                    <p className="text-destructive text-sm">{validationErrors.furnishing}</p>
+                    <p className="text-destructive text-xs sm:text-sm">{validationErrors.furnishing}</p>
                 )}
             </div>
 
             {/* Available From */}
             <div className="space-y-2">
-                <Label htmlFor="availableFrom" className="text-foreground font-semibold">Available From *</Label>
+                <Label htmlFor="availableFrom" className="text-foreground font-semibold text-sm sm:text-base">Available From *</Label>
                 <input
                     id="availableFrom"
                     type="date"
                     value={formData.availableFrom}
                     onChange={(e) => setFormData({ ...formData, availableFrom: e.target.value })}
-                    className={`w-full px-4 py-2 border rounded-lg bg-background text-foreground focus:outline-none focus:ring-2 focus:ring-ring ${validationErrors.availableFrom ? "border-destructive" : "border-input"
+                    className={`w-full px-3 sm:px-4 py-2.5 sm:py-2 border rounded-lg bg-background text-foreground text-sm sm:text-base focus:outline-none focus:ring-2 focus:ring-ring ${validationErrors.availableFrom ? "border-destructive" : "border-input"
                         }`}
                 />
                 {validationErrors.availableFrom && (
-                    <p className="text-destructive text-sm">{validationErrors.availableFrom}</p>
+                    <p className="text-destructive text-xs sm:text-sm">{validationErrors.availableFrom}</p>
                 )}
             </div>
         </div>

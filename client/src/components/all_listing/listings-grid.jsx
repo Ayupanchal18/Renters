@@ -76,7 +76,7 @@ const PropertySkeleton = memo(({ viewMode }) => {
 PropertySkeleton.displayName = "PropertySkeleton";
 
 // Empty state component
-const EmptyState = memo(({ hasFilters, onClearFilters }) => (
+const EmptyState = memo(({ hasFilters, onClearFilters, customMessage, emptyTitle }) => (
     <div className="flex flex-col items-center justify-center py-20 px-4">
         <div className="text-center max-w-md">
             {/* Icon */}
@@ -95,13 +95,13 @@ const EmptyState = memo(({ hasFilters, onClearFilters }) => (
             
             {/* Text */}
             <h3 className="text-xl font-semibold text-foreground mb-2">
-                {hasFilters ? "No matching properties" : "No properties available"}
+                {emptyTitle || (hasFilters ? "No matching properties" : "No properties available")}
             </h3>
             <p className="text-muted-foreground mb-6 leading-relaxed">
-                {hasFilters 
+                {customMessage || (hasFilters 
                     ? "We couldn't find any properties matching your criteria. Try adjusting your filters or search terms."
                     : "There are currently no properties listed. Please check back later for new listings."
-                }
+                )}
             </p>
             
             {/* Action */}
@@ -130,7 +130,9 @@ export function ListingsGrid({
     isLoadingMore = false,
     total = 0,
     wishlistIds = new Set(),
-    onWishlistChange
+    onWishlistChange,
+    emptyStateMessage,
+    emptyStateTitle
 }) {
     const hasFilters = properties.length === 0 && !loading;
 
@@ -246,6 +248,8 @@ export function ListingsGrid({
                 <EmptyState 
                     hasFilters={hasFilters} 
                     onClearFilters={onClearFilters}
+                    customMessage={emptyStateMessage}
+                    emptyTitle={emptyStateTitle}
                 />
             )}
         </div>

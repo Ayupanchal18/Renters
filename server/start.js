@@ -28,6 +28,15 @@ async function startServer() {
             } else {
                 console.error(`❌ Assets folder NOT FOUND at: ${assetsPath}`);
             }
+
+            // Check property_image folder for placeholder images
+            const propertyImagePath = path.join(distPath, 'property_image');
+            if (fs.existsSync(propertyImagePath)) {
+                const imageFiles = fs.readdirSync(propertyImagePath);
+                console.log(`📂 Property images folder contents: ${imageFiles.join(", ")}`);
+            } else {
+                console.error(`❌ Property images folder NOT FOUND at: ${propertyImagePath}`);
+            }
         } else {
             console.error(`❌ Dist folder NOT FOUND at: ${distPath}`);
         }
@@ -53,6 +62,9 @@ async function startServer() {
                 }
             }
         }));
+
+        // Explicitly serve property_image folder for placeholder images
+        app.use('/property_image', express.static(path.join(distPath, 'property_image')));
 
         // Handle React Router - serve index.html for all non-API routes
         // This MUST be after static file middleware

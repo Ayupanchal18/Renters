@@ -56,6 +56,7 @@ const propertyListQuerySchema = z.object({
     category: z.enum(['room', 'flat', 'house', 'pg', 'hostel', 'commercial']).optional(),
     status: z.enum(['active', 'inactive', 'blocked', 'rented', 'sold', 'expired']).optional(),
     featured: z.coerce.boolean().optional(),
+    listingType: z.enum(['rent', 'buy']).optional(),
     priceMin: z.coerce.number().min(0).optional(),
     priceMax: z.coerce.number().min(0).optional(),
     ownerId: z.string().optional(),
@@ -154,14 +155,21 @@ const buildSearchQuery = (params) => {
         query.featured = params.featured;
     }
 
-    // Filter by price range
+    // Filter by listingType (rent/buy)
+    if (params.listingType) {
+        query.listingType = params.listingType;
+    }
+
+    // Filter by price range - use appropriate field based on listingType
     if (params.priceMin !== undefined || params.priceMax !== undefined) {
-        query.monthlyRent = {};
+        // If listingType is specified, use the appropriate price field
+        const priceField = params.listingType === 'buy' ? 'sellingPrice' : 'monthlyRent';
+        query[priceField] = {};
         if (params.priceMin !== undefined) {
-            query.monthlyRent.$gte = params.priceMin;
+            query[priceField].$gte = params.priceMin;
         }
         if (params.priceMax !== undefined) {
-            query.monthlyRent.$lte = params.priceMax;
+            query[priceField].$lte = params.priceMax;
         }
     }
 

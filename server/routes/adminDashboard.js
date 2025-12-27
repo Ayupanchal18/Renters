@@ -89,6 +89,7 @@ router.get("/stats", requireAdmin, async (req, res) => {
             propertyCountsByStatus,
             propertyCountsByCategory,
             propertyCountsByCity,
+            propertyCountsByListingType,
             totalProperties,
             priceRangeDistribution
         ] = await Promise.all([
@@ -125,6 +126,12 @@ router.get("/stats", requireAdmin, async (req, res) => {
                 { $group: { _id: "$city", count: { $sum: 1 } } },
                 { $sort: { count: -1 } },
                 { $limit: 10 }
+            ]),
+
+            // Property counts by listingType (rent vs buy)
+            Property.aggregate([
+                { $match: { isDeleted: { $ne: true } } },
+                { $group: { _id: "$listingType", count: { $sum: 1 } } }
             ]),
 
             // Total properties
@@ -204,6 +211,17 @@ router.get("/stats", requireAdmin, async (req, res) => {
             byPriceRange[label] = item.count;
         });
 
+        // Transform property counts by listingType into object
+        const byListingType = {
+            rent: 0,
+            buy: 0
+        };
+        propertyCountsByListingType.forEach(item => {
+            if (item._id && byListingType.hasOwnProperty(item._id)) {
+                byListingType[item._id] = item.count;
+            }
+        });
+
         res.json({
             success: true,
             data: {
@@ -220,7 +238,8 @@ router.get("/stats", requireAdmin, async (req, res) => {
                     byStatus,
                     byCategory,
                     byCity,
-                    byPriceRange
+                    byPriceRange,
+                    byListingType
                 }
             }
         });

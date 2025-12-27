@@ -127,9 +127,9 @@ export function PropertyMapView({ properties = [], loading = false }) {
     }
 
     return (
-        <div className="flex flex-col lg:flex-row gap-4 h-[calc(100vh-300px)] min-h-[500px] max-h-[700px]">
+        <div className="flex flex-col lg:flex-row gap-4 h-auto lg:h-[calc(100vh-300px)] lg:min-h-[500px] lg:max-h-[700px]">
             {/* Map Section */}
-            <div className="relative flex-1 min-h-[250px] lg:min-h-0 rounded-2xl overflow-hidden border border-border shadow-lg bg-muted">
+            <div className="relative flex-1 min-h-[250px] h-[300px] lg:h-auto rounded-2xl overflow-hidden border border-border shadow-lg bg-muted">
                 {!mapLoaded && (
                     <div className="absolute inset-0 flex items-center justify-center bg-muted z-10">
                         <div className="text-center">
@@ -186,7 +186,7 @@ export function PropertyMapView({ properties = [], loading = false }) {
             </div>
             
             {/* Properties List Sidebar */}
-            <div className="w-full lg:w-80 flex-shrink-0 bg-card rounded-2xl border border-border overflow-hidden flex flex-col max-h-[350px] lg:max-h-full">
+            <div className="w-full lg:w-80 flex-shrink-0 bg-card rounded-2xl border border-border overflow-hidden flex flex-col h-[300px] sm:h-[350px] lg:h-auto lg:max-h-full">
                 <div className="p-4 border-b border-border bg-muted/50 flex-shrink-0">
                     <h3 className="font-semibold text-foreground flex items-center gap-2">
                         <Home className="w-4 h-4 text-primary" />

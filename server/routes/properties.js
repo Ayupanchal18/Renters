@@ -6,6 +6,8 @@ import mongoose from "mongoose";
 import { connectDB } from "../src/config/db.js";
 import { authenticateToken } from "../src/middleware/security.js";
 import { propertyUpload, uploadPropertyPhotos } from "../src/middleware/cloudinaryUpload.js";
+import { validatePropertyByListingType } from "../src/middleware/propertyValidation.js";
+import { LISTING_TYPES } from "../../shared/propertyTypes.js";
 
 const router = Router();
 
@@ -39,7 +41,37 @@ function makeListingNumber() {
     return `LIST-${stamp}-${randomSuffix(4)}`;
 }
 
-// Create property
+/**
+ * Generate property URL path based on listing type
+ * Requirements: 9.1, 9.2
+ * 
+ * @param {Object} property - Property object with listingType and slug
+ * @returns {string} URL path in format /rent/{slug} or /buy/{slug}
+ */
+function generatePropertyUrlPath(property) {
+    if (!property || !property.slug) return null;
+
+    const listingType = property.listingType || LISTING_TYPES.RENT;
+    // Generate /rent/{slug} for rent properties (Requirement 9.1)
+    // Generate /buy/{slug} for buy properties (Requirement 9.2)
+    return `/${listingType}/${property.slug}`;
+}
+
+/**
+ * Add URL path to property object
+ * @param {Object} property - Property object
+ * @returns {Object} Property with urlPath added
+ */
+function addUrlPathToProperty(property) {
+    if (!property) return property;
+    return {
+        ...property,
+        urlPath: generatePropertyUrlPath(property)
+    };
+}
+
+// Create property (backward compatible - defaults to rent)
+// Requirements: 10.1 - Default listingType to "rent" for backward compatibility
 router.post("/", propertyUpload.array("photos", 10), async (req, res) => {
     try {
         const userId = req.headers["x-user-id"];
@@ -49,6 +81,12 @@ router.post("/", propertyUpload.array("photos", 10), async (req, res) => {
         if (!user) return res.status(401).json({ error: "Invalid user id in x-user-id header" });
 
         const body = req.body || {};
+
+        // Default listingType to "rent" for backward compatibility (Requirement 10.1)
+        if (!body.listingType) {
+            body.listingType = LISTING_TYPES.RENT;
+        }
+
         const required = ["category", "title", "propertyType", "furnishing", "availableFrom", "city", "address", "monthlyRent"];
         for (const r of required) {
             if (body[r] === undefined || body[r] === null || body[r] === "") {
@@ -69,6 +107,7 @@ router.post("/", propertyUpload.array("photos", 10), async (req, res) => {
 
         const doc = new Property({
             ...body,
+            listingType: body.listingType || LISTING_TYPES.RENT,
             photos: photoPaths,
             ownerId: user._id,
             ownerName,
@@ -561,9 +600,12 @@ router.get("/:identifier", async (req, res) => {
             });
         }
 
+        // Add URL path based on listing type (Requirements 9.1, 9.2)
+        const propertyWithUrl = addUrlPathToProperty(property);
+
         res.json({
             success: true,
-            data: property
+            data: propertyWithUrl
         });
 
     } catch (err) {
@@ -677,9 +719,12 @@ router.post("/get-property", async (req, res) => {
             });
         }
 
+        // Add URL path based on listing type (Requirements 9.1, 9.2)
+        const propertyWithUrl = addUrlPathToProperty(property);
+
         res.json({
             success: true,
-            data: property
+            data: propertyWithUrl
         });
 
     } catch (err) {

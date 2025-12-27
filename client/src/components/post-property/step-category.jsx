@@ -62,10 +62,10 @@ export default function StepCategory({ formData, setFormData, validationErrors }
 
     return (
         <div>
-            <h2 className="text-2xl font-bold text-foreground mb-2">What are you listing?</h2>
-            <p className="text-muted-foreground mb-8">Select the property type that best describes your listing</p>
+            <h2 className="text-xl sm:text-2xl font-bold text-foreground mb-1 sm:mb-2">What are you listing?</h2>
+            <p className="text-sm sm:text-base text-muted-foreground mb-6 sm:mb-8">Select the property type that best describes your listing</p>
 
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+            <div className="grid grid-cols-2 sm:grid-cols-3 gap-3 sm:gap-4">
                 {categories.map((category) => {
                     const Icon = category.icon;
                     const isSelected = formData.category === category.id;
@@ -74,26 +74,26 @@ export default function StepCategory({ formData, setFormData, validationErrors }
                         <button
                             key={category.id}
                             onClick={() => setFormData({ ...formData, category: category.id })}
-                            className={`p-6 rounded-xl border-2 transition-all duration-300 hover:scale-105 text-left ${isSelected
+                            className={`p-4 sm:p-6 rounded-xl border-2 transition-all duration-300 hover:scale-105 text-left ${isSelected
                                     ? "border-primary bg-primary/10 shadow-lg"
                                     : "border-border bg-card hover:border-primary/50"
                                 }`}
                         >
                             <Icon
-                                size={32}
-                                className={isSelected ? "text-primary mb-3" : "text-muted-foreground mb-3"}
+                                size={28}
+                                className={`${isSelected ? "text-primary" : "text-muted-foreground"} mb-2 sm:mb-3 w-6 h-6 sm:w-8 sm:h-8`}
                             />
-                            <h3 className={`font-semibold text-lg ${isSelected ? "text-primary" : "text-foreground"}`}>
+                            <h3 className={`font-semibold text-sm sm:text-lg ${isSelected ? "text-primary" : "text-foreground"}`}>
                                 {category.label}
                             </h3>
-                            <p className="text-sm text-muted-foreground mt-1">{category.description}</p>
+                            <p className="text-xs sm:text-sm text-muted-foreground mt-1 line-clamp-2">{category.description}</p>
                         </button>
                     );
                 })}
             </div>
 
             {validationErrors.category && (
-                <p className="text-destructive text-sm mt-4">{validationErrors.category}</p>
+                <p className="text-destructive text-xs sm:text-sm mt-4">{validationErrors.category}</p>
             )}
         </div>
     );

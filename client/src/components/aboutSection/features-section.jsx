@@ -50,30 +50,30 @@ const tenantFeatures = [
 
 export default function FeaturesSection() {
     return (
-        <section className="py-20 px-4 bg-background">
+        <section className="py-8 sm:py-12 md:py-16 px-4 bg-background">
             <div className="max-w-6xl mx-auto">
-                <h2 className="text-4xl md:text-5xl font-bold mb-16 text-center text-balance">
+                <h2 className="text-2xl sm:text-3xl md:text-4xl font-bold mb-8 sm:mb-10 md:mb-12 text-center text-balance">
                     How We Help Users
                 </h2>
 
                 {/* Property Owners */}
-                <div className="mb-20">
-                    <h3 className="text-3xl font-bold mb-12 text-primary">
+                <div className="mb-10 sm:mb-14 md:mb-16">
+                    <h3 className="text-xl sm:text-2xl md:text-3xl font-bold mb-5 sm:mb-8 text-primary">
                         For Property Owners
                     </h3>
-                    <div className="grid md:grid-cols-3 gap-8">
+                    <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4 sm:gap-6">
                         {ownerFeatures.map((feature, i) => {
                             const Icon = feature.icon;
                             return (
                                 <div
                                     key={i}
-                                    className="p-8 bg-card rounded-lg border border-border hover:border-primary/50 transition-colors"
+                                    className="p-4 sm:p-6 bg-card rounded-lg border border-border hover:border-primary/50 transition-colors"
                                 >
-                                    <div className="mb-4">
-                                        <Icon className="w-12 h-12 text-primary" />
+                                    <div className="mb-3">
+                                        <Icon className="w-8 h-8 sm:w-10 sm:h-10 md:w-12 md:h-12 text-primary" />
                                     </div>
-                                    <h4 className="text-xl font-semibold mb-3">{feature.title}</h4>
-                                    <p className="text-muted-foreground leading-relaxed">
+                                    <h4 className="text-base sm:text-lg md:text-xl font-semibold mb-2">{feature.title}</h4>
+                                    <p className="text-sm sm:text-base text-muted-foreground leading-relaxed">
                                         {feature.description}
                                     </p>
                                 </div>
@@ -84,20 +84,20 @@ export default function FeaturesSection() {
 
                 {/* Tenants */}
                 <div>
-                    <h3 className="text-3xl font-bold mb-12 text-primary">For Tenants</h3>
-                    <div className="grid md:grid-cols-3 gap-8">
+                    <h3 className="text-xl sm:text-2xl md:text-3xl font-bold mb-5 sm:mb-8 text-primary">For Tenants</h3>
+                    <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4 sm:gap-6">
                         {tenantFeatures.map((feature, i) => {
                             const Icon = feature.icon;
                             return (
                                 <div
                                     key={i}
-                                    className="p-8 bg-card rounded-lg border border-border hover:border-primary/50 transition-colors"
+                                    className="p-4 sm:p-6 bg-card rounded-lg border border-border hover:border-primary/50 transition-colors"
                                 >
-                                    <div className="mb-4">
-                                        <Icon className="w-12 h-12 text-primary" />
+                                    <div className="mb-3">
+                                        <Icon className="w-8 h-8 sm:w-10 sm:h-10 md:w-12 md:h-12 text-primary" />
                                     </div>
-                                    <h4 className="text-xl font-semibold mb-3">{feature.title}</h4>
-                                    <p className="text-muted-foreground leading-relaxed">
+                                    <h4 className="text-base sm:text-lg md:text-xl font-semibold mb-2">{feature.title}</h4>
+                                    <p className="text-sm sm:text-base text-muted-foreground leading-relaxed">
                                         {feature.description}
                                     </p>
                                 </div>

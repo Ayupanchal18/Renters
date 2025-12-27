@@ -1,13 +1,14 @@
 import React, { useState, useEffect, useRef } from "react";
 import { Link, useLocation, useNavigate } from "react-router-dom";
 import { Button } from "./ui/button";
-import { Building2, Menu, X, Bell, LogOut, User, Heart, ChevronDown, Shield, MessageSquare, Check } from 'lucide-react';
+import { Building2, Menu, X, Bell, LogOut, User, Heart, ChevronDown, Shield, MessageSquare, Check, Key, Home as HomeIcon } from 'lucide-react';
 import { isAuthenticated, logout, getUser } from "../utils/auth";
 import { ThemeToggle } from "./ui/theme-toggle";
 import { cva } from "class-variance-authority";
 import { cn } from "../lib/utils";
 import { useUnreadCounts } from "../hooks/useUnreadCounts";
 import { useNotifications } from "../hooks/useNotifications";
+import { LISTING_TYPES, LISTING_TYPE_LABELS } from '@shared/propertyTypes';
 
 /**
  * Navbar variant styles using CVA
@@ -60,15 +61,17 @@ export default function Navbar({ variant = "default" }) {
     const [isAdmin, setIsAdmin] = useState(false);
     const [profileMenuOpen, setProfileMenuOpen] = useState(false);
     const [notificationDropdownOpen, setNotificationDropdownOpen] = useState(false);
+    // Listing type context for rent vs buy - Requirements: 7.5
+    const [listingTypeContext, setListingTypeContext] = useState(LISTING_TYPES.RENT);
     const location = useLocation();
     const navigate = useNavigate();
     const notificationDropdownRef = useRef(null);
 
     // Use unread counts hook for real-time badge updates
     // Requirements: 7.1, 7.2, 7.3
-    const { 
-        messageCount, 
-        notificationCount 
+    const {
+        messageCount,
+        notificationCount
     } = useUnreadCounts({ autoConnect: isLoggedIn, autoFetch: isLoggedIn });
 
     // Use notifications hook for dropdown preview
@@ -89,6 +92,16 @@ export default function Navbar({ variant = "default" }) {
         const user = getUser();
         setIsAdmin(user?.role === 'admin');
     }, [location.pathname]); // Re-check authentication when route changes
+
+    // Detect listing type context from URL - Requirements: 7.5
+    useEffect(() => {
+        const path = location.pathname;
+        if (path.startsWith('/buy') || path.includes('buy-properties')) {
+            setListingTypeContext(LISTING_TYPES.BUY);
+        } else if (path.startsWith('/rent') || path.includes('rent-properties')) {
+            setListingTypeContext(LISTING_TYPES.RENT);
+        }
+    }, [location.pathname]);
 
     // Close notification dropdown when clicking outside
     useEffect(() => {
@@ -126,7 +139,7 @@ export default function Navbar({ variant = "default" }) {
             await markAsRead(notificationId);
         }
         setNotificationDropdownOpen(false);
-        
+
         // Navigate to conversation if it's a message notification
         if (notification.type === 'message' && notification.data?.conversationId) {
             navigate(`/messages?conversation=${notification.data.conversationId}`);
@@ -153,14 +166,15 @@ export default function Navbar({ variant = "default" }) {
 
     const publicLinks = [
         { to: "/", label: "Home" },
-        { to: "/listings", label: "All Listings" },
+        { to: "/rent-properties", label: "Rent", listingType: LISTING_TYPES.RENT },
+        { to: "/buy-properties", label: "Buy", listingType: LISTING_TYPES.BUY },
         { to: "/about", label: "About Us" },
         { to: "/contact", label: "Contact" },
-        { to: "/blog", label: "Blog" },
     ];
 
     const userLinks = [
-        { to: "/listings", label: "All Listings" },
+        { to: "/rent-properties", label: "Rent", listingType: LISTING_TYPES.RENT },
+        { to: "/buy-properties", label: "Buy", listingType: LISTING_TYPES.BUY },
         { to: "/messages", label: "Messages", showBadge: true, badgeCount: messageCount },
         { to: "/wishlist", label: "Wishlist" },
     ];
@@ -178,15 +192,15 @@ export default function Navbar({ variant = "default" }) {
                         to="/"
                         className={cn(
                             "flex items-center gap-2 text-xl font-bold hover:opacity-80 transition-opacity",
-                            isGradientVariant 
-                                ? "text-white" 
+                            isGradientVariant
+                                ? "text-white"
                                 : "bg-gradient-to-r from-primary to-primary bg-clip-text text-transparent"
                         )}
                     >
                         <div className={cn(
                             "p-2 rounded-lg",
-                            isGradientVariant 
-                                ? "bg-white/20" 
+                            isGradientVariant
+                                ? "bg-white/20"
                                 : "bg-gradient-to-br from-primary to-primary"
                         )}>
                             <Building2 className={cn(
@@ -206,15 +220,18 @@ export default function Navbar({ variant = "default" }) {
                                         variant="ghost"
                                         className={cn(
                                             "font-medium transition-all relative",
-                                            isActive(link.to)
-                                                ? isGradientVariant 
-                                                    ? "text-white bg-white/20" 
+                                            isActive(link.to) || (link.listingType && link.listingType === listingTypeContext && (location.pathname.includes('rent') || location.pathname.includes('buy')))
+                                                ? isGradientVariant
+                                                    ? "text-white bg-white/20"
                                                     : "text-primary bg-primary/10"
                                                 : isGradientVariant
                                                     ? "text-white/90 hover:text-white hover:bg-white/10"
                                                     : "text-foreground hover:text-primary hover:bg-muted"
                                         )}
                                     >
+                                        {/* Icon for Rent/Buy links - Requirements: 7.5 */}
+                                        {link.listingType === LISTING_TYPES.RENT && <Key className="w-4 h-4 mr-1.5" />}
+                                        {link.listingType === LISTING_TYPES.BUY && <HomeIcon className="w-4 h-4 mr-1.5" />}
                                         {link.label}
                                         {/* Unread badge for messages - Requirements: 7.1, 7.3 */}
                                         {link.showBadge && link.badgeCount > 0 && (
@@ -232,15 +249,18 @@ export default function Navbar({ variant = "default" }) {
                                         variant="ghost"
                                         className={cn(
                                             "font-medium transition-all",
-                                            isActive(link.to)
-                                                ? isGradientVariant 
-                                                    ? "text-white bg-white/20" 
+                                            isActive(link.to) || (link.listingType && link.listingType === listingTypeContext && (location.pathname.includes('rent') || location.pathname.includes('buy')))
+                                                ? isGradientVariant
+                                                    ? "text-white bg-white/20"
                                                     : "text-primary bg-primary/10"
                                                 : isGradientVariant
                                                     ? "text-white/90 hover:text-white hover:bg-white/10"
                                                     : "text-foreground hover:text-primary hover:bg-muted"
                                         )}
                                     >
+                                        {/* Icon for Rent/Buy links - Requirements: 7.5 */}
+                                        {link.listingType === LISTING_TYPES.RENT && <Key className="w-4 h-4 mr-1.5" />}
+                                        {link.listingType === LISTING_TYPES.BUY && <HomeIcon className="w-4 h-4 mr-1.5" />}
                                         {link.label}
                                     </Button>
                                 </Link>
@@ -252,7 +272,7 @@ export default function Navbar({ variant = "default" }) {
                     <div className="hidden md:flex items-center gap-3">
                         {/* Theme Toggle */}
                         <ThemeToggle />
-                        
+
                         {isLoggedIn ? (
                             <div className="flex items-center gap-2">
                                 {/* Notification Bell with Dropdown - Requirements: 6.1, 6.5, 7.2, 7.3 */}
@@ -263,8 +283,8 @@ export default function Navbar({ variant = "default" }) {
                                         onClick={() => setNotificationDropdownOpen(!notificationDropdownOpen)}
                                         className={cn(
                                             "relative",
-                                            isGradientVariant 
-                                                ? "hover:bg-white/10" 
+                                            isGradientVariant
+                                                ? "hover:bg-white/10"
                                                 : "hover:bg-muted"
                                         )}
                                     >
@@ -357,8 +377,8 @@ export default function Navbar({ variant = "default" }) {
                                 <Link to="/post-property">
                                     <Button className={cn(
                                         "font-medium shadow-md hover:shadow-lg transition-all",
-                                        isGradientVariant 
-                                            ? "bg-white text-primary hover:bg-white/90" 
+                                        isGradientVariant
+                                            ? "bg-white text-primary hover:bg-white/90"
                                             : "bg-primary hover:bg-primary/90 text-primary-foreground"
                                     )}>
                                         Post Property
@@ -371,15 +391,15 @@ export default function Navbar({ variant = "default" }) {
                                         onClick={() => setProfileMenuOpen(!profileMenuOpen)}
                                         className={cn(
                                             "flex items-center gap-2 px-3 py-2 rounded-lg transition-colors",
-                                            isGradientVariant 
-                                                ? "hover:bg-white/10" 
+                                            isGradientVariant
+                                                ? "hover:bg-white/10"
                                                 : "hover:bg-muted"
                                         )}
                                     >
                                         <div className={cn(
-                                            "h-8 w-8 rounded-full flex items-center justify-center",
-                                            isGradientVariant 
-                                                ? "bg-white/20" 
+                                            "h-8 w-8 rounded-full flex items-center justify-center rounded-md",
+                                            isGradientVariant
+                                                ? "bg-white/20"
                                                 : "bg-gradient-to-br from-primary to-primary"
                                         )}>
                                             <User className={cn(
@@ -447,8 +467,8 @@ export default function Navbar({ variant = "default" }) {
                                         variant="ghost"
                                         className={cn(
                                             "font-medium",
-                                            isGradientVariant 
-                                                ? "text-white hover:text-white hover:bg-white/10" 
+                                            isGradientVariant
+                                                ? "text-white hover:text-white hover:bg-white/10"
                                                 : "text-foreground hover:text-primary"
                                         )}
                                     >
@@ -460,20 +480,20 @@ export default function Navbar({ variant = "default" }) {
                                         variant="outline"
                                         className={cn(
                                             "font-medium",
-                                            isGradientVariant 
-                                                ? "border-white/30 text-white hover:bg-white/10" 
+                                            isGradientVariant
+                                                ? "border-white/30 text-white hover:bg-white/10"
                                                 : "border-border"
                                         )}
                                     >
                                         Sign Up
                                     </Button>
                                 </Link>
-                                {/* Post Property Button - Primary CTA on right side (Requirement 4.4) */}
-                                <Link to="/post-property">
+                                {/* Post Property Button - Redirects to login for non-authenticated users */}
+                                <Link to="/login" state={{ from: '/post-property', message: 'Please login to post a property' }}>
                                     <Button className={cn(
                                         "font-medium shadow-md hover:shadow-lg transition-all",
-                                        isGradientVariant 
-                                            ? "bg-white text-primary hover:bg-white/90" 
+                                        isGradientVariant
+                                            ? "bg-white text-primary hover:bg-white/90"
                                             : "bg-primary hover:bg-primary/90 text-primary-foreground"
                                     )}>
                                         Post Property
@@ -489,8 +509,8 @@ export default function Navbar({ variant = "default" }) {
                         <button
                             className={cn(
                                 "p-2 rounded-lg transition-colors",
-                                isGradientVariant 
-                                    ? "hover:bg-white/10 text-white" 
+                                isGradientVariant
+                                    ? "hover:bg-white/10 text-white"
                                     : "hover:bg-muted"
                             )}
                             onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
@@ -508,8 +528,8 @@ export default function Navbar({ variant = "default" }) {
                 {mobileMenuOpen && (
                     <div className={cn(
                         "md:hidden py-3 animate-in slide-in-from-top-2",
-                        isGradientVariant 
-                            ? "border-t border-white/20" 
+                        isGradientVariant
+                            ? "border-t border-white/20"
                             : "border-t border-border"
                     )}>
                         <div className="flex flex-col gap-1 mb-3">
@@ -522,17 +542,26 @@ export default function Navbar({ variant = "default" }) {
                                     >
                                         <button
                                             className={cn(
-                                                "w-full text-left px-4 py-2.5 rounded-lg font-medium transition-all text-sm",
-                                                isActive(link.to)
-                                                    ? isGradientVariant 
-                                                        ? "text-white bg-white/20" 
+                                                "w-full text-left px-4 py-2.5 rounded-lg font-medium transition-all text-sm flex items-center gap-2",
+                                                isActive(link.to) || (link.listingType && link.listingType === listingTypeContext && (location.pathname.includes('rent') || location.pathname.includes('buy')))
+                                                    ? isGradientVariant
+                                                        ? "text-white bg-white/20"
                                                         : "text-primary bg-primary/10"
                                                     : isGradientVariant
                                                         ? "text-white/90 hover:bg-white/10"
                                                         : "text-foreground hover:bg-muted"
                                             )}
                                         >
+                                            {/* Icon for Rent/Buy links - Requirements: 7.5 */}
+                                            {link.listingType === LISTING_TYPES.RENT && <Key className="w-4 h-4" />}
+                                            {link.listingType === LISTING_TYPES.BUY && <HomeIcon className="w-4 h-4" />}
                                             {link.label}
+                                            {/* Badge for messages */}
+                                            {link.showBadge && link.badgeCount > 0 && (
+                                                <span className="ml-auto h-5 w-5 flex items-center justify-center text-xs font-bold bg-destructive text-destructive-foreground rounded-full">
+                                                    {link.badgeCount > 99 ? '99+' : link.badgeCount}
+                                                </span>
+                                            )}
                                         </button>
                                     </Link>
                                 ))
@@ -545,16 +574,19 @@ export default function Navbar({ variant = "default" }) {
                                     >
                                         <button
                                             className={cn(
-                                                "w-full text-left px-4 py-2.5 rounded-lg font-medium transition-all text-sm",
-                                                isActive(link.to)
-                                                    ? isGradientVariant 
-                                                        ? "text-white bg-white/20" 
+                                                "w-full text-left px-4 py-2.5 rounded-lg font-medium transition-all text-sm flex items-center gap-2",
+                                                isActive(link.to) || (link.listingType && link.listingType === listingTypeContext && (location.pathname.includes('rent') || location.pathname.includes('buy')))
+                                                    ? isGradientVariant
+                                                        ? "text-white bg-white/20"
                                                         : "text-primary bg-primary/10"
                                                     : isGradientVariant
                                                         ? "text-white/90 hover:bg-white/10"
                                                         : "text-foreground hover:bg-muted"
                                             )}
                                         >
+                                            {/* Icon for Rent/Buy links - Requirements: 7.5 */}
+                                            {link.listingType === LISTING_TYPES.RENT && <Key className="w-4 h-4" />}
+                                            {link.listingType === LISTING_TYPES.BUY && <HomeIcon className="w-4 h-4" />}
                                             {link.label}
                                         </button>
                                     </Link>
@@ -565,8 +597,8 @@ export default function Navbar({ variant = "default" }) {
                         {/* Mobile Auth Section */}
                         <div className={cn(
                             "flex flex-col gap-1.5 pt-3",
-                            isGradientVariant 
-                                ? "border-t border-white/20" 
+                            isGradientVariant
+                                ? "border-t border-white/20"
                                 : "border-t border-border"
                         )}>
                             {isLoggedIn ? (
@@ -686,7 +718,8 @@ export default function Navbar({ variant = "default" }) {
                                         </Button>
                                     </Link>
                                     <Link
-                                        to="/post-property"
+                                        to="/login"
+                                        state={{ from: '/post-property', message: 'Please login to post a property' }}
                                         onClick={() => setMobileMenuOpen(false)}
                                     >
                                         <Button size="sm" className="w-full bg-primary hover:bg-primary/90 text-primary-foreground h-9 text-sm">

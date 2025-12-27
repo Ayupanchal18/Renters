@@ -8,7 +8,9 @@ import {
   UserCog,
   TrendingUp,
   TrendingDown,
-  Activity
+  Activity,
+  Home,
+  ShoppingCart
 } from 'lucide-react';
 
 /**
@@ -94,7 +96,7 @@ const StatsCards = ({ stats, loading = false }) => {
   if (loading) {
     return (
       <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
-        {[...Array(8)].map((_, i) => (
+        {[...Array(10)].map((_, i) => (
           <StatCardSkeleton key={i} />
         ))}
       </div>
@@ -134,6 +136,20 @@ const StatsCards = ({ stats, loading = false }) => {
       value: properties?.total,
       icon: Building2,
       variant: 'primary'
+    },
+    {
+      title: 'Rent Properties',
+      value: properties?.byListingType?.rent ?? 0,
+      icon: Home,
+      description: 'Properties for rent',
+      variant: 'success'
+    },
+    {
+      title: 'Buy Properties',
+      value: properties?.byListingType?.buy ?? 0,
+      icon: ShoppingCart,
+      description: 'Properties for sale',
+      variant: 'info'
     },
     {
       title: 'Active Listings',

@@ -27,11 +27,13 @@ import {
 import { 
     getCurrentLocation, 
     getLocationSuggestions,
+    fetchLocationSuggestions,
 } from '../utils/locationStandardization';
 import { 
     validateSearchParameters, 
     convertToApiPayload 
 } from '../utils/searchParameterStandardization';
+import { LISTING_TYPES, LISTING_TYPE_LABELS } from '@shared/propertyTypes';
 
 export default function Home() {
     const [searchLocation, setSearchLocation] = useState('');
@@ -47,6 +49,8 @@ export default function Home() {
     const [activeTestimonial, setActiveTestimonial] = useState(0);
     const [wishlistIds, setWishlistIds] = useState(new Set());
     const [testimonials, setTestimonials] = useState([]);
+    // Listing type context for rent vs buy - Requirements: 7.1, 7.4
+    const [listingTypeContext, setListingTypeContext] = useState(LISTING_TYPES.RENT);
     const [errors, setErrors] = useState({
         location: "",
         type: "",
@@ -105,7 +109,25 @@ export default function Home() {
             return;
         }
         const searchPayload = convertToApiPayload(validation.normalized);
-        navigate("/listings", { state: { searchData: searchPayload } });
+        
+        // Navigate to appropriate listing page based on listingType context - Requirements: 7.2, 7.3
+        const targetRoute = listingTypeContext === LISTING_TYPES.BUY 
+            ? "/buy-properties" 
+            : "/rent-properties";
+        navigate(targetRoute, { state: { searchData: searchPayload } });
+    };
+
+    // Handle listing type toggle - Requirements: 7.1, 7.2, 7.3
+    const handleListingTypeChange = (type) => {
+        setListingTypeContext(type);
+    };
+
+    // Navigate directly to listing page based on type - Requirements: 7.2, 7.3
+    const handleBrowseListings = (type) => {
+        const targetRoute = type === LISTING_TYPES.BUY 
+            ? "/buy-properties" 
+            : "/rent-properties";
+        navigate(targetRoute);
     };
 
     const handleKeyPress = (e) => {
@@ -241,6 +263,7 @@ export default function Home() {
         getallProperties();
         fetchWishlistIds();
         fetchTestimonials();
+        fetchLocationSuggestions(); // Fetch cities from API
     }, [fetchWishlistIds, fetchTestimonials]);
 
     // Auto-rotate testimonials
@@ -273,30 +296,91 @@ export default function Home() {
                     <div className="absolute top-20 left-10 w-72 h-72 bg-primary/10 rounded-full blur-3xl animate-pulse" />
                     <div className="absolute bottom-20 right-10 w-96 h-96 bg-secondary/10 rounded-full blur-3xl animate-pulse delay-1000" />
                     
-                    <div className="relative max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pt-8 sm:pt-16 pb-16 sm:pb-24">
-                        <div className="text-center max-w-4xl mx-auto mb-8 sm:mb-12">
+                    <div className="relative max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pt-4 sm:pt-8 pb-8 sm:pb-12">
+                        <div className="text-center max-w-4xl mx-auto mb-4 sm:mb-6">
                             {/* Trust Badge */}
-                            <div className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-primary/10 border border-primary/20 mb-4 sm:mb-8">
-                                <Sparkles className="w-4 h-4 text-primary" />
-                                <span className="text-sm font-medium text-primary">Trusted by 100,000+ renters</span>
+                            <div className="inline-flex items-center gap-2 px-3 py-1.5 rounded-full bg-primary/10 border border-primary/20 mb-3 sm:mb-4">
+                                <Sparkles className="w-3.5 h-3.5 text-primary" />
+                                <span className="text-xs font-medium text-primary">Trusted by 100,000+ renters</span>
                             </div>
                             
-                            <h1 className="text-3xl sm:text-5xl lg:text-6xl font-bold text-foreground mb-4 sm:mb-6 leading-tight tracking-tight">
+                            <h1 className="text-2xl sm:text-4xl lg:text-5xl font-bold text-foreground mb-2 sm:mb-3 leading-tight tracking-tight">
                                 Find Your Perfect
-                                <span className="block mt-1 sm:mt-2 bg-gradient-to-r from-primary via-primary to-secondary bg-clip-text text-transparent">
+                                <span className="block mt-1 bg-gradient-to-r from-primary via-primary to-secondary bg-clip-text text-transparent">
                                     Place to Call Home
                                 </span>
                             </h1>
                             
-                            <p className="text-base sm:text-xl text-muted-foreground max-w-2xl mx-auto leading-relaxed">
+                            <p className="text-sm sm:text-base text-muted-foreground max-w-2xl mx-auto leading-relaxed mb-4">
                                 Discover thousands of verified rooms, apartments, and shared spaces. 
                                 Your next home is just a search away.
                             </p>
+
+                            {/* Rent/Buy Toggle - Requirements: 7.1, 7.2, 7.3 */}
+                            <div className="flex justify-center mb-4">
+                                <div className="relative inline-flex bg-card border border-border rounded-lg p-0.5 shadow-sm">
+                                    {/* Sliding Background */}
+                                    <div 
+                                        className={`
+                                            absolute top-0.5 bottom-0.5 w-[calc(50%-2px)] rounded-md
+                                            bg-primary shadow-lg shadow-primary/30
+                                            transition-all duration-300 ease-out
+                                            ${listingTypeContext === LISTING_TYPES.BUY ? 'translate-x-[calc(100%+2px)]' : 'translate-x-0'}
+                                        `}
+                                    />
+                                    
+                                    {/* Rent Button */}
+                                    <button
+                                        onClick={() => handleListingTypeChange(LISTING_TYPES.RENT)}
+                                        className={`
+                                            relative z-10 flex items-center gap-1.5 px-4 py-2 rounded-md font-semibold text-sm sm:text-base
+                                            transition-colors duration-300
+                                            ${listingTypeContext === LISTING_TYPES.RENT
+                                                ? 'text-primary-foreground'
+                                                : 'text-muted-foreground hover:text-foreground'
+                                            }
+                                        `}
+                                    >
+                                        <Key className="w-4 h-4" />
+                                        Rent
+                                    </button>
+                                    
+                                    {/* Buy Button */}
+                                    <button
+                                        onClick={() => handleListingTypeChange(LISTING_TYPES.BUY)}
+                                        className={`
+                                            relative z-10 flex items-center gap-1.5 px-4 py-2 rounded-md font-semibold text-sm sm:text-base
+                                            transition-colors duration-300
+                                            ${listingTypeContext === LISTING_TYPES.BUY
+                                                ? 'text-primary-foreground'
+                                                : 'text-muted-foreground hover:text-foreground'
+                                            }
+                                        `}
+                                    >
+                                        <HomeIcon className="w-4 h-4" />
+                                        Buy
+                                    </button>
+                                </div>
+                            </div>
                         </div>
 
                         {/* Search Card */}
                         <div className="max-w-5xl mx-auto relative z-30">
-                            <div className="bg-card/80 backdrop-blur-xl rounded-2xl shadow-2xl border border-border/50 p-4 sm:p-8">
+                            <div className="bg-card/80 backdrop-blur-xl rounded-2xl shadow-2xl border border-border/50 p-3 sm:p-6">
+                                {/* Listing Type Context Indicator - Requirements: 7.4 */}
+                                <div className="flex items-center justify-center gap-2 mb-3 pb-3 border-b border-border/50">
+                                    <span className="text-xs text-muted-foreground">Searching for properties</span>
+                                    <span className={`
+                                        px-2 py-0.5 rounded-full text-xs font-semibold
+                                        ${listingTypeContext === LISTING_TYPES.RENT 
+                                            ? 'bg-primary/10 text-primary' 
+                                            : 'bg-secondary/10 text-secondary'
+                                        }
+                                    `}>
+                                        {LISTING_TYPE_LABELS[listingTypeContext]}
+                                    </span>
+                                </div>
+                                
                                 {/* Main Search Row */}
                                 <div className="grid grid-cols-1 md:grid-cols-12 gap-4 items-end">
                                     {/* Location */}
@@ -327,7 +411,7 @@ export default function Home() {
                                                 title="Use my current location"
                                             >
                                                 {isDetectingLocation ? (
-                                                    <div className="w-5 h-5 border-2 border-primary/30 border-t-primary rounded-full animate-spin" />
+                                                    <div className="w-4 h-4 border-2 border-primary/30 border-t-primary rounded-full animate-spin aspect-square" />
                                                 ) : (
                                                     <Compass className="w-5 h-5" />
                                                 )}
@@ -422,13 +506,13 @@ export default function Home() {
                                 </div>
 
                                 {/* Popular Searches */}
-                                <div className="hidden sm:flex flex-wrap items-center gap-2 mt-6 pt-6 border-t border-border/50">
+                                <div className="hidden sm:flex flex-wrap items-center gap-2 mt-4 pt-4 border-t border-border/50">
                                     <span className="text-xs text-muted-foreground font-medium">Popular:</span>
                                     {['Studio NYC', '1BHK LA', 'Pet Friendly', 'Near Metro'].map(tag => (
                                         <button
                                             key={tag}
                                             onClick={() => setSearchQuery(tag)}
-                                            className="px-3 py-1.5 bg-muted hover:bg-primary/10 text-muted-foreground hover:text-primary text-xs rounded-full transition-colors"
+                                            className="px-3 py-1 bg-muted hover:bg-primary/10 text-muted-foreground hover:text-primary text-xs rounded-full transition-colors"
                                         >
                                             {tag}
                                         </button>
@@ -438,12 +522,12 @@ export default function Home() {
                         </div>
 
                         {/* Stats */}
-                        <div className="grid grid-cols-2 md:grid-cols-4 gap-3 sm:gap-6 mt-8 sm:mt-12 max-w-4xl mx-auto">
+                        <div className="grid grid-cols-2 md:grid-cols-4 gap-2 sm:gap-4 mt-6 max-w-4xl mx-auto">
                             {stats.map((stat, idx) => (
-                                <div key={idx} className="text-center p-3 sm:p-4 rounded-xl bg-card/50 backdrop-blur border border-border/50">
-                                    <stat.icon className="w-6 h-6 text-primary mx-auto mb-2" />
-                                    <div className="text-2xl sm:text-3xl font-bold text-foreground">{stat.value}</div>
-                                    <div className="text-sm text-muted-foreground">{stat.label}</div>
+                                <div key={idx} className="text-center p-2 sm:p-3 rounded-xl bg-card/50 backdrop-blur border border-border/50">
+                                    <stat.icon className="w-5 h-5 text-primary mx-auto mb-1" />
+                                    <div className="text-xl sm:text-2xl font-bold text-foreground">{stat.value}</div>
+                                    <div className="text-xs text-muted-foreground">{stat.label}</div>
                                 </div>
                             ))}
                         </div>
@@ -451,7 +535,7 @@ export default function Home() {
                 </section>
 
                 {/* Featured Properties Section */}
-                <section className="py-20 px-4 sm:px-6 lg:px-8 bg-muted/30">
+                <section className="py-10 sm:py-14 lg:py-16 px-4 sm:px-6 lg:px-8 bg-muted/30">
                     <div className="max-w-7xl mx-auto">
                         <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 mb-10">
                             <div>
@@ -461,9 +545,9 @@ export default function Home() {
                             <Button 
                                 variant="outline" 
                                 className="border-primary text-primary hover:bg-primary hover:text-primary-foreground group"
-                                onClick={() => navigate("/listings")}
+                                onClick={() => handleBrowseListings(listingTypeContext)}
                             >
-                                View All
+                                View All {listingTypeContext === LISTING_TYPES.BUY ? 'For Sale' : 'For Rent'}
                                 <ArrowRight className="w-4 h-4 ml-2 group-hover:translate-x-1 transition-transform" />
                             </Button>
                         </div>
@@ -569,14 +653,14 @@ export default function Home() {
                 </section>
 
                 {/* Why Choose Us Section */}
-                <section className="py-20 px-4 sm:px-6 lg:px-8 bg-background">
+                <section className="py-10 sm:py-14 lg:py-16 px-4 sm:px-6 lg:px-8 bg-background">
                     <div className="max-w-7xl mx-auto">
-                        <div className="text-center mb-16">
-                            <Badge className="mb-4 bg-primary/10 text-primary border-0">Why RoomHub</Badge>
-                            <h2 className="text-3xl sm:text-4xl font-bold text-foreground mb-4">
+                        <div className="text-center mb-8 sm:mb-12">
+                            <Badge className="mb-3 bg-primary/10 text-primary border-0">Why RoomHub</Badge>
+                            <h2 className="text-2xl sm:text-3xl lg:text-4xl font-bold text-foreground mb-3">
                                 Everything You Need to Find Home
                             </h2>
-                            <p className="text-lg text-muted-foreground max-w-2xl mx-auto">
+                            <p className="text-sm sm:text-base lg:text-lg text-muted-foreground max-w-2xl mx-auto">
                                 Whether you're searching for your next home or listing a property, we make it simple.
                             </p>
                         </div>
@@ -599,11 +683,11 @@ export default function Home() {
                 </section>
 
                 {/* Browse by City Section */}
-                <section className="py-20 px-4 sm:px-6 lg:px-8 bg-muted/30">
+                <section className="py-10 sm:py-14 lg:py-16 px-4 sm:px-6 lg:px-8 bg-muted/30">
                     <div className="max-w-7xl mx-auto">
-                        <div className="text-center mb-12">
-                            <h2 className="text-3xl sm:text-4xl font-bold text-foreground mb-4">Explore Popular Cities</h2>
-                            <p className="text-muted-foreground">Find rentals in your favorite locations</p>
+                        <div className="text-center mb-6 sm:mb-10">
+                            <h2 className="text-2xl sm:text-3xl lg:text-4xl font-bold text-foreground mb-2 sm:mb-3">Explore Popular Cities</h2>
+                            <p className="text-sm sm:text-base text-muted-foreground">Find rentals in your favorite locations</p>
                         </div>
 
                         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
@@ -612,7 +696,11 @@ export default function Home() {
                                     key={city.name}
                                     onClick={() => {
                                         setSearchLocation(city.name);
-                                        navigate("/listings", { state: { searchData: { location: city.name } } });
+                                        // Navigate to appropriate listing page based on context - Requirements: 7.2, 7.3
+                                        const targetRoute = listingTypeContext === LISTING_TYPES.BUY 
+                                            ? "/buy-properties" 
+                                            : "/rent-properties";
+                                        navigate(targetRoute, { state: { searchData: { location: city.name } } });
                                     }}
                                     className="group relative h-64 rounded-2xl overflow-hidden shadow-lg hover:shadow-2xl transition-all duration-300"
                                 >
@@ -645,14 +733,14 @@ export default function Home() {
                 </section>
 
                 {/* Testimonials Section */}
-                <section className="py-20 px-4 sm:px-6 lg:px-8 bg-background overflow-hidden">
+                <section className="py-10 sm:py-14 lg:py-16 px-4 sm:px-6 lg:px-8 bg-background overflow-hidden">
                     <div className="max-w-7xl mx-auto">
-                        <div className="text-center mb-16">
-                            <Badge className="mb-4 bg-secondary/10 text-secondary border-0">Testimonials</Badge>
-                            <h2 className="text-3xl sm:text-4xl font-bold text-foreground mb-4">
+                        <div className="text-center mb-8 sm:mb-12">
+                            <Badge className="mb-3 bg-secondary/10 text-secondary border-0">Testimonials</Badge>
+                            <h2 className="text-2xl sm:text-3xl lg:text-4xl font-bold text-foreground mb-2 sm:mb-3">
                                 Loved by Thousands
                             </h2>
-                            <p className="text-muted-foreground">Real stories from our community</p>
+                            <p className="text-sm sm:text-base text-muted-foreground">Real stories from our community</p>
                         </div>
 
                         <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
@@ -715,68 +803,95 @@ export default function Home() {
                 </section>
 
                 {/* CTA Section */}
-                <section className="py-20 px-4 sm:px-6 lg:px-8 bg-gradient-to-br from-primary via-primary to-primary/90 relative overflow-hidden">
+                <section className="py-10 sm:py-14 lg:py-16 px-4 sm:px-6 lg:px-8 bg-gradient-to-br from-primary via-primary to-primary/90 relative overflow-hidden">
                     {/* Background Pattern */}
                     <div className="absolute inset-0 bg-[url('data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iNjAiIGhlaWdodD0iNjAiIHZpZXdCb3g9IjAgMCA2MCA2MCIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj48ZyBmaWxsPSJub25lIiBmaWxsLXJ1bGU9ImV2ZW5vZGQiPjxnIGZpbGw9IiNmZmYiIGZpbGwtb3BhY2l0eT0iMC4wNSI+PHBhdGggZD0iTTM2IDM0djItSDI0di0yaDEyek0zNiAyNHYySDI0di0yaDEyeiIvPjwvZz48L2c+PC9zdmc+')] opacity-50" />
                     
                     <div className="max-w-6xl mx-auto relative">
-                        <div className="grid grid-cols-1 md:grid-cols-2 gap-12 items-center">
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-8 sm:gap-10 items-center">
                             {/* For Renters */}
                             <div className="text-center md:text-left">
-                                <div className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-white/10 backdrop-blur mb-6">
+                                <div className="inline-flex items-center gap-2 px-3 py-1.5 rounded-full bg-white/10 backdrop-blur mb-4">
                                     <Key className="w-4 h-4 text-white" />
-                                    <span className="text-sm font-medium text-white">For Renters</span>
+                                    <span className="text-xs sm:text-sm font-medium text-white">For Renters</span>
                                 </div>
-                                <h3 className="text-3xl sm:text-4xl font-bold text-white mb-4">
+                                <h3 className="text-2xl sm:text-3xl lg:text-4xl font-bold text-white mb-3">
                                     Find Your Dream Home Today
                                 </h3>
-                                <p className="text-white/80 text-lg mb-8 leading-relaxed">
+                                <p className="text-white/80 text-sm sm:text-base lg:text-lg mb-5 sm:mb-6 leading-relaxed">
                                     Browse thousands of verified listings with detailed filters. Your perfect space is waiting.
                                 </p>
-                                <Button
-                                    size="lg"
-                                    className="bg-card text-foreground hover:bg-card/90 font-semibold shadow-xl border border-border/20"
-                                    onClick={() => document.getElementById("search_box")?.scrollIntoView({ behavior: "smooth" })}
-                                >
-                                    Start Searching
-                                    <Search className="w-5 h-5 ml-2" />
-                                </Button>
+                                <div className="flex flex-col sm:flex-row gap-3">
+                                    <Button
+                                        size="lg"
+                                        className="bg-card text-foreground hover:bg-card/90 font-semibold shadow-xl border border-border/20"
+                                        onClick={() => {
+                                            setListingTypeContext(LISTING_TYPES.RENT);
+                                            document.getElementById("search_box")?.scrollIntoView({ behavior: "smooth" });
+                                        }}
+                                    >
+                                        Search Rentals
+                                        <Search className="w-5 h-5 ml-2" />
+                                    </Button>
+                                    <Button
+                                        size="lg"
+                                        variant="outline"
+                                        className="border-white/50 text-white hover:bg-white/10 font-semibold"
+                                        onClick={() => handleBrowseListings(LISTING_TYPES.RENT)}
+                                    >
+                                        Browse All Rentals
+                                        <ArrowRight className="w-5 h-5 ml-2" />
+                                    </Button>
+                                </div>
                             </div>
 
-                            {/* For Landlords */}
+                            {/* For Buyers */}
                             <div className="text-center md:text-left md:border-l md:border-white/20 md:pl-12">
                                 <div className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-white/10 backdrop-blur mb-6">
                                     <Building2 className="w-4 h-4 text-white" />
-                                    <span className="text-sm font-medium text-white">For Landlords</span>
+                                    <span className="text-sm font-medium text-white">For Buyers</span>
                                 </div>
                                 <h3 className="text-3xl sm:text-4xl font-bold text-white mb-4">
-                                    List Your Property Free
+                                    Own Your Dream Property
                                 </h3>
                                 <p className="text-white/80 text-lg mb-8 leading-relaxed">
-                                    Reach thousands of qualified tenants. Easy listing, powerful management tools.
+                                    Explore properties for sale. Find your perfect investment or forever home.
                                 </p>
-                                <Button
-                                    size="lg"
-                                    variant="outline"
-                                    className="border-white/80 text-white hover:bg-card hover:text-foreground hover:border-card font-semibold"
-                                    onClick={() => navigate("/post-property")}
-                                >
-                                    Post Property
-                                    <ArrowRight className="w-5 h-5 ml-2" />
-                                </Button>
+                                <div className="flex flex-col sm:flex-row gap-3">
+                                    <Button
+                                        size="lg"
+                                        className="bg-card text-foreground hover:bg-card/90 font-semibold shadow-xl border border-border/20"
+                                        onClick={() => {
+                                            setListingTypeContext(LISTING_TYPES.BUY);
+                                            document.getElementById("search_box")?.scrollIntoView({ behavior: "smooth" });
+                                        }}
+                                    >
+                                        Search Properties
+                                        <Search className="w-5 h-5 ml-2" />
+                                    </Button>
+                                    <Button
+                                        size="lg"
+                                        variant="outline"
+                                        className="border-white/50 text-white hover:bg-white/10 font-semibold"
+                                        onClick={() => handleBrowseListings(LISTING_TYPES.BUY)}
+                                    >
+                                        Browse For Sale
+                                        <ArrowRight className="w-5 h-5 ml-2" />
+                                    </Button>
+                                </div>
                             </div>
                         </div>
                     </div>
                 </section>
 
                 {/* Newsletter Section */}
-                <section className="py-20 px-4 sm:px-6 lg:px-8 bg-muted/30">
+                <section className="py-10 sm:py-14 lg:py-16 px-4 sm:px-6 lg:px-8 bg-muted/30">
                     <div className="max-w-2xl mx-auto text-center">
-                        <div className="w-16 h-16 bg-primary/10 rounded-2xl flex items-center justify-center mx-auto mb-6">
-                            <Mail className="w-8 h-8 text-primary" />
+                        <div className="w-12 h-12 sm:w-14 sm:h-14 bg-primary/10 rounded-xl flex items-center justify-center mx-auto mb-4">
+                            <Mail className="w-6 h-6 sm:w-7 sm:h-7 text-primary" />
                         </div>
-                        <h3 className="text-2xl sm:text-3xl font-bold text-foreground mb-3">Stay in the Loop</h3>
-                        <p className="text-muted-foreground mb-8">
+                        <h3 className="text-xl sm:text-2xl lg:text-3xl font-bold text-foreground mb-2">Stay in the Loop</h3>
+                        <p className="text-sm sm:text-base text-muted-foreground mb-5 sm:mb-6">
                             Get notified about new listings and rental tips delivered to your inbox.
                         </p>
                         <div className="flex flex-col sm:flex-row gap-3 max-w-md mx-auto">
@@ -785,13 +900,13 @@ export default function Home() {
                                 id="newsletter-email"
                                 type="email"
                                 placeholder="Enter your email"
-                                className="h-12 bg-card border border-border text-foreground placeholder:text-muted-foreground flex-1"
+                                className="h-11 sm:h-12 bg-card border border-border text-foreground placeholder:text-muted-foreground flex-1"
                             />
-                            <Button className="h-12 px-8 bg-primary hover:bg-primary/90 text-primary-foreground font-semibold shadow-lg shadow-primary/25">
+                            <Button className="h-11 sm:h-12 px-6 sm:px-8 bg-primary hover:bg-primary/90 text-primary-foreground font-semibold shadow-lg shadow-primary/25">
                                 Subscribe
                             </Button>
                         </div>
-                        <p className="text-xs text-muted-foreground mt-4">
+                        <p className="text-xs text-muted-foreground mt-3">
                             No spam, unsubscribe anytime.
                         </p>
                     </div>

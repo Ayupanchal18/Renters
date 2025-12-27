@@ -1,11 +1,10 @@
 import { useEffect, useState, useCallback } from "react";
-import { useParams, useNavigate } from "react-router-dom";
-import { useDispatch, useSelector } from "react-redux";
+import { useParams, useNavigate, Link } from "react-router-dom";
 import { 
-    ArrowLeft, Share2, Heart, Calendar, Home, Sparkles, 
+    ArrowLeft, Share2, Heart, Calendar, Home, 
     MapPin, Phone, MessageCircle, IndianRupee, Bed, Bath, 
     Maximize, CheckCircle, Clock, Shield, ChevronDown,
-    Building2, Layers, Car, Compass, Users, ChefHat
+    Building2, Layers, Car, Compass, Users, ChefHat, Key
 } from 'lucide-react';
 
 import { Button } from "../components/ui/button";
@@ -21,20 +20,24 @@ import Footer from '../components/Footer';
 import SEOHead from '../components/seo/SEOHead';
 import JsonLd from '../components/seo/JsonLd';
 import { generatePropertySchema, generateBreadcrumbs } from '../utils/structuredData';
-import { getPropertyByID } from "../redux/slices/propertySlice";
+import propertyService from "../api/propertyService";
 import wishlistService from "../api/wishlistService";
 import { isAuthenticated } from "../utils/auth";
 import { useMessages } from "../hooks/useMessages";
+import { PropertyCard } from "../components/all_listing/property-card";
 
-// Loading skeleton - Mobile optimized
+/**
+ * RentPropertyDetail Page Component
+ * Displays detailed view of a rent property with rent-specific fields
+ * Requirements: 6.1, 6.3, 6.5, 6.6
+ */
+
+// Loading skeleton
 function PropertySkeleton() {
     return (
         <div className="min-h-screen bg-background">
             <div className="animate-pulse">
-                {/* Gallery skeleton */}
                 <div className="aspect-[4/3] sm:aspect-[16/9] bg-muted" />
-                
-                {/* Content skeleton */}
                 <div className="max-w-7xl mx-auto px-4 py-4 space-y-4">
                     <div className="h-6 bg-muted rounded w-3/4" />
                     <div className="h-4 bg-muted rounded w-1/2" />
@@ -57,10 +60,10 @@ function PropertyError({ error, onRetry, onGoBack }) {
                     <Home className="w-8 h-8 text-destructive" />
                 </div>
                 <h2 className="text-xl font-bold text-foreground mb-2">
-                    {error?.message || 'Property Not Found'}
+                    {error?.message || 'Rental Property Not Found'}
                 </h2>
                 <p className="text-muted-foreground text-sm mb-6">
-                    We couldn't load this property. It may have been removed.
+                    We couldn't load this rental property. It may have been removed or is listed for sale.
                 </p>
                 <div className="flex gap-3 justify-center">
                     <Button onClick={onRetry} size="sm">Try Again</Button>
@@ -90,44 +93,40 @@ function QuickSpec({ icon: Icon, value, label, color = "primary" }) {
     );
 }
 
-// Price Display Component
-function PriceDisplay({ property }) {
+
+// Rent Price Display Component - Shows rent-specific pricing (Requirement 6.3)
+function RentPriceDisplay({ property }) {
     const formatCurrency = (amount) => {
         if (!amount && amount !== 0) return null;
         return new Intl.NumberFormat('en-IN').format(amount);
     };
 
-    const isBuyProperty = property.listingType === 'buy';
-    const price = isBuyProperty ? property.sellingPrice : property.monthlyRent;
-    const priceLabel = isBuyProperty ? 'Price' : 'Monthly Rent';
-    const priceSuffix = isBuyProperty ? '' : '/mo';
-
     return (
         <div className="bg-gradient-to-r from-primary to-primary/90 rounded-xl p-4 text-primary-foreground">
             <div className="flex items-center justify-between">
                 <div>
-                    <p className="text-xs font-medium opacity-80">{priceLabel}</p>
+                    <p className="text-xs font-medium opacity-80">Monthly Rent</p>
                     <div className="flex items-baseline gap-0.5">
                         <IndianRupee className="w-5 h-5" />
                         <span className="text-2xl font-bold">
-                            {formatCurrency(price) || 'Contact'}
+                            {formatCurrency(property.monthlyRent) || 'Contact'}
                         </span>
-                        {priceSuffix && <span className="text-xs opacity-70">{priceSuffix}</span>}
+                        <span className="text-xs opacity-70">/mo</span>
                     </div>
                 </div>
-                {(property.negotiable || property.rentNegotiable) && (
+                {(property.rentNegotiable || property.negotiable) && (
                     <Badge className="bg-white/20 text-white border-0 text-[10px]">
                         Negotiable
                     </Badge>
                 )}
             </div>
             
-            {/* Additional costs - Rent specific */}
-            {!isBuyProperty && (property.securityDeposit || property.maintenanceCharge) && (
+            {/* Rent-specific additional costs */}
+            {(property.securityDeposit || property.maintenanceCharge) && (
                 <div className="flex gap-4 mt-3 pt-3 border-t border-white/20 text-xs">
                     {property.securityDeposit > 0 && (
                         <div>
-                            <span className="opacity-70">Deposit: </span>
+                            <span className="opacity-70">Security Deposit: </span>
                             <span className="font-semibold">₹{formatCurrency(property.securityDeposit)}</span>
                         </div>
                     )}
@@ -140,19 +139,19 @@ function PriceDisplay({ property }) {
                 </div>
             )}
 
-            {/* Additional info - Buy specific */}
-            {isBuyProperty && (property.bookingAmount || property.pricePerSqft) && (
-                <div className="flex gap-4 mt-3 pt-3 border-t border-white/20 text-xs">
-                    {property.bookingAmount > 0 && (
+            {/* Rent-specific details */}
+            {(property.preferredTenants || property.leaseDuration) && (
+                <div className="flex gap-4 mt-2 pt-2 border-t border-white/20 text-xs">
+                    {property.preferredTenants && property.preferredTenants !== 'any' && (
                         <div>
-                            <span className="opacity-70">Booking: </span>
-                            <span className="font-semibold">₹{formatCurrency(property.bookingAmount)}</span>
+                            <span className="opacity-70">Preferred: </span>
+                            <span className="font-semibold capitalize">{property.preferredTenants}</span>
                         </div>
                     )}
-                    {property.pricePerSqft > 0 && (
+                    {property.leaseDuration && (
                         <div>
-                            <span className="opacity-70">Per Sqft: </span>
-                            <span className="font-semibold">₹{formatCurrency(property.pricePerSqft)}</span>
+                            <span className="opacity-70">Lease: </span>
+                            <span className="font-semibold">{property.leaseDuration}</span>
                         </div>
                     )}
                 </div>
@@ -161,17 +160,12 @@ function PriceDisplay({ property }) {
     );
 }
 
-// Sticky Contact Bar for Mobile
+// Sticky Contact Bar for Mobile - "Contact Owner" CTA (Requirement 6.6)
 function MobileContactBar({ property, onMessage, onCall, isCreatingConversation }) {
     const formatCurrency = (amount) => {
         if (!amount) return null;
         return new Intl.NumberFormat('en-IN').format(amount);
     };
-
-    const isBuyProperty = property.listingType === 'buy';
-    const price = isBuyProperty ? property.sellingPrice : property.monthlyRent;
-    const priceSuffix = isBuyProperty ? '' : '/month';
-    const isNegotiable = isBuyProperty ? property.negotiable : (property.negotiable || property.rentNegotiable);
 
     return (
         <div className="fixed bottom-0 left-0 right-0 z-40 bg-card/95 backdrop-blur-lg border-t border-border p-3 lg:hidden">
@@ -179,11 +173,11 @@ function MobileContactBar({ property, onMessage, onCall, isCreatingConversation 
                 <div className="flex-1 min-w-0">
                     <div className="flex items-baseline gap-1">
                         <span className="text-lg font-bold text-foreground">
-                            ₹{formatCurrency(price) || 'Contact'}
+                            ₹{formatCurrency(property.monthlyRent)}
                         </span>
-                        {priceSuffix && <span className="text-xs text-muted-foreground">{priceSuffix}</span>}
+                        <span className="text-xs text-muted-foreground">/month</span>
                     </div>
-                    {isNegotiable && (
+                    {(property.rentNegotiable || property.negotiable) && (
                         <span className="text-[10px] text-primary font-medium">Negotiable</span>
                     )}
                 </div>
@@ -202,30 +196,27 @@ function MobileContactBar({ property, onMessage, onCall, isCreatingConversation 
                     className="h-10 px-4 flex-1 max-w-[140px]"
                 >
                     <MessageCircle className="w-4 h-4 mr-1.5" />
-                    {isCreatingConversation ? 'Starting...' : 'Message'}
+                    {isCreatingConversation ? 'Starting...' : 'Contact Owner'}
                 </Button>
             </div>
         </div>
     );
 }
 
-// Property Details Grid
+// Property Details Grid with rent-specific fields
 function PropertyDetailsGrid({ property, isRoomType }) {
     const details = [];
 
-    // Room-specific details
     if (isRoomType) {
         if (property.roomType) details.push({ label: 'Room Type', value: property.roomType, icon: Users });
         if (property.bathroomType) details.push({ label: 'Bathroom', value: property.bathroomType, icon: Bath });
         details.push({ label: 'Kitchen', value: property.kitchenAvailable ? 'Available' : 'Not Available', icon: ChefHat });
     } else {
-        // Flat/House details
         if (property.bedrooms) details.push({ label: 'Bedrooms', value: property.bedrooms, icon: Bed });
         if (property.bathrooms) details.push({ label: 'Bathrooms', value: property.bathrooms, icon: Bath });
         if (property.balconies) details.push({ label: 'Balconies', value: property.balconies, icon: Building2 });
     }
 
-    // Common details
     if (property.builtUpArea) details.push({ label: 'Built-up Area', value: `${property.builtUpArea} sq.ft`, icon: Maximize });
     if (property.carpetArea) details.push({ label: 'Carpet Area', value: `${property.carpetArea} sq.ft`, icon: Maximize });
     if (property.floorNumber !== null && property.floorNumber !== undefined) {
@@ -284,7 +275,79 @@ function CollapsibleSection({ title, children, defaultOpen = true, count }) {
     );
 }
 
-export default function PropertyPage() {
+// Related Rent Properties Section (Requirement 6.5)
+function RelatedRentProperties({ currentPropertyId, city, category }) {
+    const [relatedProperties, setRelatedProperties] = useState([]);
+    const [loading, setLoading] = useState(true);
+
+    useEffect(() => {
+        const fetchRelatedProperties = async () => {
+            try {
+                const params = {
+                    limit: 4,
+                    city: city,
+                    category: category,
+                };
+                const response = await propertyService.getRentProperties(params);
+                const properties = response.data?.items || response.data?.properties || [];
+                // Filter out current property
+                const filtered = properties.filter(p => p._id !== currentPropertyId).slice(0, 3);
+                setRelatedProperties(filtered);
+            } catch (error) {
+                console.error('Error fetching related rent properties:', error);
+            } finally {
+                setLoading(false);
+            }
+        };
+
+        if (city || category) {
+            fetchRelatedProperties();
+        } else {
+            setLoading(false);
+        }
+    }, [currentPropertyId, city, category]);
+
+    if (loading) {
+        return (
+            <div className="bg-card rounded-xl border border-border p-4">
+                <h3 className="text-sm font-semibold text-foreground mb-4">Similar Rentals</h3>
+                <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+                    {[1, 2, 3].map(i => (
+                        <div key={i} className="h-48 bg-muted rounded-lg animate-pulse" />
+                    ))}
+                </div>
+            </div>
+        );
+    }
+
+    if (relatedProperties.length === 0) return null;
+
+    return (
+        <div className="bg-card rounded-xl border border-border p-4">
+            <div className="flex items-center justify-between mb-4">
+                <h3 className="text-sm font-semibold text-foreground">Similar Rentals</h3>
+                <Link 
+                    to="/rent-properties" 
+                    className="text-xs text-primary hover:underline"
+                >
+                    View all
+                </Link>
+            </div>
+            <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+                {relatedProperties.map(property => (
+                    <PropertyCard 
+                        key={property._id} 
+                        property={property}
+                        compact
+                    />
+                ))}
+            </div>
+        </div>
+    );
+}
+
+
+export default function RentPropertyDetail() {
     const [propertyData, setPropertyData] = useState(null);
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState(null);
@@ -294,11 +357,8 @@ export default function PropertyPage() {
     
     const navigate = useNavigate();
     const { slug } = useParams();
-    const dispatch = useDispatch();
-    const { propertyDataId } = useSelector(state => state.postproperty);
     const { createConversation } = useMessages();
 
-    // Format helpers
     const formatDate = (timestamp) => {
         if (!timestamp) return null;
         return new Date(timestamp).toLocaleDateString('en-IN', {
@@ -344,8 +404,8 @@ export default function PropertyPage() {
     // Share property
     const handleShare = async () => {
         const shareData = {
-            title: propertyData?.title || 'Property',
-            text: `Check out this property: ${propertyData?.title}`,
+            title: propertyData?.title || 'Rental Property',
+            text: `Check out this rental property: ${propertyData?.title}`,
             url: window.location.href,
         };
         
@@ -362,7 +422,7 @@ export default function PropertyPage() {
         }
     };
 
-    // Handle message owner
+    // Handle message owner - "Contact Owner" CTA (Requirement 6.6)
     const handleMessage = async () => {
         if (!isAuthenticated()) {
             navigate('/login');
@@ -393,7 +453,7 @@ export default function PropertyPage() {
         }
     };
 
-    // Fetch property
+    // Fetch rent property via rent-specific endpoint (Requirement 6.1)
     const fetchProperty = useCallback(async () => {
         if (!slug) return;
         
@@ -401,12 +461,19 @@ export default function PropertyPage() {
         setError(null);
         
         try {
-            const result = await dispatch(getPropertyByID({ key: slug })).unwrap();
-            if (result?.data) {
-                setPropertyData(result.data);
-                checkWishlistStatus(result.data._id);
+            const response = await propertyService.getRentPropertyBySlug(slug);
+            const data = response.data?.data || response.data;
+            
+            if (data) {
+                // Verify this is a rent property
+                if (data.listingType && data.listingType !== 'rent') {
+                    setError(new Error('This property is listed for sale, not rent'));
+                    return;
+                }
+                setPropertyData(data);
+                checkWishlistStatus(data._id);
             } else {
-                setError(new Error('Property not found'));
+                setError(new Error('Rental property not found'));
             }
         } catch (err) {
             console.error('Fetch error:', err);
@@ -414,18 +481,11 @@ export default function PropertyPage() {
         } finally {
             setLoading(false);
         }
-    }, [slug, dispatch, checkWishlistStatus]);
+    }, [slug, checkWishlistStatus]);
 
     useEffect(() => {
         fetchProperty();
     }, [fetchProperty]);
-
-    useEffect(() => {
-        if (propertyDataId?._id) {
-            setPropertyData(propertyDataId);
-            setLoading(false);
-        }
-    }, [propertyDataId]);
 
     if (loading) {
         return (
@@ -441,7 +501,7 @@ export default function PropertyPage() {
             <>
                 <Navbar />
                 <PropertyError 
-                    error={error || { message: 'Property not found' }} 
+                    error={error || { message: 'Rental property not found' }} 
                     onRetry={fetchProperty} 
                     onGoBack={() => navigate(-1)} 
                 />
@@ -485,10 +545,10 @@ export default function PropertyPage() {
 
     const quickSpecs = getQuickSpecs();
 
-    // Generate SEO data
+    // Generate SEO data with rent-specific format (Requirement 9.3)
     const baseUrl = typeof window !== 'undefined' ? window.location.origin : 'https://renters.com';
-    const propertyUrl = `${baseUrl}/properties/${propertyData.slug || propertyData._id}`;
-    const seoTitle = propertyData.title || 'Property for Rent';
+    const propertyUrl = `${baseUrl}/rent/${propertyData.slug || slug}`;
+    const seoTitle = `${propertyData.propertyType || propertyData.category || 'Property'} for Rent in ${propertyData.city || 'India'} | ${propertyData.title || 'Rental Property'}`;
     const seoDescription = propertyData.description 
         ? propertyData.description.substring(0, 155) + (propertyData.description.length > 155 ? '...' : '')
         : `${propertyData.category || 'Property'} for rent in ${shortAddress}. ${propertyData.bedrooms ? propertyData.bedrooms + ' bedrooms, ' : ''}${propertyData.monthlyRent ? '₹' + formatCurrency(propertyData.monthlyRent) + '/month' : 'Contact for price'}`;
@@ -497,7 +557,7 @@ export default function PropertyPage() {
     // Generate breadcrumbs
     const breadcrumbItems = [
         { name: 'Home', url: '/' },
-        { name: 'Listings', url: '/listings' },
+        { name: 'Rent Properties', url: '/rent-properties' },
         { name: propertyData.title || 'Property', url: propertyUrl }
     ];
 
@@ -517,7 +577,7 @@ export default function PropertyPage() {
             <Navbar />
             <div className="min-h-screen bg-background pb-20 lg:pb-0">
                 
-                {/* Mobile Header - Floating over gallery */}
+                {/* Mobile Header */}
                 <div className="absolute top-16 left-0 right-0 z-30 px-3 py-2 flex items-center justify-between lg:hidden">
                     <button 
                         onClick={() => navigate(-1)}
@@ -544,11 +604,11 @@ export default function PropertyPage() {
                     </div>
                 </div>
 
-                {/* Image Gallery - Full width on mobile */}
+                {/* Image Gallery */}
                 <div className="lg:max-w-7xl lg:mx-auto lg:px-6 lg:pt-6">
                     <ImageGallery
                         images={propertyData.photos || []}
-                        title={propertyData.title || 'Property'}
+                        title={propertyData.title || 'Rental Property'}
                     />
                 </div>
 
@@ -559,7 +619,7 @@ export default function PropertyPage() {
                         className="inline-flex items-center gap-2 px-3 py-2 text-sm font-medium text-muted-foreground hover:text-foreground hover:bg-muted rounded-lg transition-all"
                     >
                         <ArrowLeft className="w-4 h-4" />
-                        Back to listings
+                        Back to rent listings
                     </button>
                     <div className="flex items-center gap-2">
                         <button
@@ -589,16 +649,20 @@ export default function PropertyPage() {
                         {/* Left Column - Main Content */}
                         <div className="lg:col-span-2 space-y-4">
                             
-                            {/* Hero Section - Title, Location, Price, Quick Specs */}
+                            {/* Hero Section */}
                             <div className="space-y-3">
                                 {/* Badges */}
                                 <div className="flex flex-wrap items-center gap-2">
+                                    <Badge className="bg-primary/10 text-primary border-0 text-xs">
+                                        <Key className="w-3 h-3 mr-1" />
+                                        For Rent
+                                    </Badge>
                                     <Badge className={`${verification.className} border-0 text-xs`}>
                                         <VerificationIcon className="w-3 h-3 mr-1" />
                                         {verification.text}
                                     </Badge>
                                     {propertyData.category && (
-                                        <Badge variant="secondary" className="bg-primary/10 text-primary border-0 text-xs capitalize">
+                                        <Badge variant="secondary" className="bg-muted text-muted-foreground border-0 text-xs capitalize">
                                             {propertyData.category}
                                         </Badge>
                                     )}
@@ -617,7 +681,7 @@ export default function PropertyPage() {
 
                                 {/* Title */}
                                 <h1 className="text-xl sm:text-2xl lg:text-3xl font-bold text-foreground leading-tight">
-                                    {propertyData.title || 'Property'}
+                                    {propertyData.title || 'Rental Property'}
                                 </h1>
 
                                 {/* Location */}
@@ -628,7 +692,7 @@ export default function PropertyPage() {
 
                                 {/* Price Card - Mobile */}
                                 <div className="lg:hidden">
-                                    <PriceDisplay property={propertyData} />
+                                    <RentPriceDisplay property={propertyData} />
                                 </div>
 
                                 {/* Quick Specs */}
@@ -655,7 +719,7 @@ export default function PropertyPage() {
                             {/* Description */}
                             {propertyData.description && (
                                 <div className="bg-card rounded-xl border border-border p-4">
-                                    <h3 className="text-sm font-semibold text-foreground mb-2">About this property</h3>
+                                    <h3 className="text-sm font-semibold text-foreground mb-2">About this rental</h3>
                                     <p className="text-sm text-muted-foreground leading-relaxed">
                                         {propertyData.description}
                                     </p>
@@ -671,11 +735,18 @@ export default function PropertyPage() {
                             {/* Location */}
                             <PropertyLocation property={propertyData} />
 
+                            {/* Related Rent Properties (Requirement 6.5) */}
+                            <RelatedRentProperties 
+                                currentPropertyId={propertyData._id}
+                                city={propertyData.city}
+                                category={propertyData.category}
+                            />
+
                             {/* Listing Info */}
                             {propertyData.listingNumber && (
-                                <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2 p-4 bg-muted/30 rounded-xl text-xs text-muted-foreground">
-                                    <div className="flex flex-col sm:flex-row sm:items-center gap-1 sm:gap-4">
-                                        <span className="truncate">ID: <span className="font-mono text-foreground">{propertyData.listingNumber}</span></span>
+                                <div className="flex flex-wrap items-center justify-between gap-2 p-4 bg-muted/30 rounded-xl text-xs text-muted-foreground">
+                                    <div className="flex items-center gap-4">
+                                        <span>ID: <span className="font-mono text-foreground">{propertyData.listingNumber}</span></span>
                                         {propertyData.createdAt && (
                                             <span className="flex items-center gap-1">
                                                 <Calendar className="w-3 h-3" />
@@ -694,9 +765,9 @@ export default function PropertyPage() {
                         <div className="hidden lg:block space-y-4">
                             <div className="sticky top-6 space-y-4">
                                 {/* Price Card */}
-                                <PriceDisplay property={propertyData} />
+                                <RentPriceDisplay property={propertyData} />
 
-                                {/* Contact Actions */}
+                                {/* Contact Actions - "Contact Owner" CTA (Requirement 6.6) */}
                                 <div className="bg-card rounded-xl border border-border p-4 space-y-3">
                                     <Button
                                         onClick={handleMessage}
@@ -704,7 +775,7 @@ export default function PropertyPage() {
                                         className="w-full h-11"
                                     >
                                         <MessageCircle className="w-4 h-4 mr-2" />
-                                        {isCreatingConversation ? 'Starting chat...' : 'Send Message'}
+                                        {isCreatingConversation ? 'Starting chat...' : 'Contact Owner'}
                                     </Button>
                                     {propertyData.ownerPhone && (
                                         <Button
@@ -771,10 +842,7 @@ export default function PropertyPage() {
                     isCreatingConversation={isCreatingConversation}
                 />
             </div>
-            {/* Footer with bottom padding on mobile to account for fixed contact bar */}
-            <div className="pb-20 lg:pb-0">
-                <Footer />
-            </div>
+            <Footer />
             <BackToTop />
         </>
     );

@@ -22,7 +22,7 @@ export function ViewControls({
         <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 mb-6 pb-5 border-b border-border">
             {/* Results Count */}
             <div className="flex items-center gap-2">
-                <div className="w-2 h-2 rounded-full bg-primary animate-pulse" />
+                <div className="w-2 h-2 rounded-3xl bg-primary animate-pulse" />
                 <p className="text-sm text-muted-foreground">
                     <span className="font-semibold text-foreground">{properties?.length || 0}</span>
                     {' '}properties found
@@ -55,27 +55,26 @@ export function ViewControls({
                 {/* View Mode Toggle with sliding indicator */}
                 <div className="relative flex items-center bg-muted rounded-xl p-1 gap-0.5">
                     {/* Sliding background indicator */}
-                    <div 
+                    <div
                         className="absolute h-9 bg-card shadow-sm rounded-lg transition-all duration-300 ease-out"
                         style={{
                             width: 'calc(33.333% - 2px)',
-                            left: viewMode === "grid" 
-                                ? '4px' 
-                                : viewMode === "list" 
-                                    ? 'calc(33.333% + 2px)' 
+                            left: viewMode === "grid"
+                                ? '4px'
+                                : viewMode === "list"
+                                    ? 'calc(33.333% + 2px)'
                                     : 'calc(66.666%)',
                         }}
                     />
-                    
+
                     <Button
                         variant="ghost"
                         size="sm"
                         onClick={() => onViewChange("grid")}
-                        className={`relative z-10 h-9 px-3 rounded-lg transition-colors duration-200 ${
-                            viewMode === "grid" 
-                                ? "text-primary" 
+                        className={`relative z-10 h-9 px-3 rounded-lg transition-colors duration-200 ${viewMode === "grid"
+                                ? "text-primary"
                                 : "text-muted-foreground hover:text-foreground"
-                        }`}
+                            }`}
                         aria-label="Grid view"
                         aria-pressed={viewMode === "grid"}
                     >
@@ -87,11 +86,10 @@ export function ViewControls({
                         variant="ghost"
                         size="sm"
                         onClick={() => onViewChange("list")}
-                        className={`relative z-10 h-9 px-3 rounded-lg transition-colors duration-200 ${
-                            viewMode === "list" 
-                                ? "text-primary" 
+                        className={`relative z-10 h-9 px-3 rounded-lg transition-colors duration-200 ${viewMode === "list"
+                                ? "text-primary"
                                 : "text-muted-foreground hover:text-foreground"
-                        }`}
+                            }`}
                         aria-label="List view"
                         aria-pressed={viewMode === "list"}
                     >
@@ -103,11 +101,10 @@ export function ViewControls({
                         variant="ghost"
                         size="sm"
                         onClick={() => onViewChange("map")}
-                        className={`relative z-10 h-9 px-3 rounded-lg transition-colors duration-200 ${
-                            viewMode === "map" 
-                                ? "text-primary" 
+                        className={`relative z-10 h-9 px-3 rounded-lg transition-colors duration-200 ${viewMode === "map"
+                                ? "text-primary"
                                 : "text-muted-foreground hover:text-foreground"
-                        }`}
+                            }`}
                         aria-label="Map view"
                         aria-pressed={viewMode === "map"}
                     >

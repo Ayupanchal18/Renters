@@ -12,7 +12,9 @@ import {
   TrendingUp,
   Building2,
   MapPin,
-  AlertCircle
+  AlertCircle,
+  Home,
+  ShoppingCart
 } from 'lucide-react';
 
 /**
@@ -207,6 +209,15 @@ const AdminOverview = () => {
         {/* Property Distribution Charts */}
         <div className="lg:col-span-2 grid gap-6 sm:grid-cols-2">
           <ChartCard
+            title="Properties by Listing Type"
+            data={stats?.properties?.byListingType ? {
+              'For Rent': stats.properties.byListingType.rent || 0,
+              'For Sale': stats.properties.byListingType.buy || 0
+            } : {}}
+            loading={loading}
+            icon={Home}
+          />
+          <ChartCard
             title="Properties by City"
             data={stats?.properties?.byCity}
             loading={loading}
@@ -221,12 +232,6 @@ const AdminOverview = () => {
           <ChartCard
             title="Properties by Status"
             data={stats?.properties?.byStatus}
-            loading={loading}
-            icon={TrendingUp}
-          />
-          <ChartCard
-            title="Price Range Distribution"
-            data={stats?.properties?.byPriceRange}
             loading={loading}
             icon={TrendingUp}
           />

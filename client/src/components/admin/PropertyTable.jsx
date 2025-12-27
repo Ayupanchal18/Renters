@@ -24,8 +24,11 @@ import {
   ChevronsLeft,
   ChevronsRight,
   MapPin,
-  IndianRupee
+  IndianRupee,
+  Home,
+  ShoppingCart
 } from 'lucide-react';
+import { LISTING_TYPES, LISTING_TYPE_LABELS } from '@shared/propertyTypes';
 
 /**
  * Property Table Component
@@ -51,6 +54,11 @@ const STATUS_COLORS = {
   rented: 'bg-blue-100 text-blue-800 dark:bg-blue-900/30 dark:text-blue-400',
   sold: 'bg-purple-100 text-purple-800 dark:bg-purple-900/30 dark:text-purple-400',
   expired: 'bg-yellow-100 text-yellow-800 dark:bg-yellow-900/30 dark:text-yellow-400'
+};
+
+const LISTING_TYPE_COLORS = {
+  rent: 'bg-emerald-100 text-emerald-800 dark:bg-emerald-900/30 dark:text-emerald-400',
+  buy: 'bg-indigo-100 text-indigo-800 dark:bg-indigo-900/30 dark:text-indigo-400'
 };
 
 const SortableHeader = ({ column, label, sortBy, sortOrder, onSort }) => {
@@ -198,13 +206,23 @@ const PropertyCard = ({
           
           <div className="flex items-center gap-1 text-sm font-medium mt-1">
             <IndianRupee className="h-3 w-3" />
-            {formatPrice(property.monthlyRent).replace('₹', '')}
-            <span className="text-xs text-muted-foreground font-normal">/month</span>
+            {property.listingType === 'buy' 
+              ? formatPrice(property.sellingPrice).replace('₹', '')
+              : formatPrice(property.monthlyRent).replace('₹', '')}
+            {property.listingType !== 'buy' && (
+              <span className="text-xs text-muted-foreground font-normal">/month</span>
+            )}
           </div>
         </div>
       </div>
       
       <div className="px-3 pb-3 flex flex-wrap gap-2">
+        <Badge className={cn('capitalize', LISTING_TYPE_COLORS[property.listingType] || LISTING_TYPE_COLORS.rent)}>
+          <span className="flex items-center gap-1">
+            {property.listingType === 'buy' ? <ShoppingCart className="h-3 w-3" /> : <Home className="h-3 w-3" />}
+            {LISTING_TYPE_LABELS[property.listingType] || 'For Rent'}
+          </span>
+        </Badge>
         <Badge className={cn('capitalize', CATEGORY_COLORS[property.category] || CATEGORY_COLORS.room)}>
           {property.category || 'room'}
         </Badge>
@@ -302,11 +320,23 @@ const PropertyTableRow = ({
         </Badge>
       </td>
       <td className="px-4 py-3">
+        <Badge className={cn('capitalize', LISTING_TYPE_COLORS[property.listingType] || LISTING_TYPE_COLORS.rent)}>
+          <span className="flex items-center gap-1">
+            {property.listingType === 'buy' ? <ShoppingCart className="h-3 w-3" /> : <Home className="h-3 w-3" />}
+            {LISTING_TYPE_LABELS[property.listingType] || 'For Rent'}
+          </span>
+        </Badge>
+      </td>
+      <td className="px-4 py-3">
         <div className="flex items-center gap-1 text-sm font-medium">
           <IndianRupee className="h-3 w-3" />
-          {formatPrice(property.monthlyRent).replace('₹', '')}
+          {property.listingType === 'buy' 
+            ? formatPrice(property.sellingPrice).replace('₹', '')
+            : formatPrice(property.monthlyRent).replace('₹', '')}
         </div>
-        <span className="text-xs text-muted-foreground">/month</span>
+        {property.listingType !== 'buy' && (
+          <span className="text-xs text-muted-foreground">/month</span>
+        )}
       </td>
       <td className="px-4 py-3">
         <Badge className={cn('capitalize', STATUS_COLORS[property.status] || STATUS_COLORS.active)}>
@@ -383,6 +413,7 @@ const TableSkeleton = () => (
           </div>
         </td>
         <td className="px-4 py-3"><Skeleton className="h-5 w-16 rounded-full" /></td>
+        <td className="px-4 py-3"><Skeleton className="h-5 w-20 rounded-full" /></td>
         <td className="px-4 py-3"><Skeleton className="h-4 w-20" /></td>
         <td className="px-4 py-3"><Skeleton className="h-5 w-16 rounded-full" /></td>
         <td className="px-4 py-3"><Skeleton className="h-4 w-24" /></td>
@@ -543,6 +574,15 @@ const PropertyTable = ({
               </th>
               <th className="px-4 py-3 text-left text-sm font-medium text-muted-foreground whitespace-nowrap">
                 <SortableHeader
+                  column="listingType"
+                  label="Type"
+                  sortBy={sortBy}
+                  sortOrder={sortOrder}
+                  onSort={onSort}
+                />
+              </th>
+              <th className="px-4 py-3 text-left text-sm font-medium text-muted-foreground whitespace-nowrap">
+                <SortableHeader
                   column="monthlyRent"
                   label="Price"
                   sortBy={sortBy}
@@ -581,7 +621,7 @@ const PropertyTable = ({
               <TableSkeleton />
             ) : properties.length === 0 ? (
               <tr>
-                <td colSpan={7} className="px-4 py-12 text-center">
+                <td colSpan={8} className="px-4 py-12 text-center">
                   <p className="text-muted-foreground">No properties found</p>
                 </td>
               </tr>

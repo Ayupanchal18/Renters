@@ -1,0 +1,176 @@
+{
+  "migrationDate": "2025-12-26T17:05:29.533Z",
+  "isDryRun": false,
+  "statistics": {
+    "total": 10,
+    "migrated": {
+      "rent": 10,
+      "buy": 0
+    },
+    "skipped": 0,
+    "flaggedForReview": [],
+    "errors": []
+  },
+  "auditLog": [
+    {
+      "timestamp": "2025-12-26T17:05:29.158Z",
+      "propertyId": "694694c17ad73d389d622251",
+      "listingNumber": "LIST-20251220175121-1ED9",
+      "slug": "modern-room-ahmedabad-1",
+      "title": "Modern Single Room in Ahmedabad",
+      "assignedListingType": "rent",
+      "reason": "Has monthlyRent field",
+      "flaggedForReview": false,
+      "originalData": {
+        "monthlyRent": 8000,
+        "sellingPrice": null,
+        "securityDeposit": 16000,
+        "pricePerSqft": null
+      }
+    },
+    {
+      "timestamp": "2025-12-26T17:05:29.198Z",
+      "propertyId": "694694c17ad73d389d622252",
+      "listingNumber": "LIST-20251220175121-W0X8",
+      "slug": "shared-room-ahmedabad-2",
+      "title": "Shared Room Near Gujarat University",
+      "assignedListingType": "rent",
+      "reason": "Has monthlyRent field",
+      "flaggedForReview": false,
+      "originalData": {
+        "monthlyRent": 5000,
+        "sellingPrice": null,
+        "securityDeposit": 10000,
+        "pricePerSqft": null
+      }
+    },
+    {
+      "timestamp": "2025-12-26T17:05:29.234Z",
+      "propertyId": "694694c17ad73d389d622253",
+      "listingNumber": "LIST-20251220175121-KIHR",
+      "slug": "luxury-room-ahmedabad-3",
+      "title": "Luxury Room with AC in Bopal",
+      "assignedListingType": "rent",
+      "reason": "Has monthlyRent field",
+      "flaggedForReview": false,
+      "originalData": {
+        "monthlyRent": 12000,
+        "sellingPrice": null,
+        "securityDeposit": 24000,
+        "pricePerSqft": null
+      }
+    },
+    {
+      "timestamp": "2025-12-26T17:05:29.271Z",
+      "propertyId": "694694c17ad73d389d622254",
+      "listingNumber": "LIST-20251220175121-PHBT",
+      "slug": "pg-room-ahmedabad-4",
+      "title": "PG Room for Working Professionals",
+      "assignedListingType": "rent",
+      "reason": "Has monthlyRent field",
+      "flaggedForReview": false,
+      "originalData": {
+        "monthlyRent": 9000,
+        "sellingPrice": null,
+        "securityDeposit": 18000,
+        "pricePerSqft": null
+      }
+    },
+    {
+      "timestamp": "2025-12-26T17:05:29.308Z",
+      "propertyId": "694694c17ad73d389d622255",
+      "listingNumber": "LIST-20251220175121-EH7V",
+      "slug": "flat-ahmedabad-5",
+      "title": "2BHK Flat in Prahlad Nagar",
+      "assignedListingType": "rent",
+      "reason": "Has monthlyRent field",
+      "flaggedForReview": false,
+      "originalData": {
+        "monthlyRent": 25000,
+        "sellingPrice": null,
+        "securityDeposit": 50000,
+        "pricePerSqft": null
+      }
+    },
+    {
+      "timestamp": "2025-12-26T17:05:29.344Z",
+      "propertyId": "694694c17ad73d389d622256",
+      "listingNumber": "LIST-20251220175121-UA5Y",
+      "slug": "room-mumbai-1",
+      "title": "Single Room in Andheri",
+      "assignedListingType": "rent",
+      "reason": "Has monthlyRent field",
+      "flaggedForReview": false,
+      "originalData": {
+        "monthlyRent": 15000,
+        "sellingPrice": null,
+        "securityDeposit": 30000,
+        "pricePerSqft": null
+      }
+    },
+    {
+      "timestamp": "2025-12-26T17:05:29.379Z",
+      "propertyId": "69482014de1390d07ace7524",
+      "listingNumber": "LIST-20251221215804-D059",
+      "slug": "admin-test-proeprty-title-ahmedabad",
+      "title": "Admin test proeprty title",
+      "assignedListingType": "rent",
+      "reason": "Has monthlyRent field",
+      "flaggedForReview": false,
+      "originalData": {
+        "monthlyRent": 5000,
+        "sellingPrice": null,
+        "securityDeposit": 1200,
+        "pricePerSqft": null
+      }
+    },
+    {
+      "timestamp": "2025-12-26T17:05:29.416Z",
+      "propertyId": "694ab7aca6ac39ce7ec7f215",
+      "listingNumber": "LIST-20251223153922-5WAP",
+      "slug": "newly-uploaded-property-form-mobile-mumbai",
+      "title": "Newly uploaded property form mobile",
+      "assignedListingType": "rent",
+      "reason": "Has monthlyRent field",
+      "flaggedForReview": false,
+      "originalData": {
+        "monthlyRent": 1200,
+        "sellingPrice": null,
+        "securityDeposit": 500,
+        "pricePerSqft": null
+      }
+    },
+    {
+      "timestamp": "2025-12-26T17:05:29.454Z",
+      "propertyId": "694c065c273bceaff046d378",
+      "listingNumber": "LIST-20251224152721-AM44",
+      "slug": "test-property-kolkata",
+      "title": "Test property",
+      "assignedListingType": "rent",
+      "reason": "Has monthlyRent field",
+      "flaggedForReview": false,
+      "originalData": {
+        "monthlyRent": 5000,
+        "sellingPrice": null,
+        "securityDeposit": 2000,
+        "pricePerSqft": null
+      }
+    },
+    {
+      "timestamp": "2025-12-26T17:05:29.491Z",
+      "propertyId": "694e6b5875d1ec4c29721890",
+      "listingNumber": "LIST-20251226110246-JWCT",
+      "slug": "best-room-available-in-vastrapur-area-ahmedabad",
+      "title": "Best room available in vastrapur area",
+      "assignedListingType": "rent",
+      "reason": "Has monthlyRent field",
+      "flaggedForReview": false,
+      "originalData": {
+        "monthlyRent": 5000,
+        "sellingPrice": null,
+        "securityDeposit": 500,
+        "pricePerSqft": null
+      }
+    }
+  ]
+}

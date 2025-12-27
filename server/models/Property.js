@@ -13,6 +13,15 @@ const GeoSchema = new Schema(
 
 const propertySchema = new mongoose.Schema(
     {
+        // Listing type discriminator (rent vs buy) - immutable after creation
+        listingType: {
+            type: String,
+            enum: ["rent", "buy"],
+            required: true,
+            index: true,
+            immutable: true
+        },
+
         // identity
         listingNumber: { type: String, unique: true, index: true }, // human-friendly
         slug: { type: String, unique: true, index: true }, // seo-friendly path
@@ -37,10 +46,30 @@ const propertySchema = new mongoose.Schema(
 
         mapLocation: { type: String, default: "" },
 
-        monthlyRent: { type: Number, required: true },
+        // RENT-SPECIFIC FIELDS (validated only when listingType="rent")
+        monthlyRent: { type: Number },
         securityDeposit: { type: Number, default: 0 },
         maintenanceCharge: { type: Number, default: 0 },
+        rentNegotiable: { type: Boolean, default: false },
+        preferredTenants: {
+            type: String,
+            enum: ["family", "bachelor", "any"],
+            default: "any"
+        },
+        leaseDuration: { type: String, default: "" },
 
+        // BUY-SPECIFIC FIELDS (validated only when listingType="buy")
+        sellingPrice: { type: Number },
+        pricePerSqft: { type: Number },
+        possessionStatus: {
+            type: String,
+            enum: ["ready", "under_construction", "resale"],
+            default: "ready"
+        },
+        bookingAmount: { type: Number, default: 0 },
+        loanAvailable: { type: Boolean, default: true },
+
+        // Legacy field - kept for backward compatibility, use rentNegotiable instead
         negotiable: { type: Boolean, default: false },
 
         // room specific
@@ -114,5 +143,12 @@ propertySchema.index({ createdAt: -1 }); // date-based queries
 propertySchema.index({ updatedAt: -1 }); // recently updated
 propertySchema.index({ views: -1 }); // most viewed
 propertySchema.index({ favoritesCount: -1 }); // most favorited
+
+// Compound indexes for listingType queries (rent vs buy separation)
+propertySchema.index({ listingType: 1, city: 1, status: 1, isDeleted: 1 }); // listing type + location
+propertySchema.index({ listingType: 1, monthlyRent: 1, status: 1, isDeleted: 1 }); // rent price filtering
+propertySchema.index({ listingType: 1, sellingPrice: 1, status: 1, isDeleted: 1 }); // buy price filtering
+propertySchema.index({ listingType: 1, category: 1, status: 1, isDeleted: 1 }); // listing type + category
+propertySchema.index({ listingType: 1, status: 1, isDeleted: 1, createdAt: -1 }); // listing type with date sort
 
 export const Property = mongoose.models.Property || mongoose.model("Property", propertySchema);

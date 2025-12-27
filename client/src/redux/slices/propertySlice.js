@@ -14,6 +14,35 @@ export const postProperty = createAsyncThunk(
         }
     }
 );
+
+// Post rent property - uses /api/properties/rent endpoint
+export const postRentProperty = createAsyncThunk(
+    "properties/postRentProperty",
+    async (payload, { rejectWithValue }) => {
+        try {
+            const response = await propertyService.postRentProperty(payload);
+            return response.data;
+        } catch (error) {
+            console.log("Post Rent Property catch === ", error);
+            return rejectWithValue(error.response?.data || error.message);
+        }
+    }
+);
+
+// Post buy property - uses /api/properties/buy endpoint
+export const postBuyProperty = createAsyncThunk(
+    "properties/postBuyProperty",
+    async (payload, { rejectWithValue }) => {
+        try {
+            const response = await propertyService.postBuyProperty(payload);
+            return response.data;
+        } catch (error) {
+            console.log("Post Buy Property catch === ", error);
+            return rejectWithValue(error.response?.data || error.message);
+        }
+    }
+);
+
 export const getAllProperties = createAsyncThunk(
     "properties/getAllProperties",
     async (params = {}, { rejectWithValue }) => {
@@ -226,6 +255,50 @@ const propertySlice = createSlice({
                 state.isError = true;
                 state.errorMessage = action.payload
                 state.successMessage = ""
+            })
+            // Post Rent Property
+            .addCase(postRentProperty.pending, (state) => {
+                state.isLoading = true;
+                state.isSuccess = false;
+                state.isError = false;
+                state.errorMessage = "";
+            })
+            .addCase(postRentProperty.fulfilled, (state, action) => {
+                state.isLoading = false;
+                state.isSuccess = true;
+                state.isError = false;
+                state.propertyData = action.payload.data || {};
+                state.successMessage = action.payload.message || "Successfully posted rent property";
+                state.errorMessage = "";
+            })
+            .addCase(postRentProperty.rejected, (state, action) => {
+                state.isLoading = false;
+                state.isSuccess = false;
+                state.isError = true;
+                state.errorMessage = action.payload;
+                state.successMessage = "";
+            })
+            // Post Buy Property
+            .addCase(postBuyProperty.pending, (state) => {
+                state.isLoading = true;
+                state.isSuccess = false;
+                state.isError = false;
+                state.errorMessage = "";
+            })
+            .addCase(postBuyProperty.fulfilled, (state, action) => {
+                state.isLoading = false;
+                state.isSuccess = true;
+                state.isError = false;
+                state.propertyData = action.payload.data || {};
+                state.successMessage = action.payload.message || "Successfully posted buy property";
+                state.errorMessage = "";
+            })
+            .addCase(postBuyProperty.rejected, (state, action) => {
+                state.isLoading = false;
+                state.isSuccess = false;
+                state.isError = true;
+                state.errorMessage = action.payload;
+                state.successMessage = "";
             })
             .addCase(getAllProperties.pending, (state) => {
                 state.isLoading = true;

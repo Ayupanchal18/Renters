@@ -1,29 +1,33 @@
-import { useEffect, useState } from "react";
-import { ChevronRight, ChevronLeft, Check, MapPin, Home, Building2, DollarSign, Camera, User, AlertCircle } from 'lucide-react';
+import { useState } from "react";
+import { ChevronRight, ChevronLeft, Check, MapPin, Home, Building2, DollarSign, Camera, User, AlertCircle, ShoppingBag } from 'lucide-react';
 import { Button } from "../ui/button";
 import { Card } from "../ui/card";
 
+import StepListingType from "../post-property/step-listing-type";
 import StepCategory from "../post-property/step-category";
 import StepBasicDetails from "../post-property/step-basic-details";
 import StepLocation from "../post-property/step-location";
-import StepPricing from "../post-property/step-pricing";
+import StepRentPricing from "../post-property/step-rent-pricing";
+import StepBuyPricing from "../post-property/step-buy-pricing";
 import StepPropertySpecific from "../post-property/step-property-specific";
 import StepAmenities from "../post-property/step-amenities";
 import StepPhotos from "../post-property/step-photos";
 import StepOwnerDetails from "../post-property/step-owner-details";
 import SuccessPage from "../post-property/success-page";
 import { useDispatch } from "react-redux";
-import { postProperty } from "../../redux/slices/propertySlice";
+import { postRentProperty, postBuyProperty } from "../../redux/slices/propertySlice";
+import { LISTING_TYPES } from "@shared/propertyTypes";
 
 const STEPS = [
-    { id: 1, name: "Category", icon: Home },
-    { id: 2, name: "Details", icon: Building2 },
-    { id: 3, name: "Location", icon: MapPin },
-    { id: 4, name: "Pricing", icon: DollarSign },
-    { id: 5, name: "Specifics", icon: Home },
-    { id: 6, name: "Amenities", icon: Check },
-    { id: 7, name: "Photos", icon: Camera },
-    { id: 8, name: "Owner", icon: User },
+    { id: 1, name: "Listing Type", icon: ShoppingBag },
+    { id: 2, name: "Category", icon: Home },
+    { id: 3, name: "Details", icon: Building2 },
+    { id: 4, name: "Location", icon: MapPin },
+    { id: 5, name: "Pricing", icon: DollarSign },
+    { id: 6, name: "Specifics", icon: Home },
+    { id: 7, name: "Amenities", icon: Check },
+    { id: 8, name: "Photos", icon: Camera },
+    { id: 9, name: "Owner", icon: User },
 ];
 
 export default function PropertyWizard() {
@@ -35,6 +39,7 @@ export default function PropertyWizard() {
     const dispatch = useDispatch()
 
     const [formData, setFormData] = useState({
+        listingType: "",
         category: "",
         title: "",
         propertyType: "",
@@ -47,6 +52,14 @@ export default function PropertyWizard() {
         securityDeposit: "",
         maintenanceCharge: "",
         negotiable: false,
+        rentNegotiable: false,
+        preferredTenants: "any",
+        leaseDuration: "",
+        sellingPrice: "",
+        pricePerSqft: "",
+        possessionStatus: "ready",
+        bookingAmount: "",
+        loanAvailable: true,
         roomType: "",
         bathroomType: "",
         kitchenAvailable: false,
@@ -72,19 +85,43 @@ export default function PropertyWizard() {
 
     const postPropertyreq = async () => {
         const fd = new FormData();
+        
+        // Fields to exclude based on listing type
+        const rentOnlyFields = ['monthlyRent', 'securityDeposit', 'maintenanceCharge', 'rentNegotiable', 'preferredTenants', 'leaseDuration'];
+        const buyOnlyFields = ['sellingPrice', 'pricePerSqft', 'possessionStatus', 'bookingAmount', 'loanAvailable'];
+        
+        // For BUY properties, exclude RENT fields. For RENT properties, exclude BUY fields.
+        const fieldsToExclude = formData.listingType === LISTING_TYPES.BUY ? rentOnlyFields : buyOnlyFields;
+        
         Object.keys(formData).forEach(key => {
+            // Skip fields that don't belong to this listing type
+            if (fieldsToExclude.includes(key)) {
+                return;
+            }
+            
             if (key === "photos") {
                 formData.photos.forEach(p => fd.append("photos", p.file));
+            } else if (key === "amenities" && Array.isArray(formData[key])) {
+                // Handle amenities array
+                if (formData[key].length > 0) {
+                    fd.append(key, formData[key].join(','));
+                }
             } else {
-                fd.append(key, formData[key]);
+                // Only append non-empty values
+                const value = formData[key];
+                if (value !== "" && value !== null && value !== undefined && value !== false) {
+                    fd.append(key, String(value));
+                }
             }
         });
 
-        try {
-            const response = await dispatch(postProperty(fd));
-            console.log(response);
-        } catch (error) {
-            console.log(error);
+        // Use listing-type-specific endpoints
+        if (formData.listingType === LISTING_TYPES.BUY) {
+            const response = await dispatch(postBuyProperty(fd)).unwrap();
+            return response;
+        } else {
+            const response = await dispatch(postRentProperty(fd)).unwrap();
+            return response;
         }
     };
 
@@ -93,26 +130,34 @@ export default function PropertyWizard() {
 
         switch (step) {
             case 1:
-                if (!formData.category) errors.category = "Please select a property category";
+                if (!formData.listingType) errors.listingType = "Please select a listing type (Rent or Buy)";
                 break;
 
             case 2:
+                if (!formData.category) errors.category = "Please select a property category";
+                break;
+
+            case 3:
                 if (!formData.title) errors.title = "Title is required";
                 if (!formData.propertyType) errors.propertyType = "Property type is required";
                 if (!formData.furnishing) errors.furnishing = "Furnishing status is required";
                 if (!formData.availableFrom) errors.availableFrom = "Available from date is required";
                 break;
 
-            case 3:
+            case 4:
                 if (!formData.city) errors.city = "City is required";
                 if (!formData.address) errors.address = "Address is required";
                 break;
 
-            case 4:
-                if (!formData.monthlyRent) errors.monthlyRent = "Monthly rent is required";
+            case 5:
+                if (formData.listingType === LISTING_TYPES.RENT) {
+                    if (!formData.monthlyRent) errors.monthlyRent = "Monthly rent is required";
+                } else if (formData.listingType === LISTING_TYPES.BUY) {
+                    if (!formData.sellingPrice) errors.sellingPrice = "Selling price is required";
+                }
                 break;
 
-            case 8:
+            case 9:
                 if (!formData.ownerName) errors.ownerName = "Owner name is required";
                 if (!formData.ownerPhone) errors.ownerPhone = "Phone number is required";
                 if (!formData.ownerEmail) errors.ownerEmail = "Email is required";
@@ -142,15 +187,17 @@ export default function PropertyWizard() {
     };
 
     const handleSubmit = async () => {
-        postPropertyreq()
         setIsSubmitting(true);
-
-        await new Promise((resolve) => setTimeout(resolve, 1500));
-
-        console.log("Form submitted:", formData);
-
-        setSubmitted(true);
-        setIsSubmitting(false);
+        
+        try {
+            await postPropertyreq();
+            console.log("Form submitted:", formData);
+            setSubmitted(true);
+        } catch (error) {
+            console.error("Submit error:", error);
+        } finally {
+            setIsSubmitting(false);
+        }
     };
 
     if (submitted) {
@@ -162,20 +209,26 @@ export default function PropertyWizard() {
 
         switch (currentStep) {
             case 1:
-                return <StepCategory {...commonProps} />;
+                return <StepListingType {...commonProps} />;
             case 2:
-                return <StepBasicDetails {...commonProps} />;
+                return <StepCategory {...commonProps} />;
             case 3:
-                return <StepLocation {...commonProps} />;
+                return <StepBasicDetails {...commonProps} />;
             case 4:
-                return <StepPricing {...commonProps} />;
+                return <StepLocation {...commonProps} />;
             case 5:
-                return <StepPropertySpecific {...commonProps} />;
+                // Conditionally render pricing step based on listing type
+                if (formData.listingType === LISTING_TYPES.BUY) {
+                    return <StepBuyPricing {...commonProps} />;
+                }
+                return <StepRentPricing {...commonProps} />;
             case 6:
-                return <StepAmenities {...commonProps} />;
+                return <StepPropertySpecific {...commonProps} />;
             case 7:
-                return <StepPhotos {...commonProps} />;
+                return <StepAmenities {...commonProps} />;
             case 8:
+                return <StepPhotos {...commonProps} />;
+            case 9:
                 return <StepOwnerDetails {...commonProps} />;
             default:
                 return null;
@@ -183,19 +236,38 @@ export default function PropertyWizard() {
     };
 
     return (
-        <div className="min-h-screen bg-background py-8 px-4 sm:px-6 lg:px-8">
+        <div className="min-h-screen bg-background py-4 sm:py-8 px-3 sm:px-6 lg:px-8">
             <div className="max-w-4xl mx-auto">
                 {/* Header */}
-                <div className="mb-8">
-                    <h1 className="text-3xl sm:text-4xl font-bold text-foreground mb-2">Post Your Property</h1>
-                    <p className="text-muted-foreground">
-                        Step {currentStep} of {STEPS.length} • Complete all details to list your property
+                <div className="mb-6 sm:mb-8">
+                    <h1 className="text-2xl sm:text-3xl lg:text-4xl font-bold text-foreground mb-1 sm:mb-2">Post Your Property</h1>
+                    <p className="text-sm sm:text-base text-muted-foreground">
+                        Step {currentStep} of {STEPS.length}
                     </p>
                 </div>
 
-                {/* Progress Bar */}
-                <div className="mb-8">
-                    <div className="flex justify-between items-center mb-4 px-2">
+                {/* Progress Bar - Mobile optimized */}
+                <div className="mb-6 sm:mb-8">
+                    {/* Mobile: Show only current step info */}
+                    <div className="flex sm:hidden items-center justify-between mb-3">
+                        <div className="flex items-center gap-2">
+                            {(() => {
+                                const CurrentIcon = STEPS[currentStep - 1].icon;
+                                return (
+                                    <>
+                                        <div className="flex items-center justify-center w-10 h-10 rounded-full bg-primary text-primary-foreground">
+                                            <CurrentIcon size={18} />
+                                        </div>
+                                        <span className="font-semibold text-foreground">{STEPS[currentStep - 1].name}</span>
+                                    </>
+                                );
+                            })()}
+                        </div>
+                        <span className="text-sm text-muted-foreground">{currentStep}/{STEPS.length}</span>
+                    </div>
+
+                    {/* Desktop: Show all steps */}
+                    <div className="hidden sm:flex justify-between items-center mb-4 px-2">
                         {STEPS.map((step, index) => {
                             const StepIcon = step.icon;
                             const isCompleted = index < currentStep - 1;
@@ -215,7 +287,7 @@ export default function PropertyWizard() {
                                     </div>
 
                                     <span
-                                        className={`text-xs mt-2 text-center hidden sm:block ${isCurrent ? "font-semibold text-primary" : "text-muted-foreground"
+                                        className={`text-xs mt-2 text-center ${isCurrent ? "font-semibold text-primary" : "text-muted-foreground"
                                             }`}
                                     >
                                         {step.name}
@@ -225,7 +297,7 @@ export default function PropertyWizard() {
                         })}
                     </div>
 
-                    <div className="w-full h-1 bg-muted rounded-full overflow-hidden">
+                    <div className="w-full h-1.5 sm:h-1 bg-muted rounded-full overflow-hidden">
                         <div
                             className="h-full bg-gradient-to-r from-primary to-success transition-all duration-500"
                             style={{
@@ -237,11 +309,11 @@ export default function PropertyWizard() {
 
                 {/* Validation Errors */}
                 {Object.keys(validationErrors).length > 0 && (
-                    <div className="mb-6 p-4 bg-destructive/10 border border-destructive/20 rounded-lg flex gap-3">
-                        <AlertCircle className="text-destructive flex-shrink-0 mt-0.5" size={20} />
+                    <div className="mb-4 sm:mb-6 p-3 sm:p-4 bg-destructive/10 border border-destructive/20 rounded-lg flex gap-2 sm:gap-3">
+                        <AlertCircle className="text-destructive flex-shrink-0 mt-0.5" size={18} />
                         <div>
-                            <h3 className="font-semibold text-destructive mb-1">Please fix the following:</h3>
-                            <ul className="text-sm text-destructive/80 space-y-1">
+                            <h3 className="font-semibold text-destructive text-sm sm:text-base mb-1">Please fix the following:</h3>
+                            <ul className="text-xs sm:text-sm text-destructive/80 space-y-1">
                                 {Object.values(validationErrors).map((error, idx) => (
                                     <li key={idx}>• {error}</li>
                                 ))}
@@ -251,36 +323,36 @@ export default function PropertyWizard() {
                 )}
 
                 {/* Step Content */}
-                <Card className="p-6 sm:p-8 shadow-lg border border-border mb-8 bg-card">{renderStep()}</Card>
+                <Card className="p-4 sm:p-6 lg:p-8 shadow-lg border border-border mb-6 sm:mb-8 bg-card">{renderStep()}</Card>
 
                 {/* Buttons */}
-                <div className="flex gap-4 justify-between">
+                <div className="flex gap-3 sm:gap-4 justify-between">
                     <Button
                         variant="outline"
                         onClick={handlePrevious}
                         disabled={currentStep === 1}
-                        className="flex items-center gap-2 px-6"
+                        className="flex items-center gap-1 sm:gap-2 px-4 sm:px-6 text-sm sm:text-base"
                     >
-                        <ChevronLeft size={20} />
-                        Previous
+                        <ChevronLeft size={18} />
+                        <span className="hidden xs:inline">Previous</span>
                     </Button>
 
                     <Button
                         onClick={handleNext}
                         disabled={isSubmitting}
-                        className="flex items-center gap-2 px-6"
+                        className="flex items-center gap-1 sm:gap-2 px-4 sm:px-6 text-sm sm:text-base"
                     >
                         {isSubmitting ? (
                             <>
-                                <span className="animate-spin">⏳</span> Processing...
+                                <span className="animate-spin">⏳</span> <span className="hidden sm:inline">Processing...</span>
                             </>
                         ) : currentStep === STEPS.length ? (
                             <>
-                                Submit Listing <Check size={20} />
+                                Submit <Check size={18} />
                             </>
                         ) : (
                             <>
-                                Next <ChevronRight size={20} />
+                                Next <ChevronRight size={18} />
                             </>
                         )}
                     </Button>

@@ -18,7 +18,12 @@ import NotFound from "./pages/NotFound";
 
 // Route-based code splitting - lazy load all other pages
 const Listings = lazy(() => import("./pages/Listings"));
+const RentListings = lazy(() => import("./pages/RentListings"));
+const BuyListings = lazy(() => import("./pages/BuyListings"));
 const Property = lazy(() => import("./pages/Property"));
+const RentPropertyDetail = lazy(() => import("./pages/RentPropertyDetail"));
+const BuyPropertyDetail = lazy(() => import("./pages/BuyPropertyDetail"));
+const PropertyRedirect = lazy(() => import("./pages/PropertyRedirect"));
 const PostProperty = lazy(() => import("./pages/PostProperty"));
 const SearchResults = lazy(() => import("./pages/SearchResults"));
 const Login = lazy(() => import("./pages/Login"));
@@ -152,7 +157,12 @@ const App = () => {
                             
                             {/* Lazy loaded routes */}
                             <Route path="/listings" element={<Listings />} />
+                            <Route path="/rent-properties" element={<RentListings />} />
+                            <Route path="/buy-properties" element={<BuyListings />} />
+                            <Route path="/rent/:slug" element={<RentPropertyDetail />} />
+                            <Route path="/buy/:slug" element={<BuyPropertyDetail />} />
                             <Route path="/properties/:slug" element={<Property />} />
+                            <Route path="/property/:slug" element={<PropertyRedirect />} />
                             <Route path="/post-property" element={<PostProperty />} />
                             <Route path="/search" element={<SearchResults />} />
                             <Route path="/login" element={<Login />} />

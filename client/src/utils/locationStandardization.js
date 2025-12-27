@@ -39,19 +39,55 @@ const API_ENDPOINTS = {
         `https://nominatim.openstreetmap.org/reverse?lat=${lat}&lon=${lng}&format=json`
 };
 
-// Mock location suggestions for autocomplete (can be replaced with real API)
-export const LOCATION_SUGGESTIONS = [
-    { city: 'New York', state: 'NY', country: 'USA' },
-    { city: 'Los Angeles', state: 'CA', country: 'USA' },
-    { city: 'Chicago', state: 'IL', country: 'USA' },
-    { city: 'San Francisco', state: 'CA', country: 'USA' },
-    { city: 'Miami', state: 'FL', country: 'USA' },
-    { city: 'Boston', state: 'MA', country: 'USA' },
-    { city: 'Austin', state: 'TX', country: 'USA' },
-    { city: 'Seattle', state: 'WA', country: 'USA' },
-    { city: 'Denver', state: 'CO', country: 'USA' },
-    { city: 'Portland', state: 'OR', country: 'USA' }
+// Location suggestions - will be populated from API
+export let LOCATION_SUGGESTIONS = [];
+
+// Fallback suggestions if API fails
+const FALLBACK_SUGGESTIONS = [
+    { city: 'Mumbai', state: 'Maharashtra', country: 'India' },
+    { city: 'Delhi', state: 'Delhi', country: 'India' },
+    { city: 'Bangalore', state: 'Karnataka', country: 'India' },
+    { city: 'Hyderabad', state: 'Telangana', country: 'India' },
+    { city: 'Chennai', state: 'Tamil Nadu', country: 'India' },
+    { city: 'Pune', state: 'Maharashtra', country: 'India' },
+    { city: 'Kolkata', state: 'West Bengal', country: 'India' },
+    { city: 'Ahmedabad', state: 'Gujarat', country: 'India' }
 ];
+
+// Flag to track if locations have been fetched
+let locationsFetched = false;
+
+/**
+ * Fetches cities from the API and updates LOCATION_SUGGESTIONS
+ * @returns {Promise<Array>} - Array of location objects
+ */
+export async function fetchLocationSuggestions() {
+    if (locationsFetched && LOCATION_SUGGESTIONS.length > 0) {
+        return LOCATION_SUGGESTIONS;
+    }
+
+    try {
+        const response = await fetch('/api/locations/cities');
+        const data = await response.json();
+
+        if (data.success && data.data?.length > 0) {
+            LOCATION_SUGGESTIONS = data.data.map(city => ({
+                city: city.name,
+                state: '',
+                country: 'India',
+                slug: city.slug
+            }));
+            locationsFetched = true;
+        } else {
+            LOCATION_SUGGESTIONS = FALLBACK_SUGGESTIONS;
+        }
+    } catch (error) {
+        console.error('Failed to fetch location suggestions:', error);
+        LOCATION_SUGGESTIONS = FALLBACK_SUGGESTIONS;
+    }
+
+    return LOCATION_SUGGESTIONS;
+}
 
 /**
  * Standardizes location data from different API responses
@@ -95,6 +131,11 @@ export function standardizeLocationData(apiResponse, service, coordinates = {}) 
         city = city.trim();
         state = state.trim();
         country = country.trim();
+
+        // If no city was found, return null
+        if (!city) {
+            return null;
+        }
 
         // Create formatted string
         const formatted = state ? `${city}, ${state}` : city;
@@ -174,24 +215,12 @@ export async function getCurrentLocation(options = {}) {
                         return;
                     }
 
-                    // If both services fail, return coordinates only
-                    resolve({
-                        city: '',
-                        state: '',
-                        country: '',
-                        formatted: `${latitude.toFixed(4)}, ${longitude.toFixed(4)}`,
-                        coordinates
-                    });
+                    // If both services fail, reject with error instead of showing coordinates
+                    reject(new Error('Unable to determine your city. Please enter your location manually.'));
                 } catch (error) {
                     console.error('Reverse geocoding failed:', error);
-                    // Return coordinates as fallback
-                    resolve({
-                        city: '',
-                        state: '',
-                        country: '',
-                        formatted: `${latitude.toFixed(4)}, ${longitude.toFixed(4)}`,
-                        coordinates
-                    });
+                    // Reject instead of showing coordinates
+                    reject(new Error('Unable to determine your city. Please enter your location manually.'));
                 }
             },
             (error) => {
@@ -320,26 +349,30 @@ export function validateLocationInput(locationInput) {
  * @returns {Array} - Array of location suggestions
  */
 export function getLocationSuggestions(query, limit = 8) {
+    // Use current LOCATION_SUGGESTIONS (may be from API or fallback)
+    const suggestions = LOCATION_SUGGESTIONS.length > 0 ? LOCATION_SUGGESTIONS : FALLBACK_SUGGESTIONS;
+
     if (!query || typeof query !== 'string' || query.trim().length < 1) {
-        return LOCATION_SUGGESTIONS.slice(0, limit).map(loc => ({
+        return suggestions.slice(0, limit).map(loc => ({
             ...loc,
-            formatted: `${loc.city}, ${loc.state}`
+            formatted: loc.state ? `${loc.city}, ${loc.state}` : loc.city
         }));
     }
 
     const queryLower = query.toLowerCase().trim();
 
-    const filtered = LOCATION_SUGGESTIONS.filter(location => {
+    const filtered = suggestions.filter(location => {
         const cityMatch = location.city.toLowerCase().includes(queryLower);
-        const stateMatch = location.state.toLowerCase().includes(queryLower);
-        const formattedMatch = `${location.city}, ${location.state}`.toLowerCase().includes(queryLower);
+        const stateMatch = location.state?.toLowerCase().includes(queryLower);
+        const formatted = location.state ? `${location.city}, ${location.state}` : location.city;
+        const formattedMatch = formatted.toLowerCase().includes(queryLower);
 
         return cityMatch || stateMatch || formattedMatch;
     });
 
     return filtered.slice(0, limit).map(loc => ({
         ...loc,
-        formatted: `${loc.city}, ${loc.state}`
+        formatted: loc.state ? `${loc.city}, ${loc.state}` : loc.city
     }));
 }
 
@@ -433,6 +466,7 @@ export default {
     reverseGeocode,
     validateLocationInput,
     getLocationSuggestions,
+    fetchLocationSuggestions,
     formatLocationForDisplay,
     areLocationsEqual,
     normalizeLocationData

@@ -19,7 +19,8 @@ import {
 } from '../ui/select';
 import { authenticatedFetch, getHeaders } from '../../lib/api';
 import { cn } from '../../lib/utils';
-import { Loader2, AlertCircle, Settings2, ArrowRight, Star, StarOff } from 'lucide-react';
+import { Loader2, AlertCircle, Settings2, ArrowRight, Star, StarOff, Home, ShoppingCart } from 'lucide-react';
+import { LISTING_TYPE_LABELS } from '@shared/propertyTypes';
 
 /**
  * Property Status Modal Component
@@ -49,6 +50,11 @@ const STATUS_COLORS = {
   rented: 'bg-blue-100 text-blue-800 dark:bg-blue-900/30 dark:text-blue-400',
   sold: 'bg-purple-100 text-purple-800 dark:bg-purple-900/30 dark:text-purple-400',
   expired: 'bg-yellow-100 text-yellow-800 dark:bg-yellow-900/30 dark:text-yellow-400'
+};
+
+const LISTING_TYPE_COLORS = {
+  rent: 'bg-emerald-100 text-emerald-800 dark:bg-emerald-900/30 dark:text-emerald-400',
+  buy: 'bg-indigo-100 text-indigo-800 dark:bg-indigo-900/30 dark:text-indigo-400'
 };
 
 const PropertyStatusModal = ({ open, onOpenChange, property, onStatusChanged }) => {
@@ -174,6 +180,12 @@ const PropertyStatusModal = ({ open, onOpenChange, property, onStatusChanged }) 
                 <p className="font-medium truncate">{property?.title || 'Unknown'}</p>
                 <p className="text-sm text-muted-foreground truncate">{property?.city}</p>
                 <div className="flex items-center gap-2 mt-1">
+                  <Badge className={cn('capitalize text-xs', LISTING_TYPE_COLORS[property?.listingType] || LISTING_TYPE_COLORS.rent)}>
+                    <span className="flex items-center gap-1">
+                      {property?.listingType === 'buy' ? <ShoppingCart className="h-3 w-3" /> : <Home className="h-3 w-3" />}
+                      {LISTING_TYPE_LABELS[property?.listingType] || 'For Rent'}
+                    </span>
+                  </Badge>
                   <Badge className={cn('capitalize text-xs', STATUS_COLORS[property?.status])}>
                     {property?.status || 'active'}
                   </Badge>
