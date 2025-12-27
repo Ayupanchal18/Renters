@@ -2,8 +2,9 @@ FROM node:22.16-alpine
 
 WORKDIR /app
 
-# Cache bust: v7 - Client-local tailwind config
-RUN echo "Build version: 7"
+# Cache bust: v9 - Add rent debug endpoint
+ARG CACHEBUST=9
+RUN echo "Build version: ${CACHEBUST}"
 
 # Verify Node version
 RUN node --version && npm --version
