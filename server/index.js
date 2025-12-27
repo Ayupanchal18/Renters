@@ -34,20 +34,35 @@ export default async function createServer(devMode = false) {
     app.set('trust proxy', 1);
 
     // CORS configuration - restrict origins in production
+    const isDevelopment = devMode || process.env.NODE_ENV === 'development';
+    const defaultDevOrigins = [
+        'http://localhost:8080',
+        'http://localhost:3000',
+        'http://localhost:5173',
+        'http://127.0.0.1:8080',
+        'http://127.0.0.1:3000',
+        'http://127.0.0.1:5173'
+    ];
+
     const allowedOrigins = process.env.ALLOWED_ORIGINS
         ? process.env.ALLOWED_ORIGINS.split(',').map(o => o.trim())
-        : (devMode ? ['http://localhost:8080', 'http://localhost:3000', 'http://127.0.0.1:8080'] : []);
+        : (isDevelopment ? defaultDevOrigins : []);
 
     app.use(cors({
         origin: (origin, callback) => {
-            // Allow requests with no origin (mobile apps, curl, etc.) in dev mode
-            if (!origin && devMode) {
+            // Allow requests with no origin (same-origin, mobile apps, curl, Postman, etc.)
+            if (!origin) {
                 return callback(null, true);
             }
-            // Check if origin is allowed
-            if (!origin || allowedOrigins.includes(origin) || allowedOrigins.includes('*')) {
+            // In development, allow all localhost origins
+            if (isDevelopment && (origin.includes('localhost') || origin.includes('127.0.0.1'))) {
+                return callback(null, true);
+            }
+            // Check if origin is in allowed list or wildcard is set
+            if (allowedOrigins.includes(origin) || allowedOrigins.includes('*')) {
                 callback(null, true);
             } else {
+                console.warn(`CORS blocked origin: ${origin}. Allowed: ${allowedOrigins.join(', ') || 'none'}`);
                 callback(new Error('Not allowed by CORS'));
             }
         },
