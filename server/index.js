@@ -106,6 +106,14 @@ export default async function createServer(devMode = false) {
     app.use(addRequestId);
     app.use(securityHeaders);
 
+    // More permissive rate limiting for polling endpoints
+    const pollingRateLimiter = createRateLimiter({
+        windowMs: 15 * 60 * 1000,
+        maxRequests: 1000,
+        message: "Too many requests, please try again later"
+    });
+    app.use('/api/notifications/unread-count', pollingRateLimiter);
+
     // Global rate limiting - 100 requests per 15 minutes per IP
     const globalRateLimiter = createRateLimiter({
         windowMs: 15 * 60 * 1000,
