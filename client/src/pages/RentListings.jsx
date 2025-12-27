@@ -115,15 +115,19 @@ export default function RentListings() {
     }, [filters, sortBy, pagination.pageSize]);
 
     // Search rent properties
-    const searchRentProperties = useCallback(async (searchPayload) => {
+    const searchRentProperties = useCallback(async (searchPayload, overrideSort = null) => {
         try {
             setIsLoading(true);
             setIsSearchMode(true); // Mark as search mode to prevent filter useEffect from overwriting
 
+            const searchLocation = searchPayload.location || searchPayload.city || "";
+            const effectiveSort = overrideSort || sortBy;
+
             const payload = {
                 q: searchPayload.query || "",
-                location: searchPayload.location || "",
-                sort: sortBy,
+                location: searchLocation,
+                city: searchLocation,
+                sort: effectiveSort,
                 filters: {
                     category: filters.propertyType || searchPayload.filters?.category,
                     minRent: filters.priceRange.min > 0 ? filters.priceRange.min : undefined,
@@ -133,6 +137,11 @@ export default function RentListings() {
                     preferredTenants: filters.preferredTenants,
                 }
             };
+
+            // Update location filter state
+            if (searchLocation) {
+                setFilters(prev => ({ ...prev, location: searchLocation }));
+            }
 
             const response = await propertyService.searchRentProperties(payload);
             // Handle nested response structure: response.data.data.searchResultData
@@ -217,10 +226,14 @@ export default function RentListings() {
         setViewMode(newViewMode);
     }, []);
 
-    // Handle sort change
+    // Handle sort change - trigger re-fetch with new sort
     const handleSortChange = useCallback((newSortBy) => {
         setSortBy(newSortBy);
-    }, []);
+        // If in search mode or has location filter, re-search with new sort
+        if (isSearchMode || filters.location) {
+            searchRentProperties({ location: filters.location || "", query: "" }, newSortBy);
+        }
+    }, [isSearchMode, filters.location, searchRentProperties]);
 
     // Initial load
     useEffect(() => {
@@ -237,12 +250,13 @@ export default function RentListings() {
         }
     }, [fetchWishlistIds, fetchRentProperties, searchRentProperties, initialSearchData]);
 
-    // Refetch when filters or sort changes (only if not in search mode)
+    // Refetch when filters or sort changes (only if not in search mode and no location filter)
     useEffect(() => {
-        if (initialLoadDone.current && !isSearchMode) {
+        // Skip if initial load not done, or in search mode, or if location filter is set (city search)
+        if (initialLoadDone.current && !isSearchMode && !filters.location) {
             fetchRentProperties(1);
         }
-    }, [filters, sortBy, isSearchMode]);
+    }, [filters.propertyType, filters.priceRange, filters.bedrooms, filters.furnishing, filters.preferredTenants, filters.verifiedOnly, sortBy, isSearchMode, filters.location]);
 
     return (
         <div className="min-h-screen flex flex-col">
@@ -381,6 +395,7 @@ export default function RentListings() {
                                 sortBy={sortBy}
                                 onSortChange={handleSortChange}
                                 properties={properties}
+                                listingType="rent"
                             />
 
                             <ListingsGrid

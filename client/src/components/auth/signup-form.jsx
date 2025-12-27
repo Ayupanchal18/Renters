@@ -171,7 +171,7 @@ export default function SignupForm() {
                                     name="name"
                                     value={formData.name}
                                     onChange={handleChange}
-                                    placeholder="John Doe"
+                                    placeholder="Rahul Sharma"
                                     className={`${inputClasses(errors.name)} pl-10`}
                                 />
                             </div>
@@ -193,7 +193,7 @@ export default function SignupForm() {
                                     name="email"
                                     value={formData.email}
                                     onChange={handleChange}
-                                    placeholder="john@example.com"
+                                    placeholder="rahul.sharma@gmail.com"
                                     className={`${inputClasses(errors.email)} pl-10`}
                                 />
                             </div>
@@ -215,7 +215,7 @@ export default function SignupForm() {
                                     name="phone"
                                     value={formData.phone}
                                     onChange={handleChange}
-                                    placeholder="+1 (555) 123-4567"
+                                    placeholder="+91 98765 43210"
                                     className={`${inputClasses(errors.phone)} pl-10`}
                                 />
                             </div>
@@ -258,7 +258,7 @@ export default function SignupForm() {
                                     name="address"
                                     value={formData.address}
                                     onChange={handleChange}
-                                    placeholder="123 Main Street, City, State"
+                                    placeholder="Andheri West, Mumbai, Maharashtra"
                                     className={`${inputClasses(errors.address)} pl-10`}
                                 />
                             </div>

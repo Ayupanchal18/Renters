@@ -1,10 +1,9 @@
-import { useState, useEffect, useMemo, useCallback } from "react";
+import { useState, useMemo, useCallback } from "react";
 import { ConversationList } from "../components/chatComponents/ConversationList";
 import { ChatWindow } from "../components/chatComponents/ChatWindow.jsx";
 import { EmptyChatState } from "../components/chatComponents/EmptyChatState.jsx";
 import { ChevronLeft, AlertCircle, RefreshCw } from "lucide-react";
 import Navbar from './../components/Navbar';
-import Footer from './../components/Footer';
 import { useMessages } from "../hooks/useMessages";
 import { getUser } from "../utils/auth";
 
@@ -185,7 +184,7 @@ export default function Messages() {
     return (
         <>
             <Navbar />
-            <div className="h-[90vh] bg-background flex flex-col">
+            <div className="h-[calc(100dvh-64px)] sm:h-[calc(100dvh-72px)] bg-background flex flex-col overflow-hidden">
                 {/* Mobile header - only show when in chat view */}
                 {showMobileChat && transformedSelectedConversation && (
                     <div className="md:hidden bg-card border-b border-border px-4 py-3 flex items-center rounded-t-xl mx-4 mt-4">
@@ -203,7 +202,7 @@ export default function Messages() {
 
                 {/* Error Banner */}
                 {error && (
-                    <div className="mx-4 mt-2 p-3 bg-destructive/10 border border-destructive/20 rounded-lg flex items-center justify-between">
+                    <div className="mx-4 mt-2 p-3 bg-destructive/10 border border-destructive/20 rounded-lg flex items-center justify-between flex-shrink-0">
                         <div className="flex items-center gap-2 text-destructive">
                             <AlertCircle className="w-5 h-5" />
                             <span className="text-sm">{error}</span>
@@ -219,10 +218,10 @@ export default function Messages() {
                 )}
 
                 {/* Layout */}
-                <div className="flex flex-1 overflow-hidden p-2 sm:p-4 md:p-5 gap-0">
+                <div className="flex flex-1 overflow-hidden p-2 sm:p-4 md:p-5 gap-0 min-h-0">
                     {/* Left panel - Conversation List */}
                     <div
-                        className={`w-full md:w-[380px] lg:w-[420px] md:rounded-l-xl bg-card border md:border-r-0 border-border flex flex-col rounded-xl md:rounded-r-none shadow-sm ${showMobileChat ? "hidden md:flex" : "flex"
+                        className={`w-full md:w-[380px] lg:w-[420px] md:rounded-l-xl bg-card border md:border-r-0 border-border flex flex-col rounded-xl md:rounded-r-none shadow-sm overflow-hidden ${showMobileChat ? "hidden md:flex" : "flex"
                             }`}
                     >
                         <ConversationList
@@ -259,7 +258,6 @@ export default function Messages() {
                     </div>
                 </div>
             </div>
-            <Footer />
         </>
     );
 }

@@ -115,7 +115,7 @@ export function MessageComposer({ onSendMessage, disabled = false }) {
     const isImage = selectedFile && ALLOWED_IMAGE_TYPES.includes(selectedFile.type);
 
     return (
-        <div className="bg-card border-t border-border p-2 sm:p-3">
+        <div className="bg-card border-t border-border p-2 sm:p-3 pb-safe">
             {/* File Upload Error */}
             {uploadError && (
                 <div className="mb-2 p-2 bg-destructive/10 border border-destructive/20 rounded-lg flex items-center gap-2 text-destructive text-xs">

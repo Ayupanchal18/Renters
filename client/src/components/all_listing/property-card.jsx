@@ -20,7 +20,12 @@ export function PropertyCard({ property, viewMode, initialSaved = false, onWishl
     }, [initialSaved]);
 
     const handleClick = (slug) => {
-        navigateWithState(`/properties/${slug}`, {
+        // Navigate to correct route based on listing type
+        const route = property.listingType === 'buy' 
+            ? `/buy/${slug}` 
+            : `/rent/${slug}`;
+        
+        navigateWithState(route, {
             saveViewState: {
                 fromListings: true,
                 propertyId: property._id,

@@ -116,15 +116,19 @@ export default function BuyListings() {
     }, [filters, sortBy, pagination.pageSize]);
 
     // Search buy properties
-    const searchBuyProperties = useCallback(async (searchPayload) => {
+    const searchBuyProperties = useCallback(async (searchPayload, overrideSort = null) => {
         try {
             setIsLoading(true);
             setIsSearchMode(true); // Mark as search mode to prevent filter useEffect from overwriting
 
+            const searchLocation = searchPayload.location || searchPayload.city || "";
+            const effectiveSort = overrideSort || sortBy;
+
             const payload = {
                 q: searchPayload.query || "",
-                location: searchPayload.location || "",
-                sort: sortBy,
+                location: searchLocation,
+                city: searchLocation,
+                sort: effectiveSort,
                 filters: {
                     category: filters.propertyType || searchPayload.filters?.category,
                     minPrice: filters.priceRange.min > 0 ? filters.priceRange.min : undefined,
@@ -134,6 +138,11 @@ export default function BuyListings() {
                     loanAvailable: filters.loanAvailable,
                 }
             };
+
+            // Update location filter state
+            if (searchLocation) {
+                setFilters(prev => ({ ...prev, location: searchLocation }));
+            }
 
             const response = await propertyService.searchBuyProperties(payload);
             // Handle nested response structure: response.data.data.searchResultData
@@ -218,10 +227,14 @@ export default function BuyListings() {
         setViewMode(newViewMode);
     }, []);
 
-    // Handle sort change
+    // Handle sort change - trigger re-fetch with new sort
     const handleSortChange = useCallback((newSortBy) => {
         setSortBy(newSortBy);
-    }, []);
+        // If in search mode or has location filter, re-search with new sort
+        if (isSearchMode || filters.location) {
+            searchBuyProperties({ location: filters.location || "", query: "" }, newSortBy);
+        }
+    }, [isSearchMode, filters.location, searchBuyProperties]);
 
     // Initial load
     useEffect(() => {
@@ -238,12 +251,13 @@ export default function BuyListings() {
         }
     }, [fetchWishlistIds, fetchBuyProperties, searchBuyProperties, initialSearchData]);
 
-    // Refetch when filters or sort changes (only if not in search mode)
+    // Refetch when filters or sort changes (only if not in search mode and no location filter)
     useEffect(() => {
-        if (initialLoadDone.current && !isSearchMode) {
+        // Skip if initial load not done, or in search mode, or if location filter is set (city search)
+        if (initialLoadDone.current && !isSearchMode && !filters.location) {
             fetchBuyProperties(1);
         }
-    }, [filters, sortBy, isSearchMode]);
+    }, [filters.propertyType, filters.priceRange, filters.bedrooms, filters.possessionStatus, filters.loanAvailable, filters.verifiedOnly, sortBy, isSearchMode, filters.location]);
 
     // Format price for display
     const formatPrice = (price) => {
@@ -392,6 +406,7 @@ export default function BuyListings() {
                                 sortBy={sortBy}
                                 onSortChange={handleSortChange}
                                 properties={properties}
+                                listingType="buy"
                             />
 
                             <ListingsGrid

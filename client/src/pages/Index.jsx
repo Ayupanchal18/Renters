@@ -19,6 +19,7 @@ import { useNavigate } from 'react-router-dom';
 import { getAllProperties } from '../redux/slices/propertySlice';
 import { useDispatch } from 'react-redux';
 import wishlistService from '../api/wishlistService';
+import propertyService from '../api/propertyService';
 import { isAuthenticated } from '../utils/auth';
 import { 
     HOMEPAGE_PROPERTY_TYPE_OPTIONS,
@@ -120,6 +121,7 @@ export default function Home() {
     // Handle listing type toggle - Requirements: 7.1, 7.2, 7.3
     const handleListingTypeChange = (type) => {
         setListingTypeContext(type);
+        setSelectedPropertyType('all'); // Reset category filter when switching rent/buy
     };
 
     // Navigate directly to listing page based on type - Requirements: 7.2, 7.3
@@ -246,24 +248,49 @@ export default function Home() {
         }
     }, []);
 
-    const getallProperties = async () => {
+    const getallProperties = useCallback(async () => {
         setLoading(true);
         try {
-            const response = await dispatch(getAllProperties());
-            const data = response?.payload?.items || [];
+            // Fetch properties based on listing type context (rent/buy)
+            let response;
+            const params = { limit: 12 };
+            
+            if (listingTypeContext === LISTING_TYPES.BUY) {
+                response = await propertyService.getBuyProperties(params);
+            } else {
+                response = await propertyService.getRentProperties(params);
+            }
+            
+            // API returns { success, data: { items, total, page, pageSize } }
+            const data = response?.data?.data?.items || response?.data?.items || [];
             setProperties(data);
         } catch (error) {
-            console.log(error);
+            console.error('Failed to fetch properties:', error);
+            setProperties([]);
         } finally {
             setLoading(false);
         }
-    };
+    }, [listingTypeContext]);
 
     useEffect(() => {
         getallProperties();
-        fetchWishlistIds();
-        fetchTestimonials();
-        fetchLocationSuggestions(); // Fetch cities from API
+    }, [getallProperties]);
+
+    // Defer non-critical API calls to after initial render
+    useEffect(() => {
+        // Use requestIdleCallback for non-critical data fetching
+        const loadNonCriticalData = () => {
+            fetchWishlistIds();
+            fetchTestimonials();
+            fetchLocationSuggestions();
+        };
+
+        if ('requestIdleCallback' in window) {
+            requestIdleCallback(loadNonCriticalData, { timeout: 2000 });
+        } else {
+            // Fallback for browsers without requestIdleCallback
+            setTimeout(loadNonCriticalData, 100);
+        }
     }, [fetchWishlistIds, fetchTestimonials]);
 
     // Auto-rotate testimonials
@@ -539,8 +566,12 @@ export default function Home() {
                     <div className="max-w-7xl mx-auto">
                         <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 mb-10">
                             <div>
-                                <h2 className="text-3xl sm:text-4xl font-bold text-foreground mb-2">Featured Listings</h2>
-                                <p className="text-muted-foreground">Hand-picked properties ready for you</p>
+                                <h2 className="text-3xl sm:text-4xl font-bold text-foreground mb-2">
+                                    Featured {listingTypeContext === LISTING_TYPES.BUY ? 'For Sale' : 'For Rent'}
+                                </h2>
+                                <p className="text-muted-foreground">
+                                    Hand-picked properties {listingTypeContext === LISTING_TYPES.BUY ? 'for sale' : 'for rent'}
+                                </p>
                             </div>
                             <Button 
                                 variant="outline" 
@@ -562,7 +593,7 @@ export default function Home() {
                                         : 'bg-card text-muted-foreground hover:bg-muted border border-border'
                                 }`}
                             >
-                                All Properties
+                                All {listingTypeContext === LISTING_TYPES.BUY ? 'For Sale' : 'For Rent'}
                             </button>
                             {typeOptions.slice(0, 4).map((option, idx) => (
                                 <button
@@ -630,7 +661,9 @@ export default function Home() {
                                     <div className="col-span-full text-center py-16">
                                         <Building2 className="w-16 h-16 text-muted-foreground/50 mx-auto mb-4" />
                                         <h3 className="text-lg font-semibold text-foreground mb-2">
-                                            {selectedPropertyType === 'all' ? 'No properties found' : `No ${typeOptions.find(o => o.value === selectedPropertyType)?.label || selectedPropertyType} properties found`}
+                                            {selectedPropertyType === 'all' 
+                                                ? `No ${listingTypeContext === LISTING_TYPES.BUY ? 'properties for sale' : 'rentals'} found` 
+                                                : `No ${typeOptions.find(o => o.value === selectedPropertyType)?.label || selectedPropertyType} ${listingTypeContext === LISTING_TYPES.BUY ? 'for sale' : 'for rent'} found`}
                                         </h3>
                                         <p className="text-muted-foreground mb-4">
                                             {selectedPropertyType === 'all' 
@@ -642,7 +675,7 @@ export default function Home() {
                                                 onClick={() => setSelectedPropertyType('all')}
                                                 className="text-primary hover:text-primary/80 font-medium transition-colors"
                                             >
-                                                View all properties
+                                                View all {listingTypeContext === LISTING_TYPES.BUY ? 'for sale' : 'for rent'}
                                             </button>
                                         )}
                                     </div>
@@ -696,11 +729,19 @@ export default function Home() {
                                     key={city.name}
                                     onClick={() => {
                                         setSearchLocation(city.name);
-                                        // Navigate to appropriate listing page based on context - Requirements: 7.2, 7.3
+                                        // Navigate to appropriate listing page based on context
                                         const targetRoute = listingTypeContext === LISTING_TYPES.BUY 
                                             ? "/buy-properties" 
                                             : "/rent-properties";
-                                        navigate(targetRoute, { state: { searchData: { location: city.name } } });
+                                        navigate(targetRoute, { 
+                                            state: { 
+                                                searchData: { 
+                                                    location: city.name,
+                                                    city: city.name,
+                                                    query: ""
+                                                } 
+                                            } 
+                                        });
                                     }}
                                     className="group relative h-64 rounded-2xl overflow-hidden shadow-lg hover:shadow-2xl transition-all duration-300"
                                 >
@@ -733,54 +774,52 @@ export default function Home() {
                 </section>
 
                 {/* Testimonials Section */}
-                <section className="py-10 sm:py-14 lg:py-16 px-4 sm:px-6 lg:px-8 bg-background overflow-hidden">
+                <section className="py-8 sm:py-10 lg:py-12 px-4 sm:px-6 lg:px-8 bg-background overflow-hidden">
                     <div className="max-w-7xl mx-auto">
-                        <div className="text-center mb-8 sm:mb-12">
-                            <Badge className="mb-3 bg-secondary/10 text-secondary border-0">Testimonials</Badge>
-                            <h2 className="text-2xl sm:text-3xl lg:text-4xl font-bold text-foreground mb-2 sm:mb-3">
+                        <div className="text-center mb-6 sm:mb-8">
+                            <Badge className="mb-2 bg-secondary/10 text-secondary border-0">Testimonials</Badge>
+                            <h2 className="text-xl sm:text-2xl lg:text-3xl font-bold text-foreground mb-1 sm:mb-2">
                                 Loved by Thousands
                             </h2>
-                            <p className="text-sm sm:text-base text-muted-foreground">Real stories from our community</p>
+                            <p className="text-sm text-muted-foreground">Real stories from our community</p>
                         </div>
 
-                        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+                        <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
                             {testimonials.map((testimonial, idx) => (
                                 <div
                                     key={idx}
-                                    className={`p-8 rounded-2xl border transition-all duration-500 ${
+                                    className={`p-4 sm:p-5 rounded-xl border transition-all duration-500 ${
                                         activeTestimonial === idx
-                                            ? 'bg-primary/5 border-primary/30 shadow-lg scale-[1.02]'
+                                            ? 'bg-primary/5 border-primary/30 shadow-md scale-[1.01]'
                                             : 'bg-card border-border hover:border-primary/20'
                                     }`}
                                 >
                                     {/* Quote Icon */}
-                                    <Quote className={`w-10 h-10 mb-4 ${activeTestimonial === idx ? 'text-primary' : 'text-muted-foreground/30'}`} />
+                                    <Quote className={`w-6 h-6 mb-2 ${activeTestimonial === idx ? 'text-primary' : 'text-muted-foreground/30'}`} />
                                     
                                     {/* Rating */}
-                                    <div className="flex gap-1 mb-4">
+                                    <div className="flex gap-0.5 mb-2">
                                         {[...Array(testimonial.rating)].map((_, i) => (
-                                            <Star key={i} className="w-5 h-5 fill-amber-400 text-amber-400" />
+                                            <Star key={i} className="w-4 h-4 fill-amber-400 text-amber-400" />
                                         ))}
                                     </div>
 
                                     {/* Content */}
-                                    <p className="text-foreground text-lg leading-relaxed mb-6">
+                                    <p className="text-foreground text-sm leading-relaxed mb-3 line-clamp-3">
                                         "{testimonial.content}"
                                     </p>
 
                                     {/* Author */}
-                                    <div className="flex items-center gap-4 pt-6 border-t border-border">
-                                        <img
-                                            src={testimonial.image}
-                                            alt={testimonial.name}
-                                            className="w-12 h-12 rounded-full object-cover ring-2 ring-primary/20"
-                                        />
-                                        <div>
-                                            <div className="flex items-center gap-2">
-                                                <p className="font-semibold text-foreground">{testimonial.name}</p>
-                                                <CheckCircle2 className="w-4 h-4 text-primary" />
+                                    <div className="flex items-center gap-3 pt-3 border-t border-border">
+                                        <div className="w-9 h-9 rounded-full bg-primary/10 flex items-center justify-center text-primary font-semibold text-sm flex-shrink-0">
+                                            {testimonial.name.split(' ').map(n => n[0]).join('')}
+                                        </div>
+                                        <div className="min-w-0">
+                                            <div className="flex items-center gap-1.5">
+                                                <p className="font-medium text-sm text-foreground truncate">{testimonial.name}</p>
+                                                <CheckCircle2 className="w-3.5 h-3.5 text-primary flex-shrink-0" />
                                             </div>
-                                            <p className="text-sm text-muted-foreground">{testimonial.role} • {testimonial.location}</p>
+                                            <p className="text-xs text-muted-foreground truncate">{testimonial.role} • {testimonial.location}</p>
                                         </div>
                                     </div>
                                 </div>
@@ -788,13 +827,13 @@ export default function Home() {
                         </div>
 
                         {/* Testimonial Indicators */}
-                        <div className="flex justify-center gap-2 mt-8">
+                        <div className="flex justify-center gap-1.5 mt-6">
                             {testimonials.map((_, idx) => (
                                 <button
                                     key={idx}
                                     onClick={() => setActiveTestimonial(idx)}
-                                    className={`w-2 h-2 rounded-full transition-all ${
-                                        activeTestimonial === idx ? 'w-8 bg-primary' : 'bg-muted-foreground/30 hover:bg-muted-foreground/50'
+                                    className={`w-1.5 h-1.5 rounded-full transition-all ${
+                                        activeTestimonial === idx ? 'w-6 bg-primary' : 'bg-muted-foreground/30 hover:bg-muted-foreground/50'
                                     }`}
                                 />
                             ))}
@@ -811,20 +850,20 @@ export default function Home() {
                         <div className="grid grid-cols-1 md:grid-cols-2 gap-8 sm:gap-10 items-center">
                             {/* For Renters */}
                             <div className="text-center md:text-left">
-                                <div className="inline-flex items-center gap-2 px-3 py-1.5 rounded-full bg-white/10 backdrop-blur mb-4">
+                                <div className="inline-flex items-center gap-2 px-3 py-1.5 rounded-full bg-white/20 backdrop-blur mb-4">
                                     <Key className="w-4 h-4 text-white" />
                                     <span className="text-xs sm:text-sm font-medium text-white">For Renters</span>
                                 </div>
                                 <h3 className="text-2xl sm:text-3xl lg:text-4xl font-bold text-white mb-3">
                                     Find Your Dream Home Today
                                 </h3>
-                                <p className="text-white/80 text-sm sm:text-base lg:text-lg mb-5 sm:mb-6 leading-relaxed">
+                                <p className="text-white/90 text-sm sm:text-base lg:text-lg mb-5 sm:mb-6 leading-relaxed">
                                     Browse thousands of verified listings with detailed filters. Your perfect space is waiting.
                                 </p>
                                 <div className="flex flex-col sm:flex-row gap-3">
                                     <Button
                                         size="lg"
-                                        className="bg-card text-foreground hover:bg-card/90 font-semibold shadow-xl border border-border/20"
+                                        className="bg-white hover:bg-gray-100 text-gray-900 font-semibold shadow-xl"
                                         onClick={() => {
                                             setListingTypeContext(LISTING_TYPES.RENT);
                                             document.getElementById("search_box")?.scrollIntoView({ behavior: "smooth" });
@@ -836,7 +875,7 @@ export default function Home() {
                                     <Button
                                         size="lg"
                                         variant="outline"
-                                        className="border-white/50 text-white hover:bg-white/10 font-semibold"
+                                        className="border-2 border-white text-white hover:bg-white hover:text-gray-900 font-semibold"
                                         onClick={() => handleBrowseListings(LISTING_TYPES.RENT)}
                                     >
                                         Browse All Rentals
@@ -846,21 +885,21 @@ export default function Home() {
                             </div>
 
                             {/* For Buyers */}
-                            <div className="text-center md:text-left md:border-l md:border-white/20 md:pl-12">
-                                <div className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-white/10 backdrop-blur mb-6">
+                            <div className="text-center md:text-left md:border-l md:border-white/30 md:pl-12">
+                                <div className="inline-flex items-center gap-2 px-3 py-1.5 rounded-full bg-white/20 backdrop-blur mb-4">
                                     <Building2 className="w-4 h-4 text-white" />
-                                    <span className="text-sm font-medium text-white">For Buyers</span>
+                                    <span className="text-xs sm:text-sm font-medium text-white">For Buyers</span>
                                 </div>
-                                <h3 className="text-3xl sm:text-4xl font-bold text-white mb-4">
+                                <h3 className="text-2xl sm:text-3xl lg:text-4xl font-bold text-white mb-3">
                                     Own Your Dream Property
                                 </h3>
-                                <p className="text-white/80 text-lg mb-8 leading-relaxed">
+                                <p className="text-white/90 text-sm sm:text-base lg:text-lg mb-5 sm:mb-6 leading-relaxed">
                                     Explore properties for sale. Find your perfect investment or forever home.
                                 </p>
                                 <div className="flex flex-col sm:flex-row gap-3">
                                     <Button
                                         size="lg"
-                                        className="bg-card text-foreground hover:bg-card/90 font-semibold shadow-xl border border-border/20"
+                                        className="bg-white hover:bg-gray-100 text-gray-900 font-semibold shadow-xl"
                                         onClick={() => {
                                             setListingTypeContext(LISTING_TYPES.BUY);
                                             document.getElementById("search_box")?.scrollIntoView({ behavior: "smooth" });
@@ -872,7 +911,7 @@ export default function Home() {
                                     <Button
                                         size="lg"
                                         variant="outline"
-                                        className="border-white/50 text-white hover:bg-white/10 font-semibold"
+                                        className="border-2 border-white text-white hover:bg-white hover:text-gray-900 font-semibold"
                                         onClick={() => handleBrowseListings(LISTING_TYPES.BUY)}
                                     >
                                         Browse For Sale

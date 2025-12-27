@@ -12,9 +12,11 @@ import { SocketProvider } from "./contexts/SocketContext";
 import { HelmetProvider } from "react-helmet-async";
 import { useWebVitals, WEB_VITALS_THRESHOLDS } from "./hooks/useWebVitals";
 
-// Critical path - load immediately
-import Index from "./pages/Index";
+// Critical path - load immediately (lightweight)
 import NotFound from "./pages/NotFound";
+
+// Home page - lazy load since it's heavy
+const Index = lazy(() => import("./pages/Index"));
 
 // Route-based code splitting - lazy load all other pages
 const Listings = lazy(() => import("./pages/Listings"));

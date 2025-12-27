@@ -147,8 +147,10 @@ export function ChatWindow({
                 )}
             </div>
 
-            {/* Message Composer */}
-            <MessageComposer onSendMessage={handleSendMessage} disabled={sending} />
+            {/* Message Composer - flex-shrink-0 ensures it stays visible */}
+            <div className="flex-shrink-0">
+                <MessageComposer onSendMessage={handleSendMessage} disabled={sending} />
+            </div>
         </div>
     );
 }

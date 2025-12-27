@@ -91,6 +91,7 @@ module.exports = {
         'lg': 'var(--spacing-lg)',
         'xl': 'var(--spacing-xl)',
         '2xl': 'var(--spacing-2xl)',
+        'safe': 'env(safe-area-inset-bottom, 0px)',
       },
       boxShadow: {
         'sm': 'var(--shadow-sm)',

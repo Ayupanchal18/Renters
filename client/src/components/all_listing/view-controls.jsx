@@ -6,13 +6,21 @@ export function ViewControls({
     onViewChange,
     sortBy,
     onSortChange,
-    properties
+    properties,
+    listingType = "rent" // "rent" or "buy"
 }) {
-    const sortOptions = [
+    // Use different sort values based on listing type
+    const sortOptions = listingType === "buy" ? [
         { value: "newest", label: "Newest First" },
         { value: "oldest", label: "Oldest First" },
-        { value: "rent_low_to_high", label: "Price: Low to High" },
-        { value: "rent_high_to_low", label: "Price: High to Low" },
+        { value: "price_low_to_high", label: "Price: Low to High" },
+        { value: "price_high_to_low", label: "Price: High to Low" },
+        { value: "featured", label: "Featured" },
+    ] : [
+        { value: "newest", label: "Newest First" },
+        { value: "oldest", label: "Oldest First" },
+        { value: "rent_low_to_high", label: "Rent: Low to High" },
+        { value: "rent_high_to_low", label: "Rent: High to Low" },
         { value: "featured", label: "Featured" },
     ];
 

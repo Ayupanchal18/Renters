@@ -24,13 +24,12 @@ const footerLinks = {
     company: [
         { label: "About Us", to: "/about" },
         { label: "Contact", to: "/contact" },
-        { label: "Blog", to: "/blog" },
         { label: "FAQs", to: "/faqs" },
     ],
     legal: [
         { label: "Privacy Policy", to: "/privacy-policy" },
         { label: "Terms of Service", to: "/terms" },
-        { label: "Refund Policy", to: "/refund-policy" },
+        { label: "Cookie Policy", to: "/privacy-policy#cookies" },
     ],
 };
 
