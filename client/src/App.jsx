@@ -42,7 +42,6 @@ const Blog = lazy(() => import("./pages/Blog"));
 const BlogPost = lazy(() => import("./pages/BlogPost"));
 const Privacy = lazy(() => import("./pages/Privacy"));
 const Terms = lazy(() => import("./pages/Terms"));
-const Refund = lazy(() => import("./pages/Refund"));
 const ComingSoon = lazy(() => import("./pages/ComingSoon"));
 const Maintenance = lazy(() => import("./pages/Maintenance"));
 const Notifications = lazy(() => import("./pages/Notifications"));
@@ -50,6 +49,7 @@ const Notifications = lazy(() => import("./pages/Notifications"));
 // Admin pages - lazy loaded
 const AdminRoute = lazy(() => import("./components/admin/AdminRoute"));
 const AdminLayout = lazy(() => import("./components/admin/AdminLayout"));
+const ProtectedRoute = lazy(() => import("./components/auth/ProtectedRoute"));
 const AdminOverview = lazy(() => import("./pages/admin/AdminOverview"));
 const UserManagement = lazy(() => import("./pages/admin/UserManagement"));
 const PropertyManagement = lazy(() => import("./pages/admin/PropertyManagement"));
@@ -82,6 +82,17 @@ function AdminRouteWrapper({ children }) {
             <AdminRoute>
                 <AdminLayout>{children}</AdminLayout>
             </AdminRoute>
+        </Suspense>
+    );
+}
+
+// Protected route wrapper for authenticated users
+function ProtectedRouteWrapper({ children }) {
+    return (
+        <Suspense fallback={<PageLoader />}>
+            <ProtectedRoute>
+                {children}
+            </ProtectedRoute>
         </Suspense>
     );
 }
@@ -154,10 +165,8 @@ const App = () => {
                     <NavigationStateProvider>
                     <Suspense fallback={<PageLoader />}>
                         <Routes>
-                            {/* Critical routes - not lazy */}
+                            {/* Public routes */}
                             <Route path="/" element={<Index />} />
-                            
-                            {/* Lazy loaded routes */}
                             <Route path="/listings" element={<Listings />} />
                             <Route path="/rent-properties" element={<RentListings />} />
                             <Route path="/buy-properties" element={<BuyListings />} />
@@ -165,15 +174,9 @@ const App = () => {
                             <Route path="/buy/:slug" element={<BuyPropertyDetail />} />
                             <Route path="/properties/:slug" element={<Property />} />
                             <Route path="/property/:slug" element={<PropertyRedirect />} />
-                            <Route path="/post-property" element={<PostProperty />} />
                             <Route path="/search" element={<SearchResults />} />
                             <Route path="/login" element={<Login />} />
                             <Route path="/signup" element={<Signup />} />
-                            <Route path="/dashboard" element={<Dashboard />} />
-                            <Route path="/wishlist" element={<Wishlist />} />
-                            <Route path="/messages" element={<Messages />} />
-                            <Route path="/admin" element={<AdminRouteWrapper><AdminOverview /></AdminRouteWrapper>} />
-                            <Route path="/admin/monitoring" element={<AdminDashboard />} />
                             <Route path="/about" element={<About />} />
                             <Route path="/contact" element={<Contact />} />
                             <Route path="/faqs" element={<FAQs />} />
@@ -181,12 +184,19 @@ const App = () => {
                             <Route path="/blog/:slug" element={<BlogPost />} />
                             <Route path="/privacy-policy" element={<Privacy />} />
                             <Route path="/terms" element={<Terms />} />
-                            <Route path="/refund-policy" element={<Refund />} />
                             <Route path="/coming-soon" element={<ComingSoon />} />
                             <Route path="/maintenance" element={<Maintenance />} />
-                            <Route path="/notifications" element={<Notifications />} />
 
-                            {/* Admin routes */}
+                            {/* Protected routes - require authentication */}
+                            <Route path="/post-property" element={<ProtectedRouteWrapper><PostProperty /></ProtectedRouteWrapper>} />
+                            <Route path="/dashboard" element={<ProtectedRouteWrapper><Dashboard /></ProtectedRouteWrapper>} />
+                            <Route path="/wishlist" element={<ProtectedRouteWrapper><Wishlist /></ProtectedRouteWrapper>} />
+                            <Route path="/messages" element={<ProtectedRouteWrapper><Messages /></ProtectedRouteWrapper>} />
+                            <Route path="/notifications" element={<ProtectedRouteWrapper><Notifications /></ProtectedRouteWrapper>} />
+
+                            {/* Admin routes - require admin role */}
+                            <Route path="/admin" element={<AdminRouteWrapper><AdminOverview /></AdminRouteWrapper>} />
+                            <Route path="/admin/monitoring" element={<AdminRouteWrapper><AdminDashboard /></AdminRouteWrapper>} />
                             <Route path="/admin/overview" element={<AdminRouteWrapper><AdminOverview /></AdminRouteWrapper>} />
                             <Route path="/admin/users" element={<AdminRouteWrapper><UserManagement /></AdminRouteWrapper>} />
                             <Route path="/admin/properties" element={<AdminRouteWrapper><PropertyManagement /></AdminRouteWrapper>} />

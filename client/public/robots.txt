@@ -41,4 +41,4 @@ Disallow: /login
 Disallow: /signup
 
 # Sitemap location
-Sitemap: https://renters.com/sitemap.xml
+Sitemap: https://renters-production.up.railway.app/sitemap.xml

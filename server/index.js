@@ -1,6 +1,7 @@
 import "dotenv/config";
 import express from "express";
 import cors from "cors";
+import cookieParser from "cookie-parser";
 import http from "http";
 import path from "path";
 import { fileURLToPath } from "url";
@@ -9,8 +10,10 @@ import { createAuditMiddleware } from "./src/middleware/auditLogger.js";
 import {
     addRequestId,
     securityHeaders,
+    enforceHttps,
     errorHandler,
-    notFoundHandler
+    notFoundHandler,
+    createRateLimiter
 } from "./src/middleware/security.js";
 
 const __filename = fileURLToPath(import.meta.url);
@@ -22,10 +25,45 @@ export default async function createServer(devMode = false) {
     // Create http server for both dev and production to support Socket.IO
     const httpServer = http.createServer(app);
 
-    // Middleware
-    app.use(cors());
-    app.use(express.json());
-    app.use(express.urlencoded({ extended: true }));
+    // HTTPS enforcement in production
+    if (process.env.NODE_ENV === 'production') {
+        app.use(enforceHttps);
+    }
+
+    // Trust proxy for proper IP detection behind reverse proxies
+    app.set('trust proxy', 1);
+
+    // CORS configuration - restrict origins in production
+    const allowedOrigins = process.env.ALLOWED_ORIGINS
+        ? process.env.ALLOWED_ORIGINS.split(',').map(o => o.trim())
+        : (devMode ? ['http://localhost:8080', 'http://localhost:3000', 'http://127.0.0.1:8080'] : []);
+
+    app.use(cors({
+        origin: (origin, callback) => {
+            // Allow requests with no origin (mobile apps, curl, etc.) in dev mode
+            if (!origin && devMode) {
+                return callback(null, true);
+            }
+            // Check if origin is allowed
+            if (!origin || allowedOrigins.includes(origin) || allowedOrigins.includes('*')) {
+                callback(null, true);
+            } else {
+                callback(new Error('Not allowed by CORS'));
+            }
+        },
+        credentials: true, // Allow cookies
+        methods: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'OPTIONS'],
+        allowedHeaders: ['Content-Type', 'Authorization', 'X-Request-ID'],
+        exposedHeaders: ['X-Request-ID'],
+        maxAge: 86400 // Cache preflight for 24 hours
+    }));
+
+    // Cookie parser for httpOnly cookies (refresh tokens)
+    app.use(cookieParser());
+
+    // Body parsing with size limits
+    app.use(express.json({ limit: '10mb' }));
+    app.use(express.urlencoded({ extended: true, limit: '10mb' }));
 
     // Serve uploaded files (property images, etc.)
     app.use('/uploads', express.static(path.join(__dirname, 'uploads')));
@@ -35,6 +73,24 @@ export default async function createServer(devMode = false) {
     // Security middleware
     app.use(addRequestId);
     app.use(securityHeaders);
+
+    // Global rate limiting - 100 requests per 15 minutes per IP
+    const globalRateLimiter = createRateLimiter({
+        windowMs: 15 * 60 * 1000,
+        maxRequests: 100,
+        message: "Too many requests from this IP, please try again later"
+    });
+    app.use('/api/', globalRateLimiter);
+
+    // Stricter rate limiting for auth endpoints
+    const authRateLimiter = createRateLimiter({
+        windowMs: 15 * 60 * 1000,
+        maxRequests: 10,
+        message: "Too many authentication attempts, please try again later"
+    });
+    app.use('/api/auth/login', authRateLimiter);
+    app.use('/api/auth/register', authRateLimiter);
+    app.use('/api/verification/send-otp', authRateLimiter);
 
     // Security audit logging middleware
     app.use(createAuditMiddleware({
@@ -47,6 +103,8 @@ export default async function createServer(devMode = false) {
             '/api/verification/verify-otp',
             '/api/auth/login',
             '/api/auth/register',
+            '/api/auth/refresh',
+            '/api/auth/logout',
             '/api/privacy/export',
             '/api/privacy/delete-account',
             '/api/privacy/consent',

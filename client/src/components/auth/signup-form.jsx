@@ -5,7 +5,7 @@ import { Button } from "../ui/button";
 import { Link } from "react-router-dom";
 import { validatePasswordStrength } from "../../utils/passwordValidation";
 import PasswordStrengthIndicator from "../ui/password-strength-indicator";
-import { User, Mail, Phone, MapPin, Lock, CheckCircle, AlertCircle } from "lucide-react";
+import { User, Mail, Phone, MapPin, Lock, CheckCircle, AlertCircle, Shield } from "lucide-react";
 
 export default function SignupForm() {
     const [formData, setFormData] = useState({
@@ -16,7 +16,9 @@ export default function SignupForm() {
         userType: "buyer",
         password: "",
         confirmPassword: "",
-        agreeToTerms: false,
+        acceptTerms: false,
+        acceptPrivacyPolicy: false,
+        acceptDataProcessing: false,
     });
 
     const [errors, setErrors] = useState({});
@@ -48,10 +50,17 @@ export default function SignupForm() {
 
         if (!formData.userType) newErrors.userType = "Please select a user type";
 
+        // Enhanced password validation
         if (!formData.password) {
             newErrors.password = "Password is required";
-        } else if (formData.password.length < 6) {
-            newErrors.password = "Password must be at least 6 characters";
+        } else {
+            const passwordValidation = validatePasswordStrength(formData.password, {
+                name: formData.name,
+                email: formData.email
+            });
+            if (!passwordValidation.isValid) {
+                newErrors.password = passwordValidation.errors[0] || "Password does not meet requirements";
+            }
         }
 
         if (!formData.confirmPassword)
@@ -59,8 +68,15 @@ export default function SignupForm() {
         else if (formData.password !== formData.confirmPassword)
             newErrors.confirmPassword = "Passwords do not match";
 
-        if (!formData.agreeToTerms)
-            newErrors.agreeToTerms = "You must accept the terms";
+        // GDPR Consent validation - all required
+        if (!formData.acceptTerms)
+            newErrors.acceptTerms = "You must accept the Terms of Service";
+        
+        if (!formData.acceptPrivacyPolicy)
+            newErrors.acceptPrivacyPolicy = "You must accept the Privacy Policy";
+        
+        if (!formData.acceptDataProcessing)
+            newErrors.acceptDataProcessing = "You must consent to data processing";
 
         setErrors(newErrors);
         return Object.keys(newErrors).length === 0;
@@ -90,24 +106,36 @@ export default function SignupForm() {
             const res = await fetch("/api/auth/register", {
                 method: "POST",
                 headers: { "Content-Type": "application/json" },
+                credentials: 'include', // Include cookies for refresh token
                 body: JSON.stringify({
                     name: formData.name,
-                    email: formData.email,
+                    email: formData.email.toLowerCase().trim(),
                     phone: formData.phone,
                     address: formData.address,
                     userType: formData.userType,
                     password: formData.password,
+                    acceptTerms: formData.acceptTerms,
+                    acceptPrivacyPolicy: formData.acceptPrivacyPolicy,
                 }),
             });
 
             const data = await res.json();
 
             if (!res.ok) {
+                if (data.details) {
+                    // Handle validation errors from server
+                    const serverErrors = {};
+                    data.details.forEach(err => {
+                        serverErrors[err.field] = err.message;
+                    });
+                    setErrors(serverErrors);
+                }
                 setSubmitError(data.error || "Signup failed. Try again.");
             } else {
                 setSubmitSuccess(true);
-                localStorage.setItem("userId", data.user.id);
-                localStorage.setItem("token", data.token);
+                // Store only the access token - refresh token is in httpOnly cookie
+                localStorage.setItem("authToken", data.token);
+                localStorage.setItem("user", JSON.stringify(data.user));
 
                 setTimeout(() => {
                     window.location.href = "/dashboard";
@@ -326,28 +354,86 @@ export default function SignupForm() {
                         </div>
                     </div>
 
-                    {/* Terms */}
-                    <label htmlFor="signup-agreeToTerms" className="flex items-start gap-3 cursor-pointer select-none">
-                        <input
-                            id="signup-agreeToTerms"
-                            type="checkbox"
-                            name="agreeToTerms"
-                            checked={formData.agreeToTerms}
-                            onChange={handleChange}
-                            className={`mt-0.5 w-4 h-4 rounded border bg-background text-primary focus:ring-primary focus:ring-2 ${
-                                errors.agreeToTerms ? "border-destructive" : "border-border"
-                            }`}
-                        />
-                        <span className="text-sm text-muted-foreground">
-                            I agree to the{" "}
-                            <Link to="/terms" className="font-medium text-primary hover:underline">
-                                Terms and Conditions
-                            </Link>
-                        </span>
-                    </label>
-                    {errors.agreeToTerms && (
-                        <p className="text-xs text-destructive -mt-2">{errors.agreeToTerms}</p>
-                    )}
+                    {/* Consent Section - GDPR Compliance */}
+                    <div className="md:col-span-2 space-y-4 pt-4 border-t border-border">
+                        <div className="flex items-center gap-2 text-sm font-medium text-foreground">
+                            <Shield className="w-4 h-4 text-primary" />
+                            <span>Privacy & Consent</span>
+                        </div>
+                        
+                        {/* Terms of Service */}
+                        <label htmlFor="signup-acceptTerms" className="flex items-start gap-3 cursor-pointer select-none">
+                            <input
+                                id="signup-acceptTerms"
+                                type="checkbox"
+                                name="acceptTerms"
+                                checked={formData.acceptTerms}
+                                onChange={handleChange}
+                                className={`mt-0.5 w-4 h-4 rounded border bg-background text-primary focus:ring-primary focus:ring-2 ${
+                                    errors.acceptTerms ? "border-destructive" : "border-border"
+                                }`}
+                            />
+                            <span className="text-sm text-muted-foreground">
+                                I agree to the{" "}
+                                <Link to="/terms" className="font-medium text-primary hover:underline" target="_blank">
+                                    Terms of Service
+                                </Link>
+                                <span className="text-destructive ml-1">*</span>
+                            </span>
+                        </label>
+                        {errors.acceptTerms && (
+                            <p className="text-xs text-destructive ml-7">{errors.acceptTerms}</p>
+                        )}
+
+                        {/* Privacy Policy */}
+                        <label htmlFor="signup-acceptPrivacyPolicy" className="flex items-start gap-3 cursor-pointer select-none">
+                            <input
+                                id="signup-acceptPrivacyPolicy"
+                                type="checkbox"
+                                name="acceptPrivacyPolicy"
+                                checked={formData.acceptPrivacyPolicy}
+                                onChange={handleChange}
+                                className={`mt-0.5 w-4 h-4 rounded border bg-background text-primary focus:ring-primary focus:ring-2 ${
+                                    errors.acceptPrivacyPolicy ? "border-destructive" : "border-border"
+                                }`}
+                            />
+                            <span className="text-sm text-muted-foreground">
+                                I have read and accept the{" "}
+                                <Link to="/privacy-policy" className="font-medium text-primary hover:underline" target="_blank">
+                                    Privacy Policy
+                                </Link>
+                                <span className="text-destructive ml-1">*</span>
+                            </span>
+                        </label>
+                        {errors.acceptPrivacyPolicy && (
+                            <p className="text-xs text-destructive ml-7">{errors.acceptPrivacyPolicy}</p>
+                        )}
+
+                        {/* Data Processing Consent */}
+                        <label htmlFor="signup-acceptDataProcessing" className="flex items-start gap-3 cursor-pointer select-none">
+                            <input
+                                id="signup-acceptDataProcessing"
+                                type="checkbox"
+                                name="acceptDataProcessing"
+                                checked={formData.acceptDataProcessing}
+                                onChange={handleChange}
+                                className={`mt-0.5 w-4 h-4 rounded border bg-background text-primary focus:ring-primary focus:ring-2 ${
+                                    errors.acceptDataProcessing ? "border-destructive" : "border-border"
+                                }`}
+                            />
+                            <span className="text-sm text-muted-foreground">
+                                I consent to the processing of my personal data for account creation and service delivery
+                                <span className="text-destructive ml-1">*</span>
+                            </span>
+                        </label>
+                        {errors.acceptDataProcessing && (
+                            <p className="text-xs text-destructive ml-7">{errors.acceptDataProcessing}</p>
+                        )}
+
+                        <p className="text-xs text-muted-foreground ml-7">
+                            You can manage your privacy settings and withdraw consent at any time from your account dashboard.
+                        </p>
+                    </div>
 
                     {/* Submit */}
                     <Button

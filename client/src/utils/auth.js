@@ -10,12 +10,34 @@ import { disconnectSocket } from '../lib/socket';
 /**
  * Authentication Utility Functions
  * Centralized token management and validation
+ * 
+ * SECURITY NOTES:
+ * - Access tokens are stored in localStorage (short-lived, 15 min)
+ * - Refresh tokens are stored in httpOnly cookies (handled by browser)
+ * - Never store sensitive data like passwords in localStorage
  */
 
-// Storage keys
+// Storage keys - SECURITY: Only store non-sensitive data
 const STORAGE_KEYS = {
     TOKEN: 'authToken',
     USER: 'user',
+};
+
+// Sensitive fields that should never be stored in localStorage
+const SENSITIVE_FIELDS = ['password', 'passwordHash', 'refreshToken', 'otp'];
+
+/**
+ * Sanitize user object before storing - remove sensitive fields
+ * @param {object} user - User object
+ * @returns {object} - Sanitized user object
+ */
+const sanitizeUserForStorage = (user) => {
+    if (!user) return null;
+    const sanitized = { ...user };
+    SENSITIVE_FIELDS.forEach(field => {
+        delete sanitized[field];
+    });
+    return sanitized;
 };
 
 /**
@@ -37,22 +59,18 @@ export const isTokenExpired = (token) => {
         const currentTime = Date.now() / 1000; // Convert to seconds
         const isExpired = decoded.exp < currentTime;
 
-        // Log token validation result
+        // Log token validation result (without sensitive data)
         logTokenEvent('TOKEN_VALIDATION', {
             hasToken: true,
             isExpired,
-            expiresAt: decoded.exp,
-            currentTime,
-            timeUntilExpiry: decoded.exp - currentTime,
+            timeUntilExpiry: Math.round(decoded.exp - currentTime),
             result: isExpired ? 'expired' : 'valid'
         });
 
         return isExpired;
     } catch (error) {
-        // Log token decode error
+        // Log token decode error (without exposing token content)
         logAuthenticationError(error, AUTH_ERROR_CONTEXTS.TOKEN_VALIDATION, {
-            tokenLength: token.length,
-            tokenPrefix: token.substring(0, 10) + '...',
             decodeError: true
         });
 
@@ -68,7 +86,7 @@ export const getToken = () => {
     try {
         return localStorage.getItem(STORAGE_KEYS.TOKEN);
     } catch (error) {
-        console.error('Error getting token from localStorage:', error);
+        console.error('Error getting token from localStorage:', error.message);
         return null;
     }
 };
@@ -80,21 +98,10 @@ export const getToken = () => {
 export const setToken = (token) => {
     try {
         if (token) {
-            console.log('=== setToken() called ===');
-            console.log('Token to set:', token);
-            console.log('Storage key:', STORAGE_KEYS.TOKEN);
             localStorage.setItem(STORAGE_KEYS.TOKEN, token);
-            console.log('Token set in localStorage successfully');
-
-            // Verify it was set
-            const storedToken = localStorage.getItem(STORAGE_KEYS.TOKEN);
-            console.log('Verification - Token in localStorage:', storedToken);
-            console.log('Tokens match:', storedToken === token);
-        } else {
-            console.warn('⚠️ setToken() called with empty/null token');
         }
     } catch (error) {
-        console.error('Error setting token in localStorage:', error);
+        console.error('Error setting token in localStorage:', error.message);
     }
 };
 
@@ -105,7 +112,7 @@ export const removeToken = () => {
     try {
         localStorage.removeItem(STORAGE_KEYS.TOKEN);
     } catch (error) {
-        console.error('Error removing token from localStorage:', error);
+        console.error('Error removing token from localStorage:', error.message);
     }
 };
 
@@ -118,35 +125,24 @@ export const getUser = () => {
         const user = localStorage.getItem(STORAGE_KEYS.USER);
         return user ? JSON.parse(user) : null;
     } catch (error) {
-        console.error('Error getting user from localStorage:', error);
+        console.error('Error getting user from localStorage:', error.message);
         return null;
     }
 };
 
 /**
- * Set user data in localStorage
+ * Set user data in localStorage (sanitized)
  * @param {object} user - User data to store
  */
 export const setUser = (user) => {
     try {
         if (user) {
-            console.log('=== setUser() called ===');
-            console.log('User to set:', user);
-            console.log('Storage key:', STORAGE_KEYS.USER);
-
-            // Check if user object has a token field
-            if (user.token) {
-                console.log('⚠️ User object contains token field:', user.token);
-                console.log('This token should be saved separately in authToken');
-            }
-
-            localStorage.setItem(STORAGE_KEYS.USER, JSON.stringify(user));
-            console.log('User data set in localStorage successfully');
-        } else {
-            console.warn('⚠️ setUser() called with empty/null user');
+            // Sanitize user data before storing
+            const sanitizedUser = sanitizeUserForStorage(user);
+            localStorage.setItem(STORAGE_KEYS.USER, JSON.stringify(sanitizedUser));
         }
     } catch (error) {
-        console.error('Error setting user in localStorage:', error);
+        console.error('Error setting user in localStorage:', error.message);
     }
 };
 
@@ -157,7 +153,7 @@ export const removeUser = () => {
     try {
         localStorage.removeItem(STORAGE_KEYS.USER);
     } catch (error) {
-        console.error('Error removing user from localStorage:', error);
+        console.error('Error removing user from localStorage:', error.message);
     }
 };
 
@@ -167,7 +163,54 @@ export const removeUser = () => {
  */
 export const isAuthenticated = () => {
     const token = getToken();
-    return token && !isTokenExpired(token);
+    if (!token) return false;
+
+    // Check if token is expired
+    if (isTokenExpired(token)) {
+        // Try to refresh the token
+        refreshAccessToken().catch(() => {
+            // If refresh fails, clear auth
+            clearAuth();
+        });
+        return false;
+    }
+
+    return true;
+};
+
+/**
+ * Refresh the access token using the refresh token (stored in httpOnly cookie)
+ * @returns {Promise<string|null>} - New access token or null
+ */
+export const refreshAccessToken = async () => {
+    try {
+        const response = await fetch('/api/auth/refresh', {
+            method: 'POST',
+            credentials: 'include', // Include httpOnly cookies
+            headers: {
+                'Content-Type': 'application/json'
+            }
+        });
+
+        if (!response.ok) {
+            throw new Error('Token refresh failed');
+        }
+
+        const data = await response.json();
+
+        if (data.success && data.token) {
+            setToken(data.token);
+            logTokenEvent('TOKEN_REFRESH', { success: true });
+            return data.token;
+        }
+
+        throw new Error('Invalid refresh response');
+    } catch (error) {
+        logAuthenticationError(error, AUTH_ERROR_CONTEXTS.TOKEN_REFRESH, {
+            refreshFailed: true
+        });
+        return null;
+    }
 };
 
 /**
@@ -180,7 +223,7 @@ export const clearAuth = () => {
     removeToken();
     removeUser();
 
-    // Disconnect socket on auth cleanup (Requirement 4.2)
+    // Disconnect socket on auth cleanup
     disconnectSocket();
 
     // Log authentication cleanup
@@ -192,10 +235,21 @@ export const clearAuth = () => {
 };
 
 /**
- * Logout user - clear auth data and redirect to login
+ * Logout user - clear auth data, invalidate refresh token, and redirect
  * @param {function} navigate - React Router navigate function (required)
  */
-export const logout = (navigate) => {
+export const logout = async (navigate) => {
+    try {
+        // Call logout endpoint to invalidate refresh token
+        await fetch('/api/auth/logout', {
+            method: 'POST',
+            credentials: 'include'
+        });
+    } catch (error) {
+        // Continue with local logout even if server call fails
+        console.error('Logout API call failed:', error.message);
+    }
+
     // Log logout event
     logAuthenticationSuccess(AUTH_ERROR_CONTEXTS.LOGOUT, {
         hasNavigate: !!navigate,
@@ -206,28 +260,27 @@ export const logout = (navigate) => {
 
     if (navigate) {
         navigate('/login', { replace: true });
-    } else {
-        logAuthenticationError(
-            new Error('Navigate function not provided to logout'),
-            AUTH_ERROR_CONTEXTS.LOGOUT,
-            {
-                navigateProvided: false,
-                fallbackRequired: true
-            }
-        );
     }
 };
 
 /**
- * Decode token and get user info
+ * Decode token and get user info (without sensitive data)
  * @param {string} token - JWT token
  * @returns {object|null} - Decoded token payload or null
  */
 export const getTokenPayload = (token) => {
     try {
-        return token ? jwtDecode(token) : null;
+        if (!token) return null;
+        const decoded = jwtDecode(token);
+        // Return only safe fields
+        return {
+            sub: decoded.sub,
+            role: decoded.role,
+            exp: decoded.exp,
+            iat: decoded.iat
+        };
     } catch (error) {
-        console.error('Error decoding token:', error);
+        console.error('Error decoding token:', error.message);
         return null;
     }
 };
@@ -243,9 +296,9 @@ export const getTimeUntilExpiry = (token) => {
     try {
         const decoded = jwtDecode(token);
         const currentTime = Date.now() / 1000;
-        return decoded.exp - currentTime;
+        return Math.round(decoded.exp - currentTime);
     } catch (error) {
-        console.error('Error calculating time until expiry:', error);
+        console.error('Error calculating time until expiry:', error.message);
         return 0;
     }
 };
@@ -259,4 +312,21 @@ export const shouldRefreshToken = (token) => {
     const timeUntilExpiry = getTimeUntilExpiry(token);
     const REFRESH_THRESHOLD = 300; // 5 minutes in seconds
     return timeUntilExpiry > 0 && timeUntilExpiry < REFRESH_THRESHOLD;
+};
+
+/**
+ * Setup automatic token refresh
+ * Call this on app initialization
+ */
+export const setupTokenRefresh = () => {
+    // Check token every minute
+    const checkInterval = setInterval(async () => {
+        const token = getToken();
+        if (token && shouldRefreshToken(token)) {
+            await refreshAccessToken();
+        }
+    }, 60000); // Check every minute
+
+    // Return cleanup function
+    return () => clearInterval(checkInterval);
 };

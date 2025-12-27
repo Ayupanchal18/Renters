@@ -8,6 +8,14 @@ import { connectDB } from "../config/db.js";
  * Provides authentication, authorization, input validation, and error handling
  */
 
+/* ---------------------- SECURITY CONFIGURATION ---------------------- */
+const JWT_SECRET = process.env.JWT_SECRET;
+
+// Validate JWT_SECRET on startup
+if (!JWT_SECRET || JWT_SECRET.length < 32) {
+    console.error("❌ CRITICAL: JWT_SECRET must be set and at least 32 characters!");
+}
+
 /* ---------------------- AUTHENTICATION MIDDLEWARE ---------------------- */
 
 /**
@@ -19,13 +27,14 @@ export const authenticateToken = async (req, res, next) => {
         const authHeader = req.headers.authorization;
         const token = authHeader && authHeader.split(' ')[1]; // Bearer TOKEN
 
-        // For development mode, allow x-user-id header as fallback
-        if (!token && process.env.NODE_ENV === 'development') {
+        // For development mode only, allow x-user-id header as fallback
+        // SECURITY: This should NEVER be enabled in production
+        if (!token && process.env.NODE_ENV === 'development' && process.env.ALLOW_DEV_AUTH === 'true') {
             const userId = req.headers["x-user-id"];
             if (userId) {
                 await connectDB();
                 const user = await User.findById(userId).lean();
-                if (user) {
+                if (user && !user.isDeleted && !user.isBlocked) {
                     req.user = user;
                     return next();
                 }
@@ -40,8 +49,18 @@ export const authenticateToken = async (req, res, next) => {
             });
         }
 
+        // SECURITY: No fallback secret - JWT_SECRET must be configured
+        if (!JWT_SECRET) {
+            console.error("JWT_SECRET not configured - rejecting authentication");
+            return res.status(500).json({
+                success: false,
+                error: "Server configuration error",
+                message: "Authentication service unavailable"
+            });
+        }
+
         // Verify JWT token
-        const decoded = jwt.verify(token, process.env.JWT_SECRET || 'fallback-secret');
+        const decoded = jwt.verify(token, JWT_SECRET);
 
         // Get user from database
         await connectDB();
@@ -52,6 +71,23 @@ export const authenticateToken = async (req, res, next) => {
                 success: false,
                 error: "Invalid token",
                 message: "User not found"
+            });
+        }
+
+        // Check if user is deleted or blocked
+        if (user.isDeleted) {
+            return res.status(401).json({
+                success: false,
+                error: "Account deleted",
+                message: "This account has been deleted"
+            });
+        }
+
+        if (user.isBlocked) {
+            return res.status(403).json({
+                success: false,
+                error: "Account suspended",
+                message: "Your account has been suspended"
             });
         }
 
@@ -76,7 +112,7 @@ export const authenticateToken = async (req, res, next) => {
             });
         }
 
-        console.error('Authentication error:', error);
+        console.error('Authentication error:', error.message);
         return res.status(500).json({
             success: false,
             error: "Authentication error",
@@ -94,33 +130,32 @@ export const optionalAuth = async (req, res, next) => {
         const authHeader = req.headers.authorization;
         const token = authHeader && authHeader.split(' ')[1];
 
-        // For development mode, allow x-user-id header as fallback
-        if (!token && process.env.NODE_ENV === 'development') {
+        // For development mode only
+        if (!token && process.env.NODE_ENV === 'development' && process.env.ALLOW_DEV_AUTH === 'true') {
             const userId = req.headers["x-user-id"];
             if (userId) {
                 await connectDB();
                 const user = await User.findById(userId).lean();
-                if (user) {
+                if (user && !user.isDeleted && !user.isBlocked) {
                     req.user = user;
                 }
             }
-        } else if (token) {
+        } else if (token && JWT_SECRET) {
             try {
-                const decoded = jwt.verify(token, process.env.JWT_SECRET || 'fallback-secret');
+                const decoded = jwt.verify(token, JWT_SECRET);
                 await connectDB();
                 const user = await User.findById(decoded.sub).lean();
-                if (user) {
+                if (user && !user.isDeleted && !user.isBlocked) {
                     req.user = user;
                 }
             } catch (error) {
-                // Ignore token errors for optional auth
-                console.log('Optional auth token error:', error.message);
+                // Ignore token errors for optional auth - don't log sensitive info
             }
         }
 
         next();
     } catch (error) {
-        console.error('Optional auth error:', error);
+        console.error('Optional auth error:', error.message);
         next(); // Continue even if optional auth fails
     }
 };
@@ -504,6 +539,7 @@ export const addRequestId = (req, res, next) => {
 
 /**
  * Add security headers
+ * Implements OWASP security headers recommendations
  */
 export const securityHeaders = (req, res, next) => {
     // Prevent clickjacking
@@ -518,7 +554,15 @@ export const securityHeaders = (req, res, next) => {
     // Referrer policy
     res.setHeader('Referrer-Policy', 'strict-origin-when-cross-origin');
 
-    // Content Security Policy - more permissive for development
+    // HSTS - Enforce HTTPS in production
+    if (process.env.NODE_ENV === 'production') {
+        res.setHeader('Strict-Transport-Security', 'max-age=31536000; includeSubDomains; preload');
+    }
+
+    // Permissions Policy - restrict browser features
+    res.setHeader('Permissions-Policy', 'geolocation=(self), microphone=(), camera=()');
+
+    // Content Security Policy
     if (process.env.NODE_ENV === 'development') {
         res.setHeader('Content-Security-Policy',
             "default-src 'self'; " +
@@ -530,7 +574,7 @@ export const securityHeaders = (req, res, next) => {
             "frame-src 'self' https://maps.google.com https://www.google.com https://*.google.com https://www.openstreetmap.org https://*.openstreetmap.org;"
         );
     } else {
-        // Stricter CSP for production - include Google Maps and OpenStreetMap for map embeds
+        // Stricter CSP for production
         res.setHeader('Content-Security-Policy',
             "default-src 'self'; " +
             "script-src 'self' 'unsafe-inline'; " +
@@ -542,5 +586,55 @@ export const securityHeaders = (req, res, next) => {
         );
     }
 
+    next();
+};
+
+/**
+ * HTTPS Enforcement Middleware
+ * Redirects HTTP to HTTPS in production
+ */
+export const enforceHttps = (req, res, next) => {
+    if (process.env.NODE_ENV === 'production' &&
+        req.headers['x-forwarded-proto'] !== 'https' &&
+        !req.secure) {
+        return res.redirect(301, `https://${req.headers.host}${req.url}`);
+    }
+    next();
+};
+
+/**
+ * Sanitize user input to prevent XSS
+ * Basic sanitization - for complex cases use a library like DOMPurify
+ */
+export const sanitizeInput = (input) => {
+    if (typeof input !== 'string') return input;
+    return input
+        .replace(/</g, '&lt;')
+        .replace(/>/g, '&gt;')
+        .replace(/"/g, '&quot;')
+        .replace(/'/g, '&#x27;')
+        .replace(/\//g, '&#x2F;');
+};
+
+/**
+ * Input sanitization middleware
+ * Sanitizes common XSS vectors in request body
+ */
+export const sanitizeRequestBody = (req, res, next) => {
+    if (req.body && typeof req.body === 'object') {
+        const sanitizeObject = (obj) => {
+            for (const key in obj) {
+                if (typeof obj[key] === 'string') {
+                    // Don't sanitize password fields
+                    if (!key.toLowerCase().includes('password')) {
+                        obj[key] = sanitizeInput(obj[key]);
+                    }
+                } else if (typeof obj[key] === 'object' && obj[key] !== null) {
+                    sanitizeObject(obj[key]);
+                }
+            }
+        };
+        sanitizeObject(req.body);
+    }
     next();
 };
