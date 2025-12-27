@@ -189,8 +189,12 @@ router.get("/", async (req, res) => {
         const skip = (page - 1) * limit;
 
         // Base filter: only rent properties that are active and not deleted
+        // Include properties without listingType for backward compatibility (legacy data)
         const filter = {
-            listingType: LISTING_TYPES.RENT,
+            $or: [
+                { listingType: LISTING_TYPES.RENT },
+                { listingType: { $exists: false } }
+            ],
             isDeleted: false,
             status: "active"
         };
@@ -272,7 +276,10 @@ router.get("/:identifier", async (req, res) => {
         if (mongoose.Types.ObjectId.isValid(identifier)) {
             property = await Property.findOne({
                 _id: identifier,
-                listingType: LISTING_TYPES.RENT,
+                $or: [
+                    { listingType: LISTING_TYPES.RENT },
+                    { listingType: { $exists: false } }
+                ],
                 isDeleted: false,
                 status: "active"
             }).lean();
@@ -281,7 +288,10 @@ router.get("/:identifier", async (req, res) => {
         if (!property) {
             property = await Property.findOne({
                 slug: identifier,
-                listingType: LISTING_TYPES.RENT,
+                $or: [
+                    { listingType: LISTING_TYPES.RENT },
+                    { listingType: { $exists: false } }
+                ],
                 isDeleted: false,
                 status: "active"
             }).lean();
@@ -369,9 +379,12 @@ router.post("/search", async (req, res) => {
         const limitNum = Math.min(100, Number(limit));
         const skip = (pageNum - 1) * limitNum;
 
-        // Base match: only rent properties
+        // Base match: only rent properties (include legacy properties without listingType)
         const matchStage = {
-            listingType: LISTING_TYPES.RENT,
+            $or: [
+                { listingType: LISTING_TYPES.RENT },
+                { listingType: { $exists: false } }
+            ],
             isDeleted: false,
             status: "active"
         };

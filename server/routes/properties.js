@@ -201,10 +201,14 @@ router.get("/debug/status", async (req, res) => {
             { $group: { _id: "$status", count: { $sum: 1 } } }
         ]);
 
+        // Get database name being used
+        const dbName = mongoose.connection.db?.databaseName || 'unknown';
+
         res.json({
             success: true,
             database: {
                 connected: true,
+                name: dbName,
                 totalProperties,
                 activeProperties,
                 deletedProperties,
