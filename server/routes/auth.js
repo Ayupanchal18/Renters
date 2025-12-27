@@ -213,11 +213,14 @@ router.post("/login", (async (req, res) => {
         await connectDB();
         const data = loginSchema.parse(req.body);
 
+        console.log(`LOGIN ATTEMPT: email=${data.email ? '***@***' : 'none'}, phone=${data.phone ? '***' : 'none'}`);
+
         // Rate limiting check
         const identifier = data.email || data.phone || req.ip;
         const rateLimit = checkLoginRateLimit(identifier);
 
         if (!rateLimit.allowed) {
+            console.log(`LOGIN RATE LIMITED: ${identifier}`);
             if (typeof logAuthEvent === 'function') {
                 await logAuthEvent(null, 'login_rate_limited', false, { identifier: data.email ? 'email' : 'phone' }, req);
             }
@@ -237,6 +240,7 @@ router.post("/login", (async (req, res) => {
                 : null;
 
         if (!user) {
+            console.log(`LOGIN FAILED: User not found for ${data.email ? 'email' : 'phone'}`);
             recordLoginAttempt(identifier);
             // Use generic error to prevent user enumeration
             return res.status(401).json({
@@ -245,8 +249,11 @@ router.post("/login", (async (req, res) => {
             });
         }
 
+        console.log(`LOGIN: User found - ${user._id}, checking status...`);
+
         // Check if user is blocked
         if (user.isBlocked) {
+            console.log(`LOGIN BLOCKED: User ${user._id} is blocked`);
             if (typeof logAuthEvent === 'function') {
                 await logAuthEvent(user._id, 'login_blocked', false, { reason: user.blockedReason }, req);
             }
@@ -259,6 +266,7 @@ router.post("/login", (async (req, res) => {
 
         // Check if user is active
         if (user.isActive === false) {
+            console.log(`LOGIN INACTIVE: User ${user._id} is inactive`);
             return res.status(403).json({
                 success: false,
                 error: "Account inactive",
@@ -267,8 +275,20 @@ router.post("/login", (async (req, res) => {
         }
 
         // Compare password
+        const hasPasswordHash = !!user.passwordHash;
+        console.log(`LOGIN: Checking password, hasPasswordHash=${hasPasswordHash}`);
+
+        if (!user.passwordHash) {
+            console.log(`LOGIN FAILED: User ${user._id} has no password hash`);
+            return res.status(401).json({
+                success: false,
+                error: "Invalid credentials"
+            });
+        }
+
         const match = await bcrypt.compare(data.password, user.passwordHash);
         if (!match) {
+            console.log(`LOGIN FAILED: Password mismatch for user ${user._id}`);
             recordLoginAttempt(identifier);
             if (typeof logAuthEvent === 'function') {
                 await logAuthEvent(user._id, 'login_failed', false, { reason: 'invalid_password' }, req);
@@ -278,6 +298,8 @@ router.post("/login", (async (req, res) => {
                 error: "Invalid credentials"
             });
         }
+
+        console.log(`LOGIN SUCCESS: User ${user._id}`);
 
         // Clear rate limit on successful login
         clearLoginAttempts(identifier);

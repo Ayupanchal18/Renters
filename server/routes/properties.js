@@ -132,6 +132,8 @@ router.post("/", propertyUpload.array("photos", 10), async (req, res) => {
 // GET all properties with basic filtering
 router.get("/", async (req, res) => {
     try {
+        await connectDB();
+
         const page = Math.max(1, Number(req.query.page) || 1);
         const limit = Math.min(100, Number(req.query.limit) || 12);
         const skip = (page - 1) * limit;
@@ -173,11 +175,50 @@ router.get("/", async (req, res) => {
         }
 
         const [items, total] = await Promise.all([query.exec(), Property.countDocuments(filter)]);
+
+        console.log(`GET /properties: Found ${total} properties (filter: ${JSON.stringify(filter)})`);
+
         res.json({ items, total, page, pageSize: limit });
 
     } catch (err) {
         console.error("GET /properties error:", err);
         res.status(500).json({ error: "Server error", message: err.message });
+    }
+});
+
+// Debug endpoint to check database status
+router.get("/debug/status", async (req, res) => {
+    try {
+        await connectDB();
+
+        const totalProperties = await Property.countDocuments({});
+        const activeProperties = await Property.countDocuments({ isDeleted: false, status: "active" });
+        const deletedProperties = await Property.countDocuments({ isDeleted: true });
+        const inactiveProperties = await Property.countDocuments({ status: { $ne: "active" } });
+
+        // Get sample of statuses
+        const statusSample = await Property.aggregate([
+            { $group: { _id: "$status", count: { $sum: 1 } } }
+        ]);
+
+        res.json({
+            success: true,
+            database: {
+                connected: true,
+                totalProperties,
+                activeProperties,
+                deletedProperties,
+                inactiveProperties,
+                statusBreakdown: statusSample
+            }
+        });
+    } catch (err) {
+        console.error("Debug status error:", err);
+        res.status(500).json({
+            success: false,
+            error: err.message,
+            database: { connected: false }
+        });
     }
 });
 
