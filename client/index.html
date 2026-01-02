@@ -76,38 +76,40 @@
       min-height: 100vh
     }
 
-    /* Skeleton loader for initial paint */
-    .initial-loader {
+    /* Static splash screen */
+    .initial-splash {
       display: flex;
+      flex-direction: column;
       align-items: center;
       justify-content: center;
       min-height: 100vh;
       background: #fafafa
     }
 
-    .initial-loader .spinner {
-      width: 32px;
-      height: 32px;
-      border: 3px solid #e5e7eb;
-      border-top-color: #3b82f6;
-      border-radius: 50%;
-      animation: spin 0.8s linear infinite
+    .initial-splash .brand {
+      font-size: 2.5rem;
+      font-weight: 700;
+      color: #3b82f6;
+      letter-spacing: -0.02em
     }
 
-    @keyframes spin {
-      to {
-        transform: rotate(360deg)
-      }
+    .initial-splash .tagline {
+      margin-top: 0.5rem;
+      font-size: 0.875rem;
+      color: #6b7280
     }
 
     @media(prefers-color-scheme:dark) {
-      .initial-loader {
+      .initial-splash {
         background: #0a0a0a
       }
 
-      .initial-loader .spinner {
-        border-color: #374151;
-        border-top-color: #3b82f6
+      .initial-splash .brand {
+        color: #60a5fa
+      }
+
+      .initial-splash .tagline {
+        color: #9ca3af
       }
     }
   </style>
@@ -115,9 +117,10 @@
 
 <body>
   <div id="root">
-    <!-- Initial loader shown before React hydrates -->
-    <div class="initial-loader">
-      <div class="spinner"></div>
+    <!-- Static splash shown before React hydrates -->
+    <div class="initial-splash">
+      <div class="brand">Renters</div>
+      <div class="tagline">Find your perfect space</div>
     </div>
   </div>
 

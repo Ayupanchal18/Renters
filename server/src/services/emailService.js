@@ -42,19 +42,10 @@ class EmailService {
 
             this.transporter = createTransport(emailConfig);
 
-            // Verify connection configuration (async)
-            // Only switch out of test mode if verification succeeds
-            this.transporter.verify((error, success) => {
-                if (error) {
-                    console.error('SMTP verification failed, staying in test mode:', error.message);
-                    // Stay in test mode
-                } else {
-                    console.log('Email service SMTP verified - switching to live mode');
-                    this.testMode = false;
-                }
-            });
-
-            console.log('Email service initialized (SMTP verification pending...)');
+            // Don't verify on startup - it wastes email quota
+            // Verification will happen on first actual email send
+            this.testMode = false;
+            console.log('Email service initialized with SMTP config (will verify on first send)');
 
         } catch (error) {
             console.error('Failed to initialize SMTP, using test mode:', error.message);
