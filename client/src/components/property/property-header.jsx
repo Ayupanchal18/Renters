@@ -3,8 +3,6 @@
  * 
  * Displays property title, basic information, verification status, and action buttons.
  * Implements proper data validation and fallback handling for missing data.
- * 
- * Requirements: 1.1, 1.2, 8.2
  */
 
 

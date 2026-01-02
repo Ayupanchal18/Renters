@@ -1,6 +1,5 @@
 /**
  * Query optimization utilities for property searches
- * Requirements: 6.1, 6.4
  */
 
 import { Property } from "../../models/Property.js";

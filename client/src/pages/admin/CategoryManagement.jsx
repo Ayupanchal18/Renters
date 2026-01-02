@@ -45,9 +45,6 @@ import {
  * - Category CRUD operations
  * - Amenity CRUD operations
  * - Active/Inactive toggle
- * 
- * Requirements: 5.4 - Create property categories (Rent, Buy, Commercial, PG)
- * Requirements: 5.5 - Allow add, edit, and delete operations for amenities
  */
 
 const CATEGORIES_API = '/api/admin/categories';

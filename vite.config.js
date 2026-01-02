@@ -54,13 +54,10 @@ export default defineConfig({
   plugins: [
     react(),
     expressPlugin(),
-    // Force full reload for all page components to avoid HMR React context issues
     {
       name: 'force-full-reload',
       handleHotUpdate({ file, server }) {
-        // Force full reload for pages and hooks to prevent React context issues
         if (file.includes('/pages/') || file.includes('/hooks/') || file.includes('/components/')) {
-          console.log('[vite] Force full reload for:', file);
           server.ws.send({ type: 'full-reload' });
           return [];
         }

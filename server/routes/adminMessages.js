@@ -12,12 +12,6 @@ const router = Router();
  * 
  * Provides read-only access to conversations and messages for moderation purposes.
  * All access is logged for audit purposes.
- * 
- * Requirements: 9.1, 9.2, 9.3, 9.4
- * - 9.1: Return conversations with full message history
- * - 9.2: Provide read-only access without ability to send messages
- * - 9.3: Log access for audit purposes
- * - 9.4: Reject non-admin users with 403 status
  */
 
 /* ---------------------- VALIDATION SCHEMAS ---------------------- */
@@ -35,10 +29,6 @@ const conversationListQuerySchema = z.object({
 /**
  * GET /api/admin/messages/conversations
  * List all conversations with pagination for admin moderation
- * 
- * Requirements: 9.1 - Return conversations with full message history
- * Requirements: 9.2 - Read-only access (no send capability)
- * Requirements: 9.3 - Log access for audit purposes
  */
 router.get("/conversations", requireAdmin, async (req, res) => {
     try {
@@ -149,9 +139,6 @@ router.get("/conversations", requireAdmin, async (req, res) => {
 /**
  * GET /api/admin/messages/conversations/:id
  * Get a single conversation with all messages for admin moderation
- * 
- * Requirements: 9.1 - Return conversation with full message history
- * Requirements: 9.3 - Log access for audit purposes
  */
 router.get("/conversations/:id", requireAdmin, async (req, res) => {
     try {

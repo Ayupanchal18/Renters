@@ -19,9 +19,6 @@ import {
  * Displays key metrics for the admin dashboard including:
  * - Total users, owners, agents, and properties
  * - Active vs inactive listing counts
- * 
- * Requirements: 2.1 - Display total counts for users, owners, agents, and properties
- * Requirements: 2.2 - Show active versus inactive listing counts
  */
 
 const StatCard = ({ title, value, icon: Icon, trend, trendValue, description, variant = 'default' }) => {

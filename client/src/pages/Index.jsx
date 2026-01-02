@@ -50,7 +50,7 @@ export default function Home() {
     const [activeTestimonial, setActiveTestimonial] = useState(0);
     const [wishlistIds, setWishlistIds] = useState(new Set());
     const [testimonials, setTestimonials] = useState([]);
-    // Listing type context for rent vs buy - Requirements: 7.1, 7.4
+    // Listing type context for rent vs buy
     const [listingTypeContext, setListingTypeContext] = useState(LISTING_TYPES.RENT);
     const [errors, setErrors] = useState({
         location: "",
@@ -111,20 +111,20 @@ export default function Home() {
         }
         const searchPayload = convertToApiPayload(validation.normalized);
         
-        // Navigate to appropriate listing page based on listingType context - Requirements: 7.2, 7.3
+        // Navigate to appropriate listing page based on listingType context
         const targetRoute = listingTypeContext === LISTING_TYPES.BUY 
             ? "/buy-properties" 
             : "/rent-properties";
         navigate(targetRoute, { state: { searchData: searchPayload } });
     };
 
-    // Handle listing type toggle - Requirements: 7.1, 7.2, 7.3
+    // Handle listing type toggle
     const handleListingTypeChange = (type) => {
         setListingTypeContext(type);
         setSelectedPropertyType('all'); // Reset category filter when switching rent/buy
     };
 
-    // Navigate directly to listing page based on type - Requirements: 7.2, 7.3
+    // Navigate directly to listing page based on type
     const handleBrowseListings = (type) => {
         const targetRoute = type === LISTING_TYPES.BUY 
             ? "/buy-properties" 
@@ -343,7 +343,7 @@ export default function Home() {
                                 Your next home is just a search away.
                             </p>
 
-                            {/* Rent/Buy Toggle - Requirements: 7.1, 7.2, 7.3 */}
+                            {/* Rent/Buy Toggle */}
                             <div className="flex justify-center mb-4">
                                 <div className="relative inline-flex bg-card border border-border rounded-lg p-0.5 shadow-sm">
                                     {/* Sliding Background */}
@@ -394,7 +394,7 @@ export default function Home() {
                         {/* Search Card */}
                         <div className="max-w-5xl mx-auto relative z-30">
                             <div className="bg-card/80 backdrop-blur-xl rounded-2xl shadow-2xl border border-border/50 p-3 sm:p-6">
-                                {/* Listing Type Context Indicator - Requirements: 7.4 */}
+                                {/* Listing Type Context Indicator */}
                                 <div className="flex items-center justify-center gap-2 mb-3 pb-3 border-b border-border/50">
                                     <span className="text-xs text-muted-foreground">Searching for properties</span>
                                     <span className={`

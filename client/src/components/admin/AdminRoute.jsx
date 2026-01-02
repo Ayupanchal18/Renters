@@ -10,10 +10,6 @@ import { Loader2 } from 'lucide-react';
  * - Checking if user is authenticated
  * - Verifying user has admin role
  * - Redirecting non-admin users to home page
- * 
- * Requirements: 1.3 - WHEN a non-admin user attempts to access admin routes 
- *                     THEN the Admin_System SHALL return a 403 Forbidden response
- *                     (client-side: redirect to home page)
  */
 const AdminRoute = ({ children }) => {
   const [isLoading, setIsLoading] = useState(true);

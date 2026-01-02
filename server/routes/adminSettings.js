@@ -9,13 +9,6 @@ const router = Router();
 
 /**
  * Admin System Settings Routes
- * 
- * Requirements: 9.1, 9.2, 9.3, 9.4, 9.5
- * - 9.1: Update app settings and apply configuration changes
- * - 9.2: Toggle features across the application
- * - 9.3: Enable maintenance mode for non-admin users
- * - 9.4: View API keys with masked values and copy functionality
- * - 9.5: Update environment flags without requiring restart
  */
 
 /* ---------------------- VALIDATION SCHEMAS ---------------------- */
@@ -130,7 +123,6 @@ const validateSettingValue = (value, type) => {
 /**
  * GET /api/admin/settings
  * List all settings with pagination and filters
- * Requirements: 9.1 - Update app settings
  */
 router.get("/", requireAdmin, async (req, res) => {
     try {
@@ -225,7 +217,6 @@ router.get("/:key", requireAdmin, async (req, res) => {
 /**
  * POST /api/admin/settings
  * Create a new setting
- * Requirements: 9.1 - Update app settings
  */
 router.post("/", requireAdmin, async (req, res) => {
     try {
@@ -301,8 +292,6 @@ router.post("/", requireAdmin, async (req, res) => {
 /**
  * PUT /api/admin/settings/:key
  * Update a setting by key
- * Requirements: 9.1 - Update app settings and apply configuration changes
- * Requirements: 9.5 - Update environment flags without requiring restart
  */
 router.put("/:key", requireAdmin, async (req, res) => {
     try {
@@ -373,7 +362,6 @@ router.put("/:key", requireAdmin, async (req, res) => {
 /**
  * PUT /api/admin/settings
  * Bulk update multiple settings
- * Requirements: 9.1 - Update app settings and apply configuration changes
  */
 router.put("/", requireAdmin, async (req, res) => {
     try {
@@ -499,7 +487,6 @@ router.delete("/:key", requireAdmin, async (req, res) => {
 /**
  * GET /api/admin/settings/features
  * Get all feature flags
- * Requirements: 9.2 - Toggle features across the application
  */
 router.get("/features/list", requireAdmin, async (req, res) => {
     try {
@@ -527,7 +514,6 @@ router.get("/features/list", requireAdmin, async (req, res) => {
 /**
  * PUT /api/admin/settings/features/:key
  * Toggle a feature flag
- * Requirements: 9.2 - Toggle features across the application
  */
 router.put("/features/:key", requireAdmin, async (req, res) => {
     try {
@@ -617,7 +603,6 @@ router.put("/features/:key", requireAdmin, async (req, res) => {
 /**
  * GET /api/admin/settings/maintenance
  * Get maintenance mode status
- * Requirements: 9.3 - Enable maintenance mode
  */
 router.get("/maintenance/status", requireAdmin, async (req, res) => {
     try {
@@ -650,7 +635,6 @@ router.get("/maintenance/status", requireAdmin, async (req, res) => {
 /**
  * POST /api/admin/settings/maintenance
  * Toggle maintenance mode
- * Requirements: 9.3 - Enable maintenance mode for non-admin users
  */
 router.post("/maintenance", requireAdmin, async (req, res) => {
     try {
@@ -743,7 +727,6 @@ router.post("/maintenance", requireAdmin, async (req, res) => {
 /**
  * GET /api/admin/settings/api-keys
  * View API keys with masked values
- * Requirements: 9.4 - View API keys with masked values and copy functionality
  */
 router.get("/api-keys/list", requireAdmin, async (req, res) => {
     try {
@@ -778,7 +761,6 @@ router.get("/api-keys/list", requireAdmin, async (req, res) => {
 /**
  * GET /api/admin/settings/api-keys/:key/reveal
  * Reveal full API key value (for copy functionality)
- * Requirements: 9.4 - View API keys with masked values and copy functionality
  */
 router.get("/api-keys/:key/reveal", requireAdmin, async (req, res) => {
     try {
@@ -828,7 +810,6 @@ router.get("/api-keys/:key/reveal", requireAdmin, async (req, res) => {
 /**
  * POST /api/admin/settings/api-keys
  * Create a new API key setting
- * Requirements: 9.4 - View API keys
  */
 router.post("/api-keys", requireAdmin, async (req, res) => {
     try {

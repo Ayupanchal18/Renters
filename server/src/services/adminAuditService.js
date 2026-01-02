@@ -4,11 +4,6 @@ import { connectDB } from "../config/db.js";
 /**
  * Admin Audit Service
  * Handles audit log creation and retrieval for admin actions
- * 
- * Requirements: 11.1, 11.2, 11.3
- * - 11.1: Create audit log entry for any admin CRUD operation
- * - 11.2: Display logs with admin identity, action, timestamp, and affected resource
- * - 11.3: Support filtering by admin, action type, and date range
  */
 
 /* ---------------------- CONSTANTS ---------------------- */
@@ -68,8 +63,6 @@ const extractClientInfo = (req) => {
 
 /**
  * Create an audit log entry
- * 
- * Requirements: 11.1 - Create audit log entry with action details
  * 
  * @param {Object} params - Audit log parameters
  * @param {string} params.adminId - ID of the admin performing the action
@@ -147,8 +140,6 @@ export const createAuditLog = async ({
 /**
  * Get audit logs with pagination
  * 
- * Requirements: 11.2 - Display logs with admin identity, action, timestamp, and affected resource
- * 
  * @param {Object} options - Query options
  * @param {number} [options.page=1] - Page number
  * @param {number} [options.limit=20] - Items per page
@@ -214,8 +205,6 @@ export const getAuditLogs = async ({
 
 /**
  * Filter audit logs with various criteria
- * 
- * Requirements: 11.3 - Support filtering by admin, action type, and date range
  * 
  * @param {Object} filters - Filter criteria
  * @param {string} [filters.adminId] - Filter by admin ID
@@ -286,7 +275,7 @@ export const filterAuditLogs = async (filters = {}, options = {}) => {
             query.resourceId = resourceId;
         }
 
-        // Filter by date range (Requirements 11.3)
+        // Filter by date range
         if (startDate || endDate) {
             query.timestamp = {};
             if (startDate) {
@@ -509,8 +498,6 @@ export const getAuditStats = async ({ startDate, endDate } = {}) => {
 
 /**
  * Create audit log middleware for automatic logging
- * 
- * Requirements: 11.1 - Automatic audit log creation for admin actions
  * 
  * @param {string} action - Action type
  * @param {string} resourceType - Resource type

@@ -5,7 +5,6 @@ import { cn } from "../../lib/utils";
 
 /**
  * Premium Card Component with enhanced variants
- * Requirements: 7.3, 7.4, 7.5
  */
 const cardVariants = cva(
     // Base styles: soft rounded corners (8px/12px), 1px border, transition for hover effects

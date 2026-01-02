@@ -24,11 +24,6 @@ import {
  * - Key metrics (users, properties, etc.)
  * - Property distribution charts
  * - Recent activity feed
- * 
- * Requirements: 2.1 - Display total counts for users, owners, agents, and properties
- * Requirements: 2.2 - Show active versus inactive listing counts
- * Requirements: 2.3 - Display property distribution by city, category, and price range
- * Requirements: 2.4 - Show recent activity logs with timestamps
  */
 
 const API_BASE = '/api/admin/dashboard';

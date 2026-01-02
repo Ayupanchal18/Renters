@@ -5,7 +5,8 @@ const SecurityAuditLogSchema = new Schema(
     {
         userId: {
             type: String,
-            required: true,
+            required: false,
+            default: 'system',
             index: true
         },
         action: {
@@ -34,7 +35,24 @@ const SecurityAuditLogSchema = new Schema(
                 'api_request',
                 // Security monitoring actions
                 'security_alert_triggered',
-                'suspicious_activity_detected'
+                'suspicious_activity_detected',
+                'location_change_detected',
+                'multiple_ip_verification_attempts',
+                'rapid_requests_detected',
+                'security_measures_recommended',
+                // Authentication actions
+                'auth_register',
+                'auth_login_success',
+                'auth_login_failed',
+                'auth_login_blocked',
+                'auth_login_rate_limited',
+                'auth_logout',
+                // Admin notification actions
+                'admin_notification_processed',
+                'admin_notification_sent',
+                'admin_notification_failed',
+                'admin_alert_triggered',
+                'admin_escalation_triggered'
             ],
             required: true,
             index: true

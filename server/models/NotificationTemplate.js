@@ -4,8 +4,6 @@ const { Schema } = mongoose;
 /**
  * NotificationTemplate Model
  * Stores reusable notification templates for admin-sent notifications
- * 
- * Requirements: 7.3 - Configure notification templates for future use
  */
 const NotificationTemplateSchema = new Schema(
     {

@@ -7,7 +7,6 @@ const router = Router();
 /**
  * Sitemap Generator
  * Generates XML sitemap for SEO optimization
- * Requirements: 8.1, 8.2, 8.4
  */
 
 // Site configuration
@@ -77,7 +76,6 @@ function escapeXml(str) {
 /**
  * GET /sitemap.xml
  * Generate XML sitemap with static pages and all active property URLs
- * Requirements: 8.1, 8.2, 8.4
  */
 router.get("/", async (req, res) => {
     try {

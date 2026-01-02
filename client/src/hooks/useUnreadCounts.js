@@ -1,6 +1,5 @@
 /**
  * useUnreadCounts Hook - Manages unread counts for messages and notifications
- * Requirements: 7.1, 7.2, 7.3
  * 
  * Provides:
  * - Fetch initial unread counts on mount

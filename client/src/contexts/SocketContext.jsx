@@ -12,7 +12,6 @@ import { getToken, isAuthenticated } from '../utils/auth';
 
 /**
  * Socket Context for managing real-time connections
- * Requirements: 4.2, 4.5 - Authenticate connection and handle reconnection
  */
 
 const SocketContext = createContext(null);

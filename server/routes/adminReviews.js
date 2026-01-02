@@ -10,13 +10,6 @@ const router = Router();
 
 /**
  * Admin Review Moderation Routes
- * 
- * Requirements: 8.1, 8.2, 8.3, 8.4, 8.5
- * - 8.1: Return all reviews with pagination and filters
- * - 8.2: Approve review to make it publicly visible
- * - 8.3: Reject review and optionally notify the author
- * - 8.4: Delete abusive content and log the action
- * - 8.5: Block user for violations to prevent further review submissions
  */
 
 /* ---------------------- VALIDATION SCHEMAS ---------------------- */
@@ -100,8 +93,6 @@ const buildReviewQuery = (filters) => {
 /**
  * GET /api/admin/reviews
  * List all reviews with pagination and filters
- * 
- * Requirements: 8.1 - Return all reviews with pagination and filters
  */
 router.get("/", requireAdmin, async (req, res) => {
     try {
@@ -206,8 +197,6 @@ router.get("/:id", requireAdmin, async (req, res) => {
 /**
  * PATCH /api/admin/reviews/:id/approve
  * Approve a review to make it publicly visible
- * 
- * Requirements: 8.2 - Approve review to make it publicly visible
  */
 router.patch("/:id/approve", requireAdmin, async (req, res) => {
     try {
@@ -277,8 +266,6 @@ router.patch("/:id/approve", requireAdmin, async (req, res) => {
 /**
  * PATCH /api/admin/reviews/:id/reject
  * Reject a review and optionally notify the author
- * 
- * Requirements: 8.3 - Reject review and optionally notify the author
  */
 router.patch("/:id/reject", requireAdmin, async (req, res) => {
     try {
@@ -345,9 +332,8 @@ router.patch("/:id/reject", requireAdmin, async (req, res) => {
             req
         });
 
-        // TODO: Send notification to author if notifyAuthor is true
         if (notifyAuthor && review.userId) {
-            console.log(`[REVIEW REJECTION] Would notify user ${review.userId.email}: Review rejected - ${reason}`);
+            // Notification would be sent here
         }
 
         res.json({
@@ -370,8 +356,6 @@ router.patch("/:id/reject", requireAdmin, async (req, res) => {
 /**
  * DELETE /api/admin/reviews/:id
  * Delete abusive content and log the action
- * 
- * Requirements: 8.4 - Delete abusive content and log the action
  */
 router.delete("/:id", requireAdmin, async (req, res) => {
     try {
@@ -434,8 +418,6 @@ router.delete("/:id", requireAdmin, async (req, res) => {
 /**
  * POST /api/admin/reviews/:id/block-user
  * Block user for violations to prevent further review submissions
- * 
- * Requirements: 8.5 - Block user for violations to prevent further review submissions
  */
 router.post("/:id/block-user", requireAdmin, async (req, res) => {
     try {

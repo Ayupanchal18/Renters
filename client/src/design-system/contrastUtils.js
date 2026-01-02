@@ -4,7 +4,7 @@
  * Provides functions to compute WCAG contrast ratios and verify
  * accessibility compliance for text/background color pairs.
  * 
- * WCAG AA Requirements:
+ * WCAG AA Thresholds:
  * - Normal text: 4.5:1 minimum contrast ratio
  * - Large text (≥18px or ≥14px bold): 3:1 minimum contrast ratio
  */

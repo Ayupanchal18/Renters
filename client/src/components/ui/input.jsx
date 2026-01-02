@@ -8,8 +8,6 @@ import { cn } from "../../lib/utils";
  * - error: boolean - Whether the input is in an error state
  * - errorMessage: string - Error message to display (for aria-describedby)
  * - errorId: string - ID of the error message element (for aria-describedby)
- * 
- * Requirements: 5.1, 5.2, 5.5, 10.4
  */
 const Input = React.forwardRef(
     ({ className, type, error, errorMessage, errorId, ...props }, ref) => {
@@ -25,7 +23,7 @@ const Input = React.forwardRef(
                     "placeholder:text-muted-foreground",
                     // Premium focus styles with ring and 2px offset using primary color
                     "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/30 focus-visible:ring-offset-2 focus-visible:ring-offset-background",
-                    // Smooth transition on focus (Requirements: 5.1)
+                    // Smooth transition on focus
                     "transition-all duration-180 ease-smooth",
                     // Focus border enhancement
                     "focus-visible:border-primary",
@@ -35,12 +33,12 @@ const Input = React.forwardRef(
                     "md:text-sm",
                     // Default border (non-error state)
                     !error && "border-input",
-                    // Error state styling with shake animation (Requirements: 5.2)
+                    // Error state styling with shake animation
                     error && "border-destructive focus-visible:ring-destructive/30 focus-visible:border-destructive animate-shake",
                     className
                 )}
                 ref={ref}
-                // ARIA attributes for error states (Requirements: 5.5, 10.4)
+                // ARIA attributes for error states
                 aria-invalid={error ? "true" : undefined}
                 aria-describedby={error && errorId ? errorId : undefined}
                 {...props}

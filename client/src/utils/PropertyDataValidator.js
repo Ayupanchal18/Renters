@@ -1,15 +1,11 @@
 /**
  * Property Data Validator
  * 
- * **Feature: property-details-optimization, Task 1: Set up enhanced data handling and validation utilities**
- * 
  * Provides data validation and transformation for property information:
  * - Validates property data integrity
  * - Creates fallback data for missing information
  * - Transforms data for consistent display
  * - Handles error states gracefully
- * 
- * Requirements: 1.2, 4.5, 5.4, 8.5
  */
 export class PropertyDataValidator {
     constructor() {

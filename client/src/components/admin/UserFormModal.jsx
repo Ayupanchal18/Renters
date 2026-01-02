@@ -24,9 +24,6 @@ import { Loader2, AlertCircle } from 'lucide-react';
  * User Form Modal Component
  * 
  * Modal for creating and editing users
- * 
- * Requirements: 3.2 - Validate all required fields and create the account
- * Requirements: 3.3 - Update the user record and log the change
  */
 
 const API_BASE = '/api/admin/users';

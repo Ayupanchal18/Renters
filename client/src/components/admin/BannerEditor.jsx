@@ -32,9 +32,6 @@ import {
  * - Start/end dates for scheduling
  * - Display order
  * - Published status
- * 
- * Requirements: 6.1 - Update homepage banners
- * Requirements: 6.2 - Edit hero sections
  */
 
 const CONTENT_API = '/api/admin/content';

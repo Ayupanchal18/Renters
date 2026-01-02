@@ -12,12 +12,6 @@ const router = Router();
 
 /**
  * Admin Notification Management Routes
- * 
- * Requirements: 7.1, 7.2, 7.3, 7.4
- * - 7.1: Send system notification to specified users or all users
- * - 7.2: Broadcast message via selected channel (email, SMS, or push)
- * - 7.3: Configure notification templates for future use
- * - 7.4: View delivery logs with message status and timestamps
  */
 
 /* ---------------------- VALIDATION SCHEMAS ---------------------- */
@@ -107,8 +101,6 @@ const sendInAppNotification = async (userId, subject, message) => {
 /**
  * POST /api/admin/notifications/send
  * Send notification to specified users
- * 
- * Requirements: 7.1 - Send system notification to specified users
  */
 router.post("/send", requireAdmin, async (req, res) => {
     try {
@@ -255,8 +247,6 @@ router.post("/send", requireAdmin, async (req, res) => {
 /**
  * POST /api/admin/notifications/broadcast
  * Broadcast message to all users or filtered by role
- * 
- * Requirements: 7.2 - Broadcast message via selected channel
  */
 router.post("/broadcast", requireAdmin, async (req, res) => {
     try {
@@ -414,8 +404,6 @@ router.post("/broadcast", requireAdmin, async (req, res) => {
 /**
  * GET /api/admin/notifications/templates
  * List all notification templates
- * 
- * Requirements: 7.3 - Configure notification templates
  */
 router.get("/templates", requireAdmin, async (req, res) => {
     try {
@@ -463,8 +451,6 @@ router.get("/templates", requireAdmin, async (req, res) => {
 /**
  * POST /api/admin/notifications/templates
  * Create a new notification template
- * 
- * Requirements: 7.3 - Configure notification templates for future use
  */
 router.post("/templates", requireAdmin, async (req, res) => {
     try {
@@ -685,8 +671,6 @@ router.delete("/templates/:id", requireAdmin, async (req, res) => {
 /**
  * GET /api/admin/notifications/logs
  * View delivery logs with message status and timestamps
- * 
- * Requirements: 7.4 - View delivery logs with message status and timestamps
  */
 router.get("/logs", requireAdmin, async (req, res) => {
     try {

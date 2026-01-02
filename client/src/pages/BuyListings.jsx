@@ -16,7 +16,6 @@ import { SlidersHorizontal, X, Sparkles, Building2 } from "lucide-react";
 /**
  * BuyListings Page Component
  * Displays properties for sale with buy-specific filters
- * Requirements: 5.2, 5.4, 5.5, 5.6
  */
 export default function BuyListings() {
     const location = useLocation();

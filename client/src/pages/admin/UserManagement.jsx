@@ -33,9 +33,6 @@ import {
  * - Search and filter capabilities
  * - Create/Edit/Delete user actions
  * - Role and status management
- * 
- * Requirements: 3.1 - Return paginated results with search and filter capabilities
- * Requirements: 12.2 - Provide sorting, filtering, and pagination controls
  */
 
 const API_BASE = '/api/admin/users';

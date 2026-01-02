@@ -12,7 +12,6 @@ import {
     securityHeaders,
     enforceHttps,
     errorHandler,
-    notFoundHandler,
     createRateLimiter
 } from "./src/middleware/security.js";
 
@@ -200,7 +199,6 @@ export default async function createServer(devMode = false) {
         // -------------------------
         //   ADMIN ROUTES
         //   All admin routes are protected by requireAdmin middleware
-        //   Requirements: 1.2, 1.5 - Verify admin role and validate permissions
         // -------------------------
         app.use("/api/admin", (await safeImport("routes/admin.js")).default);
         app.use("/api/admin/users", (await safeImport("routes/adminUsers.js")).default);
@@ -229,7 +227,6 @@ export default async function createServer(devMode = false) {
         app.use("/api/properties", propertiesRouter);
 
         // SEO Routes - sitemap.xml for search engine crawlers
-        // Requirements: 8.1 - Generate XML sitemap
         app.use("/sitemap.xml", (await safeImport("routes/sitemap.js")).default);
 
     } catch (err) {

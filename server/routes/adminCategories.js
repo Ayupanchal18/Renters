@@ -11,10 +11,6 @@ const router = Router();
 
 /**
  * Admin Category and Amenity Management Routes
- * 
- * Requirements: 5.4, 5.5
- * - 5.4: Create property categories (Rent, Buy, Commercial, PG)
- * - 5.5: Allow add, edit, and delete operations for amenities
  */
 
 /* ---------------------- VALIDATION SCHEMAS ---------------------- */
@@ -146,8 +142,6 @@ router.get("/", requireAdmin, async (req, res) => {
 /**
  * POST /api/admin/categories
  * Create a new category
- * 
- * Requirements: 5.4 - Add property type (Rent, Buy, Commercial, PG)
  */
 router.post("/", requireAdmin, async (req, res) => {
     try {
@@ -432,8 +426,6 @@ router.delete("/:id", requireAdmin, async (req, res) => {
 /**
  * GET /api/admin/categories/amenities
  * List amenities with pagination and filters
- * 
- * Requirements: 5.5 - Manage amenities
  */
 router.get("/amenities/list", requireAdmin, async (req, res) => {
     try {
@@ -500,8 +492,6 @@ router.get("/amenities/list", requireAdmin, async (req, res) => {
 /**
  * POST /api/admin/categories/amenities
  * Create a new amenity
- * 
- * Requirements: 5.5 - Add amenities
  */
 router.post("/amenities", requireAdmin, async (req, res) => {
     try {
@@ -613,8 +603,6 @@ router.get("/amenities/:id", requireAdmin, async (req, res) => {
 /**
  * PUT /api/admin/categories/amenities/:id
  * Update amenity details
- * 
- * Requirements: 5.5 - Edit amenities
  */
 router.put("/amenities/:id", requireAdmin, async (req, res) => {
     try {
@@ -699,8 +687,6 @@ router.put("/amenities/:id", requireAdmin, async (req, res) => {
 /**
  * DELETE /api/admin/categories/amenities/:id
  * Delete an amenity
- * 
- * Requirements: 5.5 - Delete amenities
  */
 router.delete("/amenities/:id", requireAdmin, async (req, res) => {
     try {

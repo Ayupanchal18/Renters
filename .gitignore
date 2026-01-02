@@ -54,7 +54,7 @@ test-file-upload-integration.test.js
 # Verification summaries (temp docs)
 *-verification-summary.md
 
-# Kiro/Builder (IDE-specific)
+# IDE-specific
 .kiro/
 .builder/
 

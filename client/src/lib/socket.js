@@ -7,7 +7,6 @@ const MAX_RECONNECT_ATTEMPTS = 10;
 
 /**
  * Connect to Socket.IO server with JWT authentication
- * Requirements: 4.2, 4.5 - Authenticate connection and handle reconnection
  * @param {string} token - Optional JWT token (will use stored token if not provided)
  * @returns {Socket|null} Socket instance or null if not authenticated
  */

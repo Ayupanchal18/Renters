@@ -3,8 +3,6 @@
  * 
  * This file contains all SEO-related configuration values used across the application.
  * Update these values to customize SEO behavior for the Renters platform.
- * 
- * Requirements: 1.1, 1.2, 9.3, 9.4
  */
 
 const seoConfig = {
@@ -127,7 +125,6 @@ const seoConfig = {
 
 /**
  * Generate SEO meta title for a property based on listing type
- * Requirements: 9.3, 9.4
  * 
  * @param {Object} property - Property object
  * @param {string} property.listingType - 'rent' or 'buy'
@@ -175,7 +172,6 @@ export function generatePropertyMetaDescription(property) {
 
 /**
  * Generate canonical URL for a property based on listing type
- * Requirements: 9.1, 9.2
  * 
  * @param {Object} property - Property object
  * @returns {string} Canonical URL

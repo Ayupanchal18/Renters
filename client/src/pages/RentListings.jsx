@@ -16,7 +16,6 @@ import { SlidersHorizontal, X, Sparkles, Home, Key } from "lucide-react";
 /**
  * RentListings Page Component
  * Displays rental properties with rent-specific filters
- * Requirements: 5.1, 5.3, 5.5, 5.6
  */
 export default function RentListings() {
     const navigate = useNavigate();

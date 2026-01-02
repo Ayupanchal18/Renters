@@ -29,7 +29,6 @@ import { PropertyCard } from "../components/all_listing/property-card";
 /**
  * RentPropertyDetail Page Component
  * Displays detailed view of a rent property with rent-specific fields
- * Requirements: 6.1, 6.3, 6.5, 6.6
  */
 
 // Loading skeleton

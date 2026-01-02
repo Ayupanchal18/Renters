@@ -59,7 +59,6 @@ const paginationSchema = z.object({
 
 // =====================================================
 // MIDDLEWARE: Check if user is blocked
-// Requirement 10.5: Blocked users cannot send messages
 // =====================================================
 
 const checkBlockedUser = async (req, res, next) => {
@@ -86,7 +85,6 @@ const checkBlockedUser = async (req, res, next) => {
 /**
  * POST /conversations
  * Create or get an existing conversation between two users for a property
- * Requirements: 1.1, 1.2
  */
 router.post("/conversations",
     authenticateToken,
@@ -137,7 +135,6 @@ router.post("/conversations",
 /**
  * GET /conversations
  * Get all conversations for the authenticated user
- * Requirements: 3.1, 3.2
  */
 router.get("/conversations",
     authenticateToken,
@@ -177,7 +174,6 @@ router.get("/conversations",
 /**
  * GET /conversations/:id
  * Get a specific conversation with messages
- * Requirements: 3.2
  */
 router.get("/conversations/:id",
     authenticateToken,
@@ -252,7 +248,6 @@ router.get("/conversations/:id",
 /**
  * POST /conversations/:id/messages
  * Send a message in a conversation (with optional file attachment)
- * Requirements: 2.1, 5.1
  */
 router.post("/conversations/:id/messages",
     authenticateToken,
@@ -364,7 +359,6 @@ router.post("/conversations/:id/messages",
 /**
  * POST /conversations/:id/read
  * Mark all messages in a conversation as read
- * Requirements: 3.3, 3.4
  */
 router.post("/conversations/:id/read",
     authenticateToken,
@@ -405,7 +399,6 @@ router.post("/conversations/:id/read",
 /**
  * DELETE /messages/:id
  * Soft delete a message (only owner can delete)
- * Requirements: 8.1, 8.3
  */
 router.delete("/messages/:id",
     authenticateToken,
@@ -482,7 +475,6 @@ router.delete("/conversations/:id",
 /**
  * GET /unread-count
  * Get total unread message count for the authenticated user
- * Requirements: 7.1
  */
 router.get("/unread-count",
     authenticateToken,

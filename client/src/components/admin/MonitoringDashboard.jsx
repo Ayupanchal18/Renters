@@ -23,15 +23,11 @@ import {
 /**
  * OTP Delivery Monitoring Dashboard
  * 
- * **Feature: otp-delivery-reliability, Task 9: Add monitoring dashboard and administrative tools**
- * 
  * Provides comprehensive monitoring and administrative tools for OTP delivery system:
  * - Service health status and performance metrics display
  * - Configuration management and service control interfaces
  * - Real-time delivery monitoring and alerting
  * - Administrative controls for system management
- * 
- * Requirements: 8.5, 3.5
  */
 const MonitoringDashboard = () => {
   const [metrics, setMetrics] = useState(null);

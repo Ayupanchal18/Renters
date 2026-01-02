@@ -10,12 +10,6 @@ const router = Router();
 
 /**
  * Admin Location Management Routes
- * 
- * Requirements: 5.1, 5.2, 5.3, 5.6
- * - 5.1: Create locations (city, area, state)
- * - 5.2: Edit locations
- * - 5.3: Delete locations only if no properties reference them
- * - 5.6: Toggle location visibility
  */
 
 /* ---------------------- VALIDATION SCHEMAS ---------------------- */
@@ -89,7 +83,6 @@ const buildSearchQuery = (search, type, parentId, isVisible) => {
 
 /**
  * Check if location has properties referencing it
- * Requirements: 5.3 - Referential integrity check
  */
 const hasReferencingProperties = async (locationName) => {
     const count = await Property.countDocuments({
@@ -228,8 +221,6 @@ router.get("/tree", requireAdmin, async (req, res) => {
 /**
  * POST /api/admin/locations
  * Create a new location
- * 
- * Requirements: 5.1 - Add city, area, or state to the system
  */
 router.post("/", requireAdmin, async (req, res) => {
     try {
@@ -361,8 +352,6 @@ router.get("/:id", requireAdmin, async (req, res) => {
 /**
  * PUT /api/admin/locations/:id
  * Update location details
- * 
- * Requirements: 5.2 - Update the location record
  */
 router.put("/:id", requireAdmin, async (req, res) => {
     try {
@@ -469,8 +458,6 @@ router.put("/:id", requireAdmin, async (req, res) => {
 /**
  * DELETE /api/admin/locations/:id
  * Delete a location
- * 
- * Requirements: 5.3 - Remove location only if no properties reference it
  */
 router.delete("/:id", requireAdmin, async (req, res) => {
     try {
@@ -545,8 +532,6 @@ router.delete("/:id", requireAdmin, async (req, res) => {
 /**
  * PATCH /api/admin/locations/:id/visibility
  * Toggle location visibility
- * 
- * Requirements: 5.6 - Show or hide location in user-facing interfaces
  */
 router.patch("/:id/visibility", requireAdmin, async (req, res) => {
     try {

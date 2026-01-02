@@ -15,8 +15,6 @@ import { useNavigate } from 'react-router-dom';
  * - Responsive sidebar navigation (collapsible on mobile)
  * - Header with user info and actions
  * - Main content area
- * 
- * Requirements: 12.1 - Responsive layout for desktop and mobile
  */
 const AdminLayout = ({ children }) => {
   const [sidebarOpen, setSidebarOpen] = useState(false);

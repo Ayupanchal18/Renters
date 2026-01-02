@@ -1,6 +1,5 @@
 /**
  * Notification Service - handles notification API operations
- * Requirements: 6.1, 6.2, 6.3
  */
 
 import { getUser, getToken } from '../utils/auth';

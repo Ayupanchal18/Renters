@@ -1,8 +1,6 @@
 /**
  * Rent Properties Routes
  * Handles all rent-specific property endpoints
- * 
- * Requirements: 3.1, 3.2, 3.3, 3.7, 9.1
  */
 
 import { Router } from "express";
@@ -49,8 +47,6 @@ function makeListingNumber() {
 
 /**
  * Generate property URL path for rent properties
- * Requirement: 9.1 - Generate /rent/{slug} URLs for rent properties
- * 
  * @param {Object} property - Property object with slug
  * @returns {string} URL path in format /rent/{slug}
  */
@@ -75,54 +71,8 @@ function addUrlPathToProperty(property) {
 /* ---------------------- RENT ROUTES ---------------------- */
 
 /**
- * GET /api/properties/rent/debug
- * Debug endpoint to check rent properties status
- */
-router.get("/debug", async (req, res) => {
-    try {
-        const totalAll = await Property.countDocuments({});
-        const totalRent = await Property.countDocuments({ listingType: LISTING_TYPES.RENT });
-        const totalNoListingType = await Property.countDocuments({ listingType: { $exists: false } });
-        const totalActive = await Property.countDocuments({ status: "active", isDeleted: false });
-        const totalDeleted = await Property.countDocuments({ isDeleted: true });
-
-        // Check rent-eligible properties
-        const rentEligible = await Property.countDocuments({
-            $or: [
-                { listingType: LISTING_TYPES.RENT },
-                { listingType: { $exists: false } }
-            ],
-            isDeleted: false,
-            status: "active"
-        });
-
-        // Get status breakdown
-        const statusBreakdown = await Property.aggregate([
-            { $group: { _id: { status: "$status", isDeleted: "$isDeleted", listingType: "$listingType" }, count: { $sum: 1 } } }
-        ]);
-
-        res.json({
-            success: true,
-            debug: {
-                totalAll,
-                totalRent,
-                totalNoListingType,
-                totalActive,
-                totalDeleted,
-                rentEligible,
-                statusBreakdown
-            }
-        });
-    } catch (err) {
-        console.error("GET /properties/rent/debug error:", err);
-        res.status(500).json({ success: false, error: err.message });
-    }
-});
-
-/**
  * POST /api/properties/rent
  * Create a new rent property
- * Requirements: 3.1
  */
 router.post("/", propertyUpload.array("photos", 10), validatePropertyByListingType, async (req, res) => {
     try {
@@ -225,7 +175,6 @@ router.post("/", propertyUpload.array("photos", 10), validatePropertyByListingTy
 /**
  * GET /api/properties/rent
  * Get all rent properties with filtering
- * Requirements: 3.2, 3.7
  */
 router.get("/", async (req, res) => {
     try {
@@ -243,9 +192,6 @@ router.get("/", async (req, res) => {
             isDeleted: false,
             status: "active"
         };
-
-        // Debug: Log the filter being used
-        console.log("GET /api/properties/rent - Filter:", JSON.stringify(filter));
 
         // Apply optional filters
         if (req.query.city) filter.city = String(req.query.city);
@@ -290,9 +236,6 @@ router.get("/", async (req, res) => {
 
         const [items, total] = await Promise.all([query.exec(), Property.countDocuments(filter)]);
 
-        // Debug: Log results count
-        console.log(`GET /api/properties/rent - Found ${total} properties, returning ${items.length} items`);
-
         res.json({
             success: true,
             data: {
@@ -316,7 +259,6 @@ router.get("/", async (req, res) => {
 /**
  * GET /api/properties/rent/:identifier
  * Get a single rent property by ID or slug
- * Requirements: 3.3, 9.1
  */
 router.get("/:identifier", async (req, res) => {
     try {
@@ -374,7 +316,7 @@ router.get("/:identifier", async (req, res) => {
             });
         }
 
-        // Add URL path (Requirement 9.1)
+        // Add URL path
         const propertyWithUrl = addUrlPathToProperty(property);
 
         res.json({
@@ -395,7 +337,6 @@ router.get("/:identifier", async (req, res) => {
 /**
  * POST /api/properties/rent/search
  * Search rent properties with rent-specific filters
- * Requirements: 3.7
  */
 router.post("/search", async (req, res) => {
     try {

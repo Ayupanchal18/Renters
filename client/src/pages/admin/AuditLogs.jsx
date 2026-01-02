@@ -38,9 +38,6 @@ import {
  * - Paginated log table
  * - Filters by admin, action type, resource type, and date range
  * - Search functionality
- * 
- * Requirements: 11.2 - Display logs with admin identity, action, timestamp, and affected resource
- * Requirements: 11.3 - Support filtering by admin, action type, and date range
  */
 
 const API_BASE = '/api/admin/audit-logs';

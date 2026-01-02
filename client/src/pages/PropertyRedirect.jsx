@@ -7,7 +7,6 @@ import Navbar from '../components/Navbar';
  * PropertyRedirect Component
  * Handles legacy /property/:slug URLs by redirecting to the appropriate
  * /rent/:slug or /buy/:slug route based on the property's listingType
- * Requirements: 6.1, 6.2
  */
 
 function LoadingState() {

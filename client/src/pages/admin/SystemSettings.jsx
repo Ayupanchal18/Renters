@@ -53,8 +53,6 @@ import {
  * - Feature toggles
  * - Maintenance mode controls
  * - API keys management
- * 
- * Requirements: 9.1, 9.2, 9.3, 9.4
  */
 
 const API_BASE = '/api/admin/settings';

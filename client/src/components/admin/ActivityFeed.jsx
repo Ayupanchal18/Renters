@@ -19,8 +19,6 @@ import {
  * Activity Feed Component
  * 
  * Displays recent admin activity logs with timestamps
- * 
- * Requirements: 2.4 - Show recent activity logs with timestamps
  */
 
 const actionIcons = {

@@ -33,9 +33,6 @@ import {
  * - Rich content (HTML/Markdown)
  * - SEO metadata (title, description, keywords)
  * - Published status
- * 
- * Requirements: 6.3 - Manage static pages (About, Terms, Privacy)
- * Requirements: 6.5 - Update SEO metadata
  */
 
 const CONTENT_API = '/api/admin/content';

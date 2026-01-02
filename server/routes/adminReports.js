@@ -11,8 +11,6 @@ const router = Router();
 
 /**
  * Admin Reports & Export Routes
- * 
- * Requirements: 10.1, 10.2, 10.3, 10.4
  */
 
 /* ---------------------- VALIDATION SCHEMAS ---------------------- */
@@ -171,9 +169,6 @@ const formatPropertyForExport = (property, fields = null) => {
 /**
  * POST /api/admin/reports/users
  * Generate user report based on filters
- * 
- * Requirements: 10.1 - Compile user data based on selected filters
- * Requirements: 10.4 - Include only records within the specified date range
  */
 router.post("/users", requireAdmin, async (req, res) => {
     try {
@@ -295,9 +290,6 @@ router.post("/users", requireAdmin, async (req, res) => {
 /**
  * POST /api/admin/reports/properties
  * Generate property report based on filters
- * 
- * Requirements: 10.2 - Compile property data with date range support
- * Requirements: 10.4 - Include only records within the specified date range
  */
 router.post("/properties", requireAdmin, async (req, res) => {
     try {
@@ -444,8 +436,6 @@ router.post("/properties", requireAdmin, async (req, res) => {
 /**
  * GET /api/admin/reports/users/export
  * Export user report as CSV or JSON
- * 
- * Requirements: 10.3 - Generate CSV or Excel format files
  */
 router.get("/users/export", requireAdmin, async (req, res) => {
     try {
@@ -554,8 +544,6 @@ router.get("/users/export", requireAdmin, async (req, res) => {
 /**
  * GET /api/admin/reports/properties/export
  * Export property report as CSV or JSON
- * 
- * Requirements: 10.3 - Generate CSV or Excel format files
  */
 router.get("/properties/export", requireAdmin, async (req, res) => {
     try {
@@ -669,9 +657,6 @@ router.get("/properties/export", requireAdmin, async (req, res) => {
 /**
  * GET /api/admin/reports/activity/export
  * Export audit log/activity report as CSV or JSON
- * 
- * Requirements: 10.3 - Generate CSV or Excel format files
- * Requirements: 10.4 - Include only records within the specified date range
  */
 router.get("/activity/export", requireAdmin, async (req, res) => {
     try {

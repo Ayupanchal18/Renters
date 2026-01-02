@@ -1,6 +1,5 @@
 /**
  * useMessages Hook - Manages messaging state and real-time updates
- * Requirements: 2.1, 3.1, 4.1
  * 
  * Provides:
  * - Conversations list state management

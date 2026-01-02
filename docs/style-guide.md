@@ -605,4 +605,3 @@ import { toast } from "@/components/ui/use-toast";
 ---
 
 *Last updated: December 2024*
-*Requirements: 13.1, 13.2, 13.3, 13.4*

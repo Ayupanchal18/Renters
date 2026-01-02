@@ -1,8 +1,6 @@
 /**
  * Property Validation Middleware
  * Validates property data based on listing type (rent vs buy)
- * 
- * Requirements: 2.3, 2.4, 2.5, 2.6
  */
 
 import { LISTING_TYPES } from '../../../shared/propertyTypes.js';
@@ -56,12 +54,6 @@ const getPresentFields = (body, fieldList) => {
  * Ensures rent properties have rent fields and reject buy fields,
  * and buy properties have buy fields and reject rent fields.
  * 
- * Requirements:
- * - 2.3: WHEN property_type is "rent", reject requests containing selling_price or price_per_sqft
- * - 2.4: WHEN property_type is "buy", reject requests containing monthly_rent or security_deposit
- * - 2.5: Make rent-specific fields required only when property_type is "rent"
- * - 2.6: Make buy-specific fields required only when property_type is "buy"
- * 
  * @param {Object} req - Express request object
  * @param {Object} res - Express response object
  * @param {Function} next - Express next function
@@ -104,8 +96,6 @@ export const validatePropertyByListingType = (req, res, next) => {
 /**
  * Validate Rent Property
  * Ensures rent properties have required rent fields and no buy fields
- * 
- * Requirements: 2.3, 2.5
  * 
  * @param {Object} req - Express request object
  * @param {Object} res - Express response object
@@ -157,8 +147,6 @@ const validateRentProperty = (req, res, next) => {
 /**
  * Validate Buy Property
  * Ensures buy properties have required buy fields and no rent fields
- * 
- * Requirements: 2.4, 2.6
  * 
  * @param {Object} req - Express request object
  * @param {Object} res - Express response object

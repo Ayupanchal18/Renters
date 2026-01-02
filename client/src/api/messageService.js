@@ -1,8 +1,3 @@
-/**
- * Message Service - handles messaging API operations
- * Requirements: 2.1, 3.1, 3.3, 8.1
- */
-
 import { getUser, getToken } from '../utils/auth';
 
 /**

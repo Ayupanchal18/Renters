@@ -36,9 +36,6 @@ import { LISTING_TYPES, LISTING_TYPE_LABELS } from '@shared/propertyTypes';
  * - Search and filter capabilities
  * - Create/Edit/Delete property actions
  * - Status and featured management
- * 
- * Requirements: 4.1 - Return all properties regardless of owner with pagination
- * Requirements: 12.2 - Provide sorting, filtering, and pagination controls
  */
 
 const API_BASE = '/api/admin/properties';

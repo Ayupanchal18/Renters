@@ -4,8 +4,6 @@ const { Schema } = mongoose;
 /**
  * NotificationLog Model
  * Tracks all admin-sent notifications for delivery logs
- * 
- * Requirements: 7.4 - View delivery logs with message status and timestamps
  */
 const NotificationLogSchema = new Schema(
     {

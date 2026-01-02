@@ -1,15 +1,11 @@
 /**
  * Data Transformation Utils
  * 
- * **Feature: property-details-optimization, Task 1: Set up enhanced data handling and validation utilities**
- * 
  * Provides data transformation utilities for consistent property display:
  * - Formats currency values consistently
  * - Transforms property data for display
  * - Handles number parsing and formatting
  * - Creates display-ready data structures
- * 
- * Requirements: 1.2, 4.5, 5.4, 8.5
  */
 export class DataTransformationUtils {
     constructor() {

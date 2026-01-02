@@ -54,8 +54,6 @@ import {
  * - Send notification form
  * - Notification templates management
  * - Delivery logs view
- * 
- * Requirements: 7.1, 7.2, 7.3, 7.4
  */
 
 const API_BASE = '/api/admin/notifications';

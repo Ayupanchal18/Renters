@@ -1,6 +1,5 @@
 /**
  * Simple in-memory cache for search results and property data
- * Requirements: 6.1, 6.4
  */
 
 class PropertyCache {

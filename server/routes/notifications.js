@@ -26,14 +26,12 @@ const notificationsPaginationSchema = z.object({
 
 // =====================================================
 // NOTIFICATION LIST AND COUNT ROUTES
-// Requirements: 6.1, 7.2
 // =====================================================
 
 /**
  * GET /
  * Get user's notifications with pagination
  * Supports unreadOnly query param to filter for unread notifications
- * Requirements: 6.1
  */
 router.get("/",
     authenticateToken,
@@ -78,7 +76,6 @@ router.get("/",
 /**
  * GET /unread-count
  * Get the count of unread notifications for the authenticated user
- * Requirements: 7.2
  */
 router.get("/unread-count",
     authenticateToken,
@@ -115,7 +112,6 @@ router.get("/unread-count",
 /**
  * POST /:id/read
  * Mark a single notification as read
- * Requirements: 6.2
  */
 router.post("/:id/read",
     authenticateToken,
@@ -167,7 +163,6 @@ router.post("/:id/read",
 /**
  * POST /read-all
  * Mark all notifications as read for the authenticated user
- * Requirements: 6.3
  */
 router.post("/read-all",
     authenticateToken,

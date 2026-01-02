@@ -9,8 +9,6 @@ import { cn } from "../../lib/utils";
  * - Subtle shadow for depth
  * - Small arrow pointing to trigger
  * - Fade+grow animation on show
- * 
- * Requirements: 7.2
  */
 
 const TooltipProvider = TooltipPrimitive.Provider;

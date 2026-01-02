@@ -31,8 +31,6 @@ import {
  * User Table Component
  * 
  * Displays users in a sortable, paginated table with action buttons
- * 
- * Requirements: 12.2 - Provide sorting, filtering, and pagination controls
  */
 
 const ROLE_COLORS = {

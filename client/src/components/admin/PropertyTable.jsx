@@ -34,8 +34,6 @@ import { LISTING_TYPES, LISTING_TYPE_LABELS } from '@shared/propertyTypes';
  * Property Table Component
  * 
  * Displays properties in a sortable, paginated table with action buttons
- * 
- * Requirements: 12.2 - Provide sorting, filtering, and pagination controls
  */
 
 const CATEGORY_COLORS = {

@@ -1,12 +1,10 @@
 import { Router } from "express";
 import { Property } from "../models/Property.js";
 import { User } from "../models/User.js";
-import { Favorite } from "../models/Favorite.js";
 import mongoose from "mongoose";
 import { connectDB } from "../src/config/db.js";
 import { authenticateToken } from "../src/middleware/security.js";
 import { propertyUpload, uploadPropertyPhotos } from "../src/middleware/cloudinaryUpload.js";
-import { validatePropertyByListingType } from "../src/middleware/propertyValidation.js";
 import { LISTING_TYPES } from "../../shared/propertyTypes.js";
 
 const router = Router();
@@ -43,8 +41,6 @@ function makeListingNumber() {
 
 /**
  * Generate property URL path based on listing type
- * Requirements: 9.1, 9.2
- * 
  * @param {Object} property - Property object with listingType and slug
  * @returns {string} URL path in format /rent/{slug} or /buy/{slug}
  */
@@ -52,8 +48,6 @@ function generatePropertyUrlPath(property) {
     if (!property || !property.slug) return null;
 
     const listingType = property.listingType || LISTING_TYPES.RENT;
-    // Generate /rent/{slug} for rent properties (Requirement 9.1)
-    // Generate /buy/{slug} for buy properties (Requirement 9.2)
     return `/${listingType}/${property.slug}`;
 }
 
@@ -70,8 +64,119 @@ function addUrlPathToProperty(property) {
     };
 }
 
+// Create rent property
+router.post("/rent", propertyUpload.array("photos", 10), async (req, res) => {
+    try {
+        const userId = req.headers["x-user-id"];
+        if (!userId) return res.status(401).json({ error: "Unauthorized - provide x-user-id header (dev)" });
+
+        const user = await User.findById(userId).lean();
+        if (!user) return res.status(401).json({ error: "Invalid user id in x-user-id header" });
+
+        const body = req.body || {};
+
+        // Force listingType to "rent"
+        body.listingType = LISTING_TYPES.RENT;
+
+        const required = ["category", "title", "propertyType", "furnishing", "availableFrom", "city", "address", "monthlyRent"];
+        for (const r of required) {
+            if (body[r] === undefined || body[r] === null || body[r] === "") {
+                return res.status(400).json({ error: `Missing required field:${r}` });
+            }
+        }
+
+        const ownerName = body.ownerName || user.name;
+        const ownerPhone = body.ownerPhone || user.phone;
+        if (!ownerPhone) return res.status(400).json({ error: "ownerPhone missing and user has no phone" });
+
+        const baseSlug = slugify(`${body.title}-${body.city || ""}`.slice(0, 120));
+        const slug = await makeUniqueSlug(baseSlug);
+        const listingNumber = makeListingNumber();
+
+        const photoPaths = await uploadPropertyPhotos(req.files);
+
+        const doc = new Property({
+            ...body,
+            listingType: LISTING_TYPES.RENT,
+            photos: photoPaths,
+            ownerId: user._id,
+            ownerName,
+            ownerPhone,
+            ownerEmail: body.ownerEmail || user.email || "",
+            slug,
+            listingNumber,
+            location: body.location || (body.lat && body.lng ? { type: "Point", coordinates: [body.lng, body.lat] } : undefined),
+        });
+
+        await doc.save();
+        res.status(201).json(doc);
+    } catch (err) {
+        if (err.name === "ValidationError") {
+            const messages = Object.values(err.errors).map(e => e.message);
+            return res.status(400).json({ error: "Property validation failed", details: messages });
+        }
+        console.error(err);
+        res.status(500).json({ error: "Server error", message: err.message });
+    }
+});
+
+// Create buy property
+router.post("/buy", propertyUpload.array("photos", 10), async (req, res) => {
+    try {
+        const userId = req.headers["x-user-id"];
+        if (!userId) return res.status(401).json({ error: "Unauthorized - provide x-user-id header (dev)" });
+
+        const user = await User.findById(userId).lean();
+        if (!user) return res.status(401).json({ error: "Invalid user id in x-user-id header" });
+
+        const body = req.body || {};
+
+        // Force listingType to "buy"
+        body.listingType = LISTING_TYPES.BUY;
+
+        const required = ["category", "title", "propertyType", "furnishing", "availableFrom", "city", "address", "sellingPrice"];
+        for (const r of required) {
+            if (body[r] === undefined || body[r] === null || body[r] === "") {
+                return res.status(400).json({ error: `Missing required field:${r}` });
+            }
+        }
+
+        const ownerName = body.ownerName || user.name;
+        const ownerPhone = body.ownerPhone || user.phone;
+        if (!ownerPhone) return res.status(400).json({ error: "ownerPhone missing and user has no phone" });
+
+        const baseSlug = slugify(`${body.title}-${body.city || ""}`.slice(0, 120));
+        const slug = await makeUniqueSlug(baseSlug);
+        const listingNumber = makeListingNumber();
+
+        const photoPaths = await uploadPropertyPhotos(req.files);
+
+        const doc = new Property({
+            ...body,
+            listingType: LISTING_TYPES.BUY,
+            photos: photoPaths,
+            ownerId: user._id,
+            ownerName,
+            ownerPhone,
+            ownerEmail: body.ownerEmail || user.email || "",
+            slug,
+            listingNumber,
+            location: body.location || (body.lat && body.lng ? { type: "Point", coordinates: [body.lng, body.lat] } : undefined),
+        });
+
+        await doc.save();
+        res.status(201).json(doc);
+    } catch (err) {
+        if (err.name === "ValidationError") {
+            const messages = Object.values(err.errors).map(e => e.message);
+            return res.status(400).json({ error: "Property validation failed", details: messages });
+        }
+        console.error(err);
+        res.status(500).json({ error: "Server error", message: err.message });
+    }
+});
+
 // Create property (backward compatible - defaults to rent)
-// Requirements: 10.1 - Default listingType to "rent" for backward compatibility
 router.post("/", propertyUpload.array("photos", 10), async (req, res) => {
     try {
         const userId = req.headers["x-user-id"];
@@ -82,7 +187,7 @@ router.post("/", propertyUpload.array("photos", 10), async (req, res) => {
 
         const body = req.body || {};
 
-        // Default listingType to "rent" for backward compatibility (Requirement 10.1)
+        // Default listingType to "rent" for backward compatibility
         if (!body.listingType) {
             body.listingType = LISTING_TYPES.RENT;
         }
@@ -129,6 +234,656 @@ router.post("/", propertyUpload.array("photos", 10), async (req, res) => {
         res.status(500).json({ error: "Server error", message: err.message });
     }
 });
+// ==================== RENT PROPERTY ROUTES ====================
+
+// GET all rent properties with filtering
+router.get("/rent", async (req, res) => {
+    try {
+        await connectDB();
+
+        const page = Math.max(1, Number(req.query.page) || 1);
+        const limit = Math.min(100, Number(req.query.limit) || 12);
+        const skip = (page - 1) * limit;
+
+        // Include properties with listingType="rent" OR properties without listingType (backward compatibility)
+        const filter = {
+            isDeleted: false,
+            status: "active",
+            $or: [
+                { listingType: "rent" },
+                { listingType: { $exists: false } },
+                { listingType: null }
+            ]
+        };
+
+        if (req.query.city) filter.city = String(req.query.city);
+        if (req.query.category) filter.category = String(req.query.category);
+        if (req.query.propertyType) filter.propertyType = String(req.query.propertyType);
+        if (req.query.ownerId && mongoose.Types.ObjectId.isValid(req.query.ownerId)) {
+            filter.ownerId = req.query.ownerId;
+        }
+
+        if (req.query.minRent) filter.monthlyRent = { ...(filter.monthlyRent || {}), $gte: Number(req.query.minRent) };
+        if (req.query.maxRent) filter.monthlyRent = { ...(filter.monthlyRent || {}), $lte: Number(req.query.maxRent) };
+
+        if (req.query.bedrooms) filter.bedrooms = Number(req.query.bedrooms);
+        if (req.query.furnishing) filter.furnishing = String(req.query.furnishing);
+        if (req.query.preferredTenants) filter.preferredTenants = String(req.query.preferredTenants);
+
+        if (req.query.q) {
+            filter.$text = { $search: String(req.query.q) };
+        }
+
+        const sortParam = String(req.query.sort || "newest");
+        let mongoSort = { createdAt: -1 };
+        if (sortParam === "rent_low_to_high") mongoSort = { monthlyRent: 1, createdAt: -1 };
+        else if (sortParam === "rent_high_to_low") mongoSort = { monthlyRent: -1, createdAt: -1 };
+        else if (sortParam === "oldest") mongoSort = { createdAt: 1 };
+        else if (sortParam === "featured") mongoSort = { featured: -1, createdAt: -1 };
+
+        let query = Property.find(filter).sort(mongoSort).skip(skip).limit(limit).lean();
+
+        if (filter.$text) {
+            query = Property.find(filter, { score: { $meta: "textScore" } })
+                .sort({ score: { $meta: "textScore" }, ...mongoSort })
+                .skip(skip)
+                .limit(limit)
+                .lean();
+        }
+
+        const [items, total] = await Promise.all([query.exec(), Property.countDocuments(filter)]);
+
+        res.json({
+            success: true,
+            data: {
+                items,
+                total,
+                page,
+                pageSize: limit,
+                hasMore: page < Math.ceil(total / limit)
+            }
+        });
+
+    } catch (err) {
+        console.error("GET /properties/rent error:", err);
+        res.status(500).json({ success: false, error: "Server error", message: err.message });
+    }
+});
+
+// POST search rent properties
+router.post("/rent/search", async (req, res) => {
+    try {
+        const {
+            q = "",
+            query = "",
+            searchQuery = "",
+            location = "",
+            city = "",
+            category = "",
+            propertyType = "",
+            type = "",
+            page = 1,
+            limit = 12,
+            sort = "newest",
+            filters = {}
+        } = req.body;
+
+        const searchText = q || query || searchQuery || "";
+        const searchPropertyType = propertyType || type || filters.propertyType || "";
+
+        const safeFilters = filters || {};
+
+        const extractCity = (str) => {
+            if (!str) return "";
+            return str.split(",")[0].trim();
+        };
+
+        const searchLocation = extractCity(location || city || safeFilters.city || "");
+
+        const pageNum = Math.max(1, Number(page));
+        const limitNum = Math.min(100, Number(limit));
+        const skip = (pageNum - 1) * limitNum;
+
+        const matchStage = {
+            isDeleted: false,
+            status: "active",
+            // Include properties with listingType="rent" OR properties without listingType (backward compatibility)
+            $or: [
+                { listingType: "rent" },
+                { listingType: { $exists: false } },
+                { listingType: null }
+            ]
+        };
+
+        const andConditions = [];
+
+        if (searchText) {
+            const escapedQuery = String(searchText).replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+            const regex = new RegExp(escapedQuery, "i");
+
+            andConditions.push({
+                $or: [
+                    { title: regex },
+                    { description: regex },
+                    { category: regex },
+                    { propertyType: regex },
+                    { "address.city": regex },
+                    { city: regex }
+                ]
+            });
+        }
+
+        if (searchLocation) {
+            const locationRegex = new RegExp(searchLocation.replace(/[.*+?^${}()|[\]\\]/g, "\\$&"), "i");
+            andConditions.push({
+                $or: [
+                    { city: locationRegex },
+                    { "address.city": locationRegex },
+                    { address: locationRegex }
+                ]
+            });
+        }
+
+        if (searchPropertyType) {
+            const typeRegex = new RegExp(searchPropertyType.replace(/[.*+?^${}()|[\]\\]/g, "\\$&"), "i");
+            matchStage.propertyType = typeRegex;
+        }
+        if (category) {
+            const categoryRegex = new RegExp(category.replace(/[.*+?^${}()|[\]\\]/g, "\\$&"), "i");
+            matchStage.category = categoryRegex;
+        }
+
+        if (filters.priceRange) {
+            const priceFilter = {};
+            if (filters.priceRange.min !== undefined) {
+                priceFilter.$gte = Number(filters.priceRange.min);
+            }
+            if (filters.priceRange.max !== undefined && Number(filters.priceRange.max) > 0) {
+                priceFilter.$lte = Number(filters.priceRange.max);
+            }
+            if (Object.keys(priceFilter).length > 0) {
+                matchStage.monthlyRent = priceFilter;
+            }
+        }
+
+        if (safeFilters.bedrooms && Array.isArray(safeFilters.bedrooms) && safeFilters.bedrooms.length > 0) {
+            const bedroomConditions = safeFilters.bedrooms.map(bed => {
+                if (bed === "5+" || bed === 5) {
+                    return { bedrooms: { $gte: 5 } };
+                }
+                return { bedrooms: Number(bed) };
+            });
+            andConditions.push({ $or: bedroomConditions });
+        }
+
+        if (safeFilters.amenities && Array.isArray(safeFilters.amenities) && safeFilters.amenities.length > 0) {
+            matchStage.amenities = { $all: safeFilters.amenities };
+        }
+
+        if (safeFilters.furnishing && Array.isArray(safeFilters.furnishing) && safeFilters.furnishing.length > 0) {
+            matchStage.furnishing = { $in: safeFilters.furnishing };
+        }
+
+        if (safeFilters.preferredTenants) {
+            matchStage.preferredTenants = safeFilters.preferredTenants;
+        }
+
+        if (andConditions.length > 0) {
+            matchStage.$and = andConditions;
+        }
+
+        const pipeline = [];
+        pipeline.push({ $match: matchStage });
+
+        let sortStage = { createdAt: -1 };
+        switch (sort) {
+            case "rent_low_to_high":
+                sortStage = { monthlyRent: 1, createdAt: -1 };
+                break;
+            case "rent_high_to_low":
+                sortStage = { monthlyRent: -1, createdAt: -1 };
+                break;
+            case "oldest":
+                sortStage = { createdAt: 1 };
+                break;
+            default:
+                sortStage = { createdAt: -1 };
+        }
+
+        if (searchText) {
+            pipeline.push({
+                $addFields: {
+                    relevanceScore: {
+                        $add: [
+                            { $cond: [{ $regexMatch: { input: "$title", regex: searchText, options: "i" } }, 10, 0] },
+                            { $cond: [{ $regexMatch: { input: "$category", regex: searchText, options: "i" } }, 5, 0] },
+                            { $cond: [{ $regexMatch: { input: "$propertyType", regex: searchText, options: "i" } }, 3, 0] }
+                        ]
+                    }
+                }
+            });
+            if (sort === "newest" || sort === "relevance") {
+                sortStage = { relevanceScore: -1, createdAt: -1 };
+            }
+        }
+
+        pipeline.push({ $sort: sortStage });
+
+        pipeline.push({
+            $facet: {
+                metadata: [{ $count: "total" }],
+                data: [
+                    { $skip: skip },
+                    { $limit: limitNum }
+                ]
+            }
+        });
+
+        const result = await Property.aggregate(pipeline);
+
+        const data = result[0].data;
+        const total = result[0].metadata[0] ? result[0].metadata[0].total : 0;
+
+        return res.json({
+            success: true,
+            data: {
+                searchResultData: data,
+                message: "Search completed successfully"
+            },
+            pagination: {
+                total,
+                page: pageNum,
+                pageSize: limitNum,
+                totalPages: Math.ceil(total / limitNum)
+            }
+        });
+
+    } catch (err) {
+        console.error("Rent Search API Error:", err);
+        return res.status(500).json({
+            success: false,
+            error: "Internal Server Error",
+            message: err.message
+        });
+    }
+});
+
+// GET rent property by slug
+router.get("/rent/:slug", async (req, res) => {
+    try {
+        const { slug } = req.params;
+
+        let property;
+
+        // Include properties with listingType="rent" OR properties without listingType (backward compatibility)
+        const listingTypeFilter = {
+            $or: [
+                { listingType: "rent" },
+                { listingType: { $exists: false } },
+                { listingType: null }
+            ]
+        };
+
+        if (mongoose.Types.ObjectId.isValid(slug)) {
+            property = await Property.findOne({
+                _id: slug,
+                isDeleted: false,
+                status: "active",
+                ...listingTypeFilter
+            }).lean();
+        }
+
+        if (!property) {
+            property = await Property.findOne({
+                slug: slug,
+                isDeleted: false,
+                status: "active",
+                ...listingTypeFilter
+            }).lean();
+        }
+
+        if (!property) {
+            return res.status(404).json({
+                success: false,
+                error: "Property not found",
+                message: "The requested rent property could not be found"
+            });
+        }
+
+        const propertyWithUrl = addUrlPathToProperty(property);
+
+        res.json({
+            success: true,
+            data: propertyWithUrl
+        });
+
+    } catch (err) {
+        console.error("GET /properties/rent/:slug error:", err);
+        res.status(500).json({
+            success: false,
+            error: "Server error",
+            message: err.message
+        });
+    }
+});
+
+// ==================== BUY PROPERTY ROUTES ====================
+
+// GET all buy properties with filtering
+router.get("/buy", async (req, res) => {
+    try {
+        await connectDB();
+
+        const page = Math.max(1, Number(req.query.page) || 1);
+        const limit = Math.min(100, Number(req.query.limit) || 12);
+        const skip = (page - 1) * limit;
+
+        const filter = { isDeleted: false, status: "active", listingType: "buy" };
+
+        if (req.query.city) filter.city = String(req.query.city);
+        if (req.query.category) filter.category = String(req.query.category);
+        if (req.query.propertyType) filter.propertyType = String(req.query.propertyType);
+        if (req.query.ownerId && mongoose.Types.ObjectId.isValid(req.query.ownerId)) {
+            filter.ownerId = req.query.ownerId;
+        }
+
+        if (req.query.minPrice) filter.sellingPrice = { ...(filter.sellingPrice || {}), $gte: Number(req.query.minPrice) };
+        if (req.query.maxPrice) filter.sellingPrice = { ...(filter.sellingPrice || {}), $lte: Number(req.query.maxPrice) };
+
+        if (req.query.bedrooms) filter.bedrooms = Number(req.query.bedrooms);
+        if (req.query.furnishing) filter.furnishing = String(req.query.furnishing);
+        if (req.query.possessionStatus) filter.possessionStatus = String(req.query.possessionStatus);
+        if (req.query.loanAvailable !== undefined) filter.loanAvailable = req.query.loanAvailable === 'true';
+
+        if (req.query.q) {
+            filter.$text = { $search: String(req.query.q) };
+        }
+
+        const sortParam = String(req.query.sort || "newest");
+        let mongoSort = { createdAt: -1 };
+        if (sortParam === "price_low_to_high") mongoSort = { sellingPrice: 1, createdAt: -1 };
+        else if (sortParam === "price_high_to_low") mongoSort = { sellingPrice: -1, createdAt: -1 };
+        else if (sortParam === "oldest") mongoSort = { createdAt: 1 };
+        else if (sortParam === "featured") mongoSort = { featured: -1, createdAt: -1 };
+
+        let query = Property.find(filter).sort(mongoSort).skip(skip).limit(limit).lean();
+
+        if (filter.$text) {
+            query = Property.find(filter, { score: { $meta: "textScore" } })
+                .sort({ score: { $meta: "textScore" }, ...mongoSort })
+                .skip(skip)
+                .limit(limit)
+                .lean();
+        }
+
+        const [items, total] = await Promise.all([query.exec(), Property.countDocuments(filter)]);
+
+        res.json({
+            success: true,
+            data: {
+                items,
+                total,
+                page,
+                pageSize: limit,
+                hasMore: page < Math.ceil(total / limit)
+            }
+        });
+
+    } catch (err) {
+        console.error("GET /properties/buy error:", err);
+        res.status(500).json({ success: false, error: "Server error", message: err.message });
+    }
+});
+
+// POST search buy properties
+router.post("/buy/search", async (req, res) => {
+    try {
+        const {
+            q = "",
+            query = "",
+            searchQuery = "",
+            location = "",
+            city = "",
+            category = "",
+            propertyType = "",
+            type = "",
+            page = 1,
+            limit = 12,
+            sort = "newest",
+            filters = {}
+        } = req.body;
+
+        const searchText = q || query || searchQuery || "";
+        const searchPropertyType = propertyType || type || filters.propertyType || "";
+
+        const safeFilters = filters || {};
+
+        const extractCity = (str) => {
+            if (!str) return "";
+            return str.split(",")[0].trim();
+        };
+
+        const searchLocation = extractCity(location || city || safeFilters.city || "");
+
+        const pageNum = Math.max(1, Number(page));
+        const limitNum = Math.min(100, Number(limit));
+        const skip = (pageNum - 1) * limitNum;
+
+        const matchStage = {
+            isDeleted: false,
+            status: "active",
+            listingType: "buy"
+        };
+
+        const andConditions = [];
+
+        if (searchText) {
+            const escapedQuery = String(searchText).replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+            const regex = new RegExp(escapedQuery, "i");
+
+            andConditions.push({
+                $or: [
+                    { title: regex },
+                    { description: regex },
+                    { category: regex },
+                    { propertyType: regex },
+                    { "address.city": regex },
+                    { city: regex }
+                ]
+            });
+        }
+
+        if (searchLocation) {
+            const locationRegex = new RegExp(searchLocation.replace(/[.*+?^${}()|[\]\\]/g, "\\$&"), "i");
+            andConditions.push({
+                $or: [
+                    { city: locationRegex },
+                    { "address.city": locationRegex },
+                    { address: locationRegex }
+                ]
+            });
+        }
+
+        if (searchPropertyType) {
+            const typeRegex = new RegExp(searchPropertyType.replace(/[.*+?^${}()|[\]\\]/g, "\\$&"), "i");
+            matchStage.propertyType = typeRegex;
+        }
+        if (category) {
+            const categoryRegex = new RegExp(category.replace(/[.*+?^${}()|[\]\\]/g, "\\$&"), "i");
+            matchStage.category = categoryRegex;
+        }
+
+        if (filters.priceRange) {
+            const priceFilter = {};
+            if (filters.priceRange.min !== undefined) {
+                priceFilter.$gte = Number(filters.priceRange.min);
+            }
+            if (filters.priceRange.max !== undefined && Number(filters.priceRange.max) > 0) {
+                priceFilter.$lte = Number(filters.priceRange.max);
+            }
+            if (Object.keys(priceFilter).length > 0) {
+                matchStage.sellingPrice = priceFilter;
+            }
+        }
+
+        if (safeFilters.bedrooms && Array.isArray(safeFilters.bedrooms) && safeFilters.bedrooms.length > 0) {
+            const bedroomConditions = safeFilters.bedrooms.map(bed => {
+                if (bed === "5+" || bed === 5) {
+                    return { bedrooms: { $gte: 5 } };
+                }
+                return { bedrooms: Number(bed) };
+            });
+            andConditions.push({ $or: bedroomConditions });
+        }
+
+        if (safeFilters.amenities && Array.isArray(safeFilters.amenities) && safeFilters.amenities.length > 0) {
+            matchStage.amenities = { $all: safeFilters.amenities };
+        }
+
+        if (safeFilters.furnishing && Array.isArray(safeFilters.furnishing) && safeFilters.furnishing.length > 0) {
+            matchStage.furnishing = { $in: safeFilters.furnishing };
+        }
+
+        if (safeFilters.possessionStatus) {
+            matchStage.possessionStatus = safeFilters.possessionStatus;
+        }
+
+        if (safeFilters.loanAvailable !== undefined) {
+            matchStage.loanAvailable = safeFilters.loanAvailable;
+        }
+
+        if (andConditions.length > 0) {
+            matchStage.$and = andConditions;
+        }
+
+        const pipeline = [];
+        pipeline.push({ $match: matchStage });
+
+        let sortStage = { createdAt: -1 };
+        switch (sort) {
+            case "price_low_to_high":
+                sortStage = { sellingPrice: 1, createdAt: -1 };
+                break;
+            case "price_high_to_low":
+                sortStage = { sellingPrice: -1, createdAt: -1 };
+                break;
+            case "oldest":
+                sortStage = { createdAt: 1 };
+                break;
+            default:
+                sortStage = { createdAt: -1 };
+        }
+
+        if (searchText) {
+            pipeline.push({
+                $addFields: {
+                    relevanceScore: {
+                        $add: [
+                            { $cond: [{ $regexMatch: { input: "$title", regex: searchText, options: "i" } }, 10, 0] },
+                            { $cond: [{ $regexMatch: { input: "$category", regex: searchText, options: "i" } }, 5, 0] },
+                            { $cond: [{ $regexMatch: { input: "$propertyType", regex: searchText, options: "i" } }, 3, 0] }
+                        ]
+                    }
+                }
+            });
+            if (sort === "newest" || sort === "relevance") {
+                sortStage = { relevanceScore: -1, createdAt: -1 };
+            }
+        }
+
+        pipeline.push({ $sort: sortStage });
+
+        pipeline.push({
+            $facet: {
+                metadata: [{ $count: "total" }],
+                data: [
+                    { $skip: skip },
+                    { $limit: limitNum }
+                ]
+            }
+        });
+
+        const result = await Property.aggregate(pipeline);
+
+        const data = result[0].data;
+        const total = result[0].metadata[0] ? result[0].metadata[0].total : 0;
+
+        return res.json({
+            success: true,
+            data: {
+                searchResultData: data,
+                message: "Search completed successfully"
+            },
+            pagination: {
+                total,
+                page: pageNum,
+                pageSize: limitNum,
+                totalPages: Math.ceil(total / limitNum)
+            }
+        });
+
+    } catch (err) {
+        console.error("Buy Search API Error:", err);
+        return res.status(500).json({
+            success: false,
+            error: "Internal Server Error",
+            message: err.message
+        });
+    }
+});
+
+// GET buy property by slug
+router.get("/buy/:slug", async (req, res) => {
+    try {
+        const { slug } = req.params;
+
+        let property;
+
+        if (mongoose.Types.ObjectId.isValid(slug)) {
+            property = await Property.findOne({
+                _id: slug,
+                isDeleted: false,
+                status: "active",
+                listingType: "buy"
+            }).lean();
+        }
+
+        if (!property) {
+            property = await Property.findOne({
+                slug: slug,
+                isDeleted: false,
+                status: "active",
+                listingType: "buy"
+            }).lean();
+        }
+
+        if (!property) {
+            return res.status(404).json({
+                success: false,
+                error: "Property not found",
+                message: "The requested buy property could not be found"
+            });
+        }
+
+        const propertyWithUrl = addUrlPathToProperty(property);
+
+        res.json({
+            success: true,
+            data: propertyWithUrl
+        });
+
+    } catch (err) {
+        console.error("GET /properties/buy/:slug error:", err);
+        res.status(500).json({
+            success: false,
+            error: "Server error",
+            message: err.message
+        });
+    }
+});
+
+// ==================== GENERAL PROPERTY ROUTES ====================
+
 // GET all properties with basic filtering
 router.get("/", async (req, res) => {
     try {
@@ -176,53 +931,11 @@ router.get("/", async (req, res) => {
 
         const [items, total] = await Promise.all([query.exec(), Property.countDocuments(filter)]);
 
-        console.log(`GET /properties: Found ${total} properties (filter: ${JSON.stringify(filter)})`);
-
         res.json({ items, total, page, pageSize: limit });
 
     } catch (err) {
         console.error("GET /properties error:", err);
         res.status(500).json({ error: "Server error", message: err.message });
-    }
-});
-
-// Debug endpoint to check database status
-router.get("/debug/status", async (req, res) => {
-    try {
-        await connectDB();
-
-        const totalProperties = await Property.countDocuments({});
-        const activeProperties = await Property.countDocuments({ isDeleted: false, status: "active" });
-        const deletedProperties = await Property.countDocuments({ isDeleted: true });
-        const inactiveProperties = await Property.countDocuments({ status: { $ne: "active" } });
-
-        // Get sample of statuses
-        const statusSample = await Property.aggregate([
-            { $group: { _id: "$status", count: { $sum: 1 } } }
-        ]);
-
-        // Get database name being used
-        const dbName = mongoose.connection.db?.databaseName || 'unknown';
-
-        res.json({
-            success: true,
-            database: {
-                connected: true,
-                name: dbName,
-                totalProperties,
-                activeProperties,
-                deletedProperties,
-                inactiveProperties,
-                statusBreakdown: statusSample
-            }
-        });
-    } catch (err) {
-        console.error("Debug status error:", err);
-        res.status(500).json({
-            success: false,
-            error: err.message,
-            database: { connected: false }
-        });
     }
 });
 
@@ -247,7 +960,6 @@ router.post("/search", async (req, res) => {
         // 1. Sanitize Inputs
         const searchText = q || query || searchQuery || "";
         const searchPropertyType = propertyType || type || filters.propertyType || "";
-        const searchCategory = category || filters.category || "";
 
         // Ensure safe access to nested filter properties
         const safeFilters = filters || {};
@@ -435,10 +1147,6 @@ router.post("/search", async (req, res) => {
                 ]
             }
         });
-
-        // --- DEBUG LOGGING ---
-        // Uncomment the line below to see the exact query being sent to Mongo
-        console.log("Search Pipeline:", JSON.stringify(pipeline, null, 2));
 
         const result = await Property.aggregate(pipeline);
 
@@ -645,7 +1353,7 @@ router.get("/:identifier", async (req, res) => {
             });
         }
 
-        // Add URL path based on listing type (Requirements 9.1, 9.2)
+        // Add URL path based on listing type
         const propertyWithUrl = addUrlPathToProperty(property);
 
         res.json({
@@ -764,7 +1472,7 @@ router.post("/get-property", async (req, res) => {
             });
         }
 
-        // Add URL path based on listing type (Requirements 9.1, 9.2)
+        // Add URL path based on listing type
         const propertyWithUrl = addUrlPathToProperty(property);
 
         res.json({

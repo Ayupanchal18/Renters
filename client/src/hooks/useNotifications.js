@@ -1,6 +1,5 @@
 /**
  * useNotifications Hook - Manages notification state and real-time updates
- * Requirements: 5.4, 6.1, 7.2
  * 
  * Provides:
  * - Notifications list state management

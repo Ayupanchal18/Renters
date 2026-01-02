@@ -231,7 +231,6 @@ export function generatePropertySchema(property) {
 
 /**
  * Generates RealEstateListing schema specifically for rent properties
- * Requirements: 9.5
  * 
  * @param {Object} property - Rent property object from database
  * @returns {Object} JSON-LD RealEstateListing schema for rent property
@@ -393,7 +392,6 @@ export function generateRentPropertySchema(property) {
 
 /**
  * Generates RealEstateListing schema specifically for buy/sale properties
- * Requirements: 9.5
  * 
  * @param {Object} property - Buy property object from database
  * @returns {Object} JSON-LD RealEstateListing schema for buy property

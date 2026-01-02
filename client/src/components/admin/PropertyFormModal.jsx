@@ -24,9 +24,6 @@ import { Loader2, AlertCircle } from 'lucide-react';
  * Property Form Modal Component
  * 
  * Modal for creating and editing properties
- * 
- * Requirements: 4.2 - Validate required fields and create the listing
- * Requirements: 4.3 - Update the record and log the modification
  */
 
 const API_BASE = '/api/admin/properties';

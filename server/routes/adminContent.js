@@ -9,13 +9,6 @@ const router = Router();
 
 /**
  * Admin Content Management Routes (CMS)
- * 
- * Requirements: 6.1, 6.2, 6.3, 6.4, 6.5
- * - 6.1: Update homepage banners
- * - 6.2: Edit hero sections
- * - 6.3: Manage static pages (About, Terms, Privacy)
- * - 6.4: Create blog content
- * - 6.5: Update SEO metadata
  */
 
 /* ---------------------- VALIDATION SCHEMAS ---------------------- */
@@ -187,7 +180,6 @@ router.get("/", requireAdmin, async (req, res) => {
 /**
  * GET /api/admin/content/banners
  * List all banners
- * Requirements: 6.1 - Update homepage banners
  */
 router.get("/banners", requireAdmin, async (req, res) => {
     try {
@@ -240,7 +232,6 @@ router.get("/banners", requireAdmin, async (req, res) => {
 /**
  * POST /api/admin/content/banners
  * Create a new banner
- * Requirements: 6.1 - Update homepage banners
  */
 router.post("/banners", requireAdmin, async (req, res) => {
     try {
@@ -335,7 +326,6 @@ router.get("/banners/:id", requireAdmin, async (req, res) => {
 /**
  * PUT /api/admin/content/banners/:id
  * Update a banner
- * Requirements: 6.1 - Update homepage banners
  */
 router.put("/banners/:id", requireAdmin, async (req, res) => {
     try {
@@ -458,7 +448,6 @@ router.delete("/banners/:id", requireAdmin, async (req, res) => {
 /**
  * GET /api/admin/content/hero
  * List all hero sections
- * Requirements: 6.2 - Edit hero sections
  */
 router.get("/hero", requireAdmin, async (req, res) => {
     try {
@@ -511,7 +500,6 @@ router.get("/hero", requireAdmin, async (req, res) => {
 /**
  * POST /api/admin/content/hero
  * Create a new hero section
- * Requirements: 6.2 - Edit hero sections
  */
 router.post("/hero", requireAdmin, async (req, res) => {
     try {
@@ -605,7 +593,6 @@ router.get("/hero/:id", requireAdmin, async (req, res) => {
 /**
  * PUT /api/admin/content/hero/:id
  * Update a hero section
- * Requirements: 6.2 - Edit hero sections (update immediately)
  */
 router.put("/hero/:id", requireAdmin, async (req, res) => {
     try {
@@ -727,7 +714,6 @@ router.delete("/hero/:id", requireAdmin, async (req, res) => {
 /**
  * GET /api/admin/content/pages
  * List all static pages
- * Requirements: 6.3 - Manage static pages (About, Terms, Privacy)
  */
 router.get("/pages", requireAdmin, async (req, res) => {
     try {
@@ -780,7 +766,6 @@ router.get("/pages", requireAdmin, async (req, res) => {
 /**
  * POST /api/admin/content/pages
  * Create a new static page
- * Requirements: 6.3 - Manage static pages
  */
 router.post("/pages", requireAdmin, async (req, res) => {
     try {
@@ -874,7 +859,6 @@ router.get("/pages/:slug", requireAdmin, async (req, res) => {
 /**
  * PUT /api/admin/content/pages/:slug
  * Update a static page by slug
- * Requirements: 6.3 - Manage static pages (CRUD operations)
  */
 router.put("/pages/:slug", requireAdmin, async (req, res) => {
     try {
@@ -996,7 +980,6 @@ router.delete("/pages/:slug", requireAdmin, async (req, res) => {
 /**
  * GET /api/admin/content/blog
  * List all blog posts
- * Requirements: 6.4 - Create blog content
  */
 router.get("/blog", requireAdmin, async (req, res) => {
     try {
@@ -1049,7 +1032,6 @@ router.get("/blog", requireAdmin, async (req, res) => {
 /**
  * POST /api/admin/content/blog
  * Create a new blog post
- * Requirements: 6.4 - Create blog content with title, body, and metadata
  */
 router.post("/blog", requireAdmin, async (req, res) => {
     try {
@@ -1143,7 +1125,6 @@ router.get("/blog/:id", requireAdmin, async (req, res) => {
 /**
  * PUT /api/admin/content/blog/:id
  * Update a blog post
- * Requirements: 6.4 - Create blog content
  */
 router.put("/blog/:id", requireAdmin, async (req, res) => {
     try {
@@ -1265,7 +1246,6 @@ router.delete("/blog/:id", requireAdmin, async (req, res) => {
 /**
  * GET /api/admin/content/seo/:contentId
  * Get SEO metadata for a specific content item
- * Requirements: 6.5 - Update SEO metadata
  */
 router.get("/seo/:contentId", requireAdmin, async (req, res) => {
     try {
@@ -1310,7 +1290,6 @@ router.get("/seo/:contentId", requireAdmin, async (req, res) => {
 /**
  * PUT /api/admin/content/seo/:contentId
  * Update SEO metadata for a specific content item
- * Requirements: 6.5 - Update SEO metadata (title, description, keywords)
  */
 router.put("/seo/:contentId", requireAdmin, async (req, res) => {
     try {

@@ -41,8 +41,6 @@ import PageEditor from '../../components/admin/PageEditor';
  * - Banners (homepage banners)
  * - Pages (static pages like About, Terms, Privacy)
  * - SEO (metadata management)
- * 
- * Requirements: 6.1, 6.2, 6.3, 6.5
  */
 
 const CONTENT_API = '/api/admin/content';

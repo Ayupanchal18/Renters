@@ -25,8 +25,6 @@ import { Loader2, AlertCircle, Shield, ArrowRight } from 'lucide-react';
  * Role Change Modal Component
  * 
  * Modal for changing user roles with confirmation
- * 
- * Requirements: 3.5 - Update permissions immediately and log the role change
  */
 
 const API_BASE = '/api/admin/users';

@@ -1,8 +1,6 @@
 /**
  * Buy Properties Routes
  * Handles all buy-specific property endpoints
- * 
- * Requirements: 3.4, 3.5, 3.6, 3.8, 9.2
  */
 
 import { Router } from "express";
@@ -49,7 +47,6 @@ function makeListingNumber() {
 
 /**
  * Generate property URL path for buy properties
- * Requirement: 9.2 - Generate /buy/{slug} URLs for buy properties
  * 
  * @param {Object} property - Property object with slug
  * @returns {string} URL path in format /buy/{slug}
@@ -77,7 +74,6 @@ function addUrlPathToProperty(property) {
 /**
  * POST /api/properties/buy
  * Create a new buy property
- * Requirements: 3.4
  */
 router.post("/", propertyUpload.array("photos", 10), validatePropertyByListingType, async (req, res) => {
     try {
@@ -180,7 +176,6 @@ router.post("/", propertyUpload.array("photos", 10), validatePropertyByListingTy
 /**
  * GET /api/properties/buy
  * Get all buy properties with filtering
- * Requirements: 3.5, 3.8
  */
 router.get("/", async (req, res) => {
     try {
@@ -261,7 +256,6 @@ router.get("/", async (req, res) => {
 /**
  * GET /api/properties/buy/:identifier
  * Get a single buy property by ID or slug
- * Requirements: 3.6, 9.2
  */
 router.get("/:identifier", async (req, res) => {
     try {
@@ -313,7 +307,7 @@ router.get("/:identifier", async (req, res) => {
             });
         }
 
-        // Add URL path (Requirement 9.2)
+        // Add URL path
         const propertyWithUrl = addUrlPathToProperty(property);
 
         res.json({
@@ -334,7 +328,6 @@ router.get("/:identifier", async (req, res) => {
 /**
  * POST /api/properties/buy/search
  * Search buy properties with buy-specific filters
- * Requirements: 3.8
  */
 router.post("/search", async (req, res) => {
     try {

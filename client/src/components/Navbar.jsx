@@ -61,21 +61,19 @@ export default function Navbar({ variant = "default" }) {
     const [isAdmin, setIsAdmin] = useState(false);
     const [profileMenuOpen, setProfileMenuOpen] = useState(false);
     const [notificationDropdownOpen, setNotificationDropdownOpen] = useState(false);
-    // Listing type context for rent vs buy - Requirements: 7.5
+    // Listing type context for rent vs buy
     const [listingTypeContext, setListingTypeContext] = useState(LISTING_TYPES.RENT);
     const location = useLocation();
     const navigate = useNavigate();
     const notificationDropdownRef = useRef(null);
 
     // Use unread counts hook for real-time badge updates
-    // Requirements: 7.1, 7.2, 7.3
     const {
         messageCount,
         notificationCount
     } = useUnreadCounts({ autoConnect: isLoggedIn, autoFetch: isLoggedIn });
 
     // Use notifications hook for dropdown preview
-    // Requirements: 6.1, 6.5
     const {
         notifications,
         markAsRead,
@@ -93,7 +91,7 @@ export default function Navbar({ variant = "default" }) {
         setIsAdmin(user?.role === 'admin');
     }, [location.pathname]); // Re-check authentication when route changes
 
-    // Detect listing type context from URL - Requirements: 7.5
+    // Detect listing type context from URL
     useEffect(() => {
         const path = location.pathname;
         if (path.startsWith('/buy') || path.includes('buy-properties')) {
@@ -229,11 +227,11 @@ export default function Navbar({ variant = "default" }) {
                                                     : "text-foreground hover:text-primary hover:bg-muted"
                                         )}
                                     >
-                                        {/* Icon for Rent/Buy links - Requirements: 7.5 */}
+                                        {/* Icon for Rent/Buy links */}
                                         {link.listingType === LISTING_TYPES.RENT && <Key className="w-4 h-4 mr-1.5" />}
                                         {link.listingType === LISTING_TYPES.BUY && <HomeIcon className="w-4 h-4 mr-1.5" />}
                                         {link.label}
-                                        {/* Unread badge for messages - Requirements: 7.1, 7.3 */}
+                                        {/* Unread badge for messages */}
                                         {link.showBadge && link.badgeCount > 0 && (
                                             <span className="absolute -top-1 -right-1 h-5 w-5 flex items-center justify-center text-xs font-bold bg-destructive text-destructive-foreground rounded-full">
                                                 {link.badgeCount > 99 ? '99+' : link.badgeCount}
@@ -258,7 +256,7 @@ export default function Navbar({ variant = "default" }) {
                                                     : "text-foreground hover:text-primary hover:bg-muted"
                                         )}
                                     >
-                                        {/* Icon for Rent/Buy links - Requirements: 7.5 */}
+                                        {/* Icon for Rent/Buy links */}
                                         {link.listingType === LISTING_TYPES.RENT && <Key className="w-4 h-4 mr-1.5" />}
                                         {link.listingType === LISTING_TYPES.BUY && <HomeIcon className="w-4 h-4 mr-1.5" />}
                                         {link.label}
@@ -275,7 +273,7 @@ export default function Navbar({ variant = "default" }) {
 
                         {isLoggedIn ? (
                             <div className="flex items-center gap-2">
-                                {/* Notification Bell with Dropdown - Requirements: 6.1, 6.5, 7.2, 7.3 */}
+                                {/* Notification Bell with Dropdown */}
                                 <div className="relative" ref={notificationDropdownRef}>
                                     <Button
                                         variant="ghost"
@@ -292,7 +290,7 @@ export default function Navbar({ variant = "default" }) {
                                             "h-5 w-5",
                                             isGradientVariant ? "text-white" : "text-foreground"
                                         )} />
-                                        {/* Unread notification badge - Requirements: 7.2, 7.3 */}
+                                        {/* Unread notification badge */}
                                         {notificationCount > 0 && (
                                             <span className="absolute -top-1 -right-1 h-5 w-5 flex items-center justify-center text-xs font-bold bg-destructive text-destructive-foreground rounded-full">
                                                 {notificationCount > 99 ? '99+' : notificationCount}
@@ -300,7 +298,7 @@ export default function Navbar({ variant = "default" }) {
                                         )}
                                     </Button>
 
-                                    {/* Notification Dropdown - Requirements: 6.1, 6.5 */}
+                                    {/* Notification Dropdown */}
                                     {notificationDropdownOpen && (
                                         <div className="absolute right-0 mt-2 w-80 bg-popover rounded-xl shadow-lg border border-border py-2 z-50 max-h-96 overflow-hidden">
                                             {/* Header */}
@@ -552,7 +550,7 @@ export default function Navbar({ variant = "default" }) {
                                                         : "text-foreground hover:bg-muted"
                                             )}
                                         >
-                                            {/* Icon for Rent/Buy links - Requirements: 7.5 */}
+                                            {/* Icon for Rent/Buy links */}
                                             {link.listingType === LISTING_TYPES.RENT && <Key className="w-4 h-4" />}
                                             {link.listingType === LISTING_TYPES.BUY && <HomeIcon className="w-4 h-4" />}
                                             {link.label}
@@ -584,7 +582,7 @@ export default function Navbar({ variant = "default" }) {
                                                         : "text-foreground hover:bg-muted"
                                             )}
                                         >
-                                            {/* Icon for Rent/Buy links - Requirements: 7.5 */}
+                                            {/* Icon for Rent/Buy links */}
                                             {link.listingType === LISTING_TYPES.RENT && <Key className="w-4 h-4" />}
                                             {link.listingType === LISTING_TYPES.BUY && <HomeIcon className="w-4 h-4" />}
                                             {link.label}

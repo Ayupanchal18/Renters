@@ -9,7 +9,6 @@ import { POSSESSION_STATUS_LABELS } from "@shared/propertyTypes";
 /**
  * Buy-specific filter sidebar component
  * Displays filters relevant to properties for sale: city, price range, possession status, loan available
- * Requirements: 5.4
  */
 export function BuyFilterSidebar({ filters, onFilterChange, hideHeader = false }) {
     const [expandedSections, setExpandedSections] = useState({

@@ -1,6 +1,5 @@
 /**
  * Notifications Page Component
- * Requirements: 6.1, 6.4
  * 
  * Displays list of notifications sorted by date with:
  * - Visual distinction for read vs unread (background color, badge)

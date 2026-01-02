@@ -1,6 +1,5 @@
 # Robots.txt for Renters Platform
 # SEO & Core Web Vitals Optimization
-# Requirements: 9.2, 9.3, 9.4
 
 # Allow all major search engine bots to crawl public pages
 User-agent: Googlebot

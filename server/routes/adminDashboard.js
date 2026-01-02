@@ -10,8 +10,6 @@ const router = Router();
 
 /**
  * Admin Dashboard Statistics Routes
- * 
- * Requirements: 2.1, 2.2, 2.3, 2.4
  */
 
 /* ---------------------- VALIDATION SCHEMAS ---------------------- */
@@ -70,10 +68,6 @@ const getStartOfMonth = () => {
 /**
  * GET /api/admin/dashboard/stats
  * Get overview statistics for the admin dashboard
- * 
- * Requirements: 2.1 - Display total counts for users, owners, agents, and properties
- * Requirements: 2.2 - Show active versus inactive listing counts
- * Requirements: 2.3 - Display property distribution by city, category, and price range
  */
 router.get("/stats", requireAdmin, async (req, res) => {
     try {
@@ -257,8 +251,6 @@ router.get("/stats", requireAdmin, async (req, res) => {
 /**
  * GET /api/admin/dashboard/activity
  * Get recent activity logs for the dashboard
- * 
- * Requirements: 2.4 - Show recent activity logs with timestamps
  */
 router.get("/activity", requireAdmin, async (req, res) => {
     try {
@@ -326,8 +318,6 @@ router.get("/activity", requireAdmin, async (req, res) => {
 /**
  * GET /api/admin/dashboard/charts
  * Get chart data for dashboard visualizations
- * 
- * Requirements: 2.1, 2.2, 2.3 - Provide data for dashboard charts
  */
 router.get("/charts", requireAdmin, async (req, res) => {
     try {

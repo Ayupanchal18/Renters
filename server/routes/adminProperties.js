@@ -13,8 +13,6 @@ const router = Router();
 
 /**
  * Admin Property Management Routes
- * 
- * Requirements: 4.1, 4.2, 4.3, 4.4, 4.5, 4.6, 4.7, 4.8
  */
 
 /* ---------------------- FILE UPLOAD CONFIG ---------------------- */
@@ -225,7 +223,6 @@ function makeListingNumber() {
 
 /**
  * Validate location coordinates
- * Requirement 4.9: Verify location coordinates
  */
 function validateCoordinates(lat, lng) {
     if (lat !== undefined && lng !== undefined) {
@@ -250,8 +247,6 @@ function validateCoordinates(lat, lng) {
 /**
  * GET /api/admin/properties
  * List all properties with pagination, search, and filters
- * 
- * Requirements: 4.1 - Return all properties regardless of owner with pagination
  */
 router.get("/", requireAdmin, async (req, res) => {
     try {
@@ -316,8 +311,6 @@ router.get("/", requireAdmin, async (req, res) => {
 /**
  * POST /api/admin/properties
  * Create a new property
- * 
- * Requirements: 4.2 - Validate required fields and create the listing
  */
 router.post("/", requireAdmin, async (req, res) => {
     try {
@@ -468,8 +461,6 @@ router.get("/:id", requireAdmin, async (req, res) => {
 /**
  * PUT /api/admin/properties/:id
  * Update property details
- * 
- * Requirements: 4.3 - Update the record and log the modification
  */
 router.put("/:id", requireAdmin, async (req, res) => {
     try {
@@ -581,8 +572,6 @@ router.put("/:id", requireAdmin, async (req, res) => {
 /**
  * DELETE /api/admin/properties/:id
  * Soft-delete a property
- * 
- * Requirements: 4.4 - Soft-delete the listing and preserve history
  */
 router.delete("/:id", requireAdmin, async (req, res) => {
     try {
@@ -651,9 +640,6 @@ router.delete("/:id", requireAdmin, async (req, res) => {
 /**
  * PATCH /api/admin/properties/:id/status
  * Change property status
- * 
- * Requirements: 4.5 - Update status and notify the owner
- * Requirements: 4.7 - Update to Available, Rented, Sold, or Expired
  */
 router.patch("/:id/status", requireAdmin, async (req, res) => {
     try {
@@ -717,8 +703,7 @@ router.patch("/:id/status", requireAdmin, async (req, res) => {
             req
         });
 
-        // TODO: Send notification to owner about status change
-        // This would integrate with the notification service
+        // Notification would be sent here via notification service
 
         res.json({
             success: true,
@@ -739,8 +724,6 @@ router.patch("/:id/status", requireAdmin, async (req, res) => {
 /**
  * PATCH /api/admin/properties/:id/featured
  * Toggle featured/premium flags
- * 
- * Requirements: 4.6 - Update the property flags
  */
 router.patch("/:id/featured", requireAdmin, async (req, res) => {
     try {
@@ -829,8 +812,6 @@ router.patch("/:id/featured", requireAdmin, async (req, res) => {
 /**
  * POST /api/admin/properties/:id/images
  * Upload property images
- * 
- * Requirements: 4.8 - Validate file types and store securely
  */
 router.post("/:id/images", requireAdmin, upload.array("images", 10), async (req, res) => {
     try {

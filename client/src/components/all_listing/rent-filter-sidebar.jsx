@@ -9,7 +9,6 @@ import { PREFERRED_TENANTS_LABELS } from "@shared/propertyTypes";
 /**
  * Rent-specific filter sidebar component
  * Displays filters relevant to rental properties: city, budget (monthly), BHK, furnished, tenant type
- * Requirements: 5.3
  */
 export function RentFilterSidebar({ filters, onFilterChange, hideHeader = false }) {
     const [expandedSections, setExpandedSections] = useState({

@@ -10,8 +10,6 @@ import { cn } from "@/lib/utils";
  * - Pill shape with border-radius: 9999px (rounded-full)
  * - 1px border slightly darker than fill color
  * - Small typography (text-xs)
- * 
- * Requirements: 7.1
  */
 const badgeVariants = cva(
     // Base styles: pill shape, small typography, smooth transitions

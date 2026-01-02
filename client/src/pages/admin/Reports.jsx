@@ -40,8 +40,6 @@ import {
  * - Property report generation with filters
  * - Activity/Audit log export
  * - CSV and JSON export formats
- * 
- * Requirements: 10.1, 10.2, 10.3, 10.4
  */
 
 const API_BASE = '/api/admin/reports';

@@ -26,8 +26,6 @@ import {
  * - Collapsible sidebar for mobile
  * - Active state highlighting
  * - Grouped navigation items
- * 
- * Requirements: 12.1 - Responsive layout with collapsible sidebar for mobile
  */
 
 const navigationItems = [

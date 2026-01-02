@@ -5,8 +5,6 @@ import { connectDB } from "../config/db.js";
 /**
  * Admin Authentication & Authorization Middleware
  * Provides secure role-based access control for admin routes
- * 
- * Requirements: 1.1, 1.2, 1.3, 1.5
  */
 
 /* ---------------------- ERROR CODES ---------------------- */
@@ -80,9 +78,6 @@ const isUserDeleted = (user) => {
 /**
  * Authenticate Admin Request
  * Verifies JWT token and validates admin role claim
- * 
- * Requirements: 1.1 - JWT with role claim
- * Requirements: 1.5 - Validate role permissions on each request
  * 
  * @param {Object} req - Express request object
  * @param {Object} res - Express response object
@@ -160,23 +155,15 @@ export const authenticateAdmin = async (req, res, next) => {
         try {
             decoded = verifyToken(token);
         } catch (error) {
-            if (error.name === 'TokenExpiredError') {
-                // Requirement 1.4: Force logout on expired token
-                return res.status(401).json({
-                    success: false,
-                    error: ErrorCodes.AUTH_EXPIRED,
-                    message: "Your session has expired. Please log in again."
-                });
-            }
-
+            // Force logout on expired token
             return res.status(401).json({
                 success: false,
-                error: ErrorCodes.AUTH_INVALID,
-                message: "Invalid authentication token"
+                error: ErrorCodes.AUTH_EXPIRED,
+                message: "Your session has expired. Please log in again."
             });
         }
 
-        // Validate role claim exists in token (Requirement 1.1)
+        // Validate role claim exists in token
         if (!decoded.role) {
             return res.status(401).json({
                 success: false,
@@ -206,7 +193,7 @@ export const authenticateAdmin = async (req, res, next) => {
             });
         }
 
-        // Check if user is blocked (Requirement 3.7)
+        // Check if user is blocked
         if (isUserBlocked(user)) {
             return res.status(403).json({
                 success: false,
@@ -224,7 +211,7 @@ export const authenticateAdmin = async (req, res, next) => {
             });
         }
 
-        // Verify role claim matches database (Requirement 1.1)
+        // Verify role claim matches database
         if (decoded.role !== user.role) {
             return res.status(401).json({
                 success: false,
@@ -254,9 +241,6 @@ export const authenticateAdmin = async (req, res, next) => {
  * Require Admin Role
  * Ensures the authenticated user has admin role
  * 
- * Requirements: 1.2 - Verify admin role before processing
- * Requirements: 1.3 - Return 403 for non-admin users
- * 
  * @param {Object} req - Express request object
  * @param {Object} res - Express response object
  * @param {Function} next - Express next function
@@ -279,8 +263,6 @@ export const requireAdmin = async (req, res, next) => {
 /**
  * Enhanced Role-Based Authorization
  * Allows access based on specified roles with blocked user check
- * 
- * Requirements: 1.5 - Validate role permissions on each request
  * 
  * @param {string|string[]} allowedRoles - Single role or array of allowed roles
  * @returns {Function} - Express middleware function
@@ -321,8 +303,6 @@ export const requireAuth = async (req, res, next) => {
 /**
  * Generate JWT token with role claim
  * Utility function for creating tokens with proper role claims
- * 
- * Requirements: 1.1 - JWT containing user role claim
  * 
  * @param {Object} user - User document
  * @param {Object} options - Token options

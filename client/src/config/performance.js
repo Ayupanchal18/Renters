@@ -4,8 +4,6 @@
  * This file defines Core Web Vitals thresholds and performance targets
  * for the Renters platform. These values align with Google's recommended
  * thresholds for good user experience.
- * 
- * Requirements: 11.1, 11.2, 11.3
  */
 
 /**

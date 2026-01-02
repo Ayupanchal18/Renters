@@ -1,6 +1,5 @@
 /**
  * NotificationItem Component
- * Requirements: 6.4, 6.5
  * 
  * Displays individual notification with:
  * - Notification title, message preview, timestamp

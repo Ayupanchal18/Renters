@@ -59,8 +59,6 @@ import {
  * - Review list with filters
  * - Approve/Reject/Delete actions
  * - Block user for violations
- * 
- * Requirements: 8.1, 8.2, 8.3, 8.4
  */
 
 const API_BASE = '/api/admin/reviews';

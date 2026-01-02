@@ -10,8 +10,6 @@ const router = Router();
 
 /**
  * Admin User Management Routes
- * 
- * Requirements: 3.1, 3.2, 3.3, 3.4, 3.5, 3.6, 3.7, 3.8
  */
 
 /* ---------------------- VALIDATION SCHEMAS ---------------------- */
@@ -122,11 +120,8 @@ const sanitizeUser = (user) => {
 /**
  * GET /api/admin/users
  * List users with pagination, search, and filters
- * 
- * Requirements: 3.1 - Return paginated results with search and filter capabilities
  */
 router.get("/", requireAdmin, async (req, res) => {
-    console.log('=== GET /api/admin/users route handler reached ===');
     try {
         await connectDB();
 
@@ -163,7 +158,6 @@ router.get("/", requireAdmin, async (req, res) => {
             User.countDocuments(query)
         ]);
 
-        console.log('=== Sending users response, count:', users.length, '===');
         res.json({
             success: true,
             data: {
@@ -190,8 +184,6 @@ router.get("/", requireAdmin, async (req, res) => {
 /**
  * POST /api/admin/users
  * Create a new user
- * 
- * Requirements: 3.2 - Validate all required fields and create the account
  */
 router.post("/", requireAdmin, async (req, res) => {
     try {
@@ -311,8 +303,6 @@ router.get("/:id", requireAdmin, async (req, res) => {
 /**
  * PUT /api/admin/users/:id
  * Update user details
- * 
- * Requirements: 3.3 - Update the user record and log the change
  */
 router.put("/:id", requireAdmin, async (req, res) => {
     try {
@@ -404,8 +394,6 @@ router.put("/:id", requireAdmin, async (req, res) => {
 /**
  * DELETE /api/admin/users/:id
  * Soft-delete a user
- * 
- * Requirements: 3.4 - Soft-delete the account and preserve audit history
  */
 router.delete("/:id", requireAdmin, async (req, res) => {
     try {
@@ -474,8 +462,6 @@ router.delete("/:id", requireAdmin, async (req, res) => {
 /**
  * PATCH /api/admin/users/:id/role
  * Change user role
- * 
- * Requirements: 3.5 - Update permissions immediately and log the role change
  */
 router.patch("/:id/role", requireAdmin, async (req, res) => {
     try {
@@ -558,9 +544,6 @@ router.patch("/:id/role", requireAdmin, async (req, res) => {
 /**
  * PATCH /api/admin/users/:id/status
  * Activate, deactivate, or block a user
- * 
- * Requirements: 3.6 - Update account status and notify the user
- * Requirements: 3.7 - Prevent blocked user from logging in until unblocked
  */
 router.patch("/:id/status", requireAdmin, async (req, res) => {
     try {
@@ -663,8 +646,7 @@ router.patch("/:id/status", requireAdmin, async (req, res) => {
             req
         });
 
-        // TODO: Send notification to user about status change
-        // This would integrate with the notification service
+        // Notification would be sent here via notification service
 
         res.json({
             success: true,
@@ -685,8 +667,6 @@ router.patch("/:id/status", requireAdmin, async (req, res) => {
 /**
  * POST /api/admin/users/:id/reset-password
  * Force password reset for a user
- * 
- * Requirements: 3.8 - Generate secure temporary password and require change on next login
  */
 router.post("/:id/reset-password", requireAdmin, async (req, res) => {
     try {
@@ -735,8 +715,7 @@ router.post("/:id/reset-password", requireAdmin, async (req, res) => {
             req
         });
 
-        // TODO: Send email with temporary password if sendEmail is true
-        // This would integrate with the email service
+        // Email would be sent here via email service
 
         res.json({
             success: true,

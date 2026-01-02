@@ -26,10 +26,6 @@ import { LISTING_TYPE_LABELS } from '@shared/propertyTypes';
  * Property Status Modal Component
  * 
  * Modal for changing property status and featured flags
- * 
- * Requirements: 4.5 - Update status and notify the owner
- * Requirements: 4.6 - Update the property flags
- * Requirements: 4.7 - Update to Available, Rented, Sold, or Expired
  */
 
 const API_BASE = '/api/admin/properties';

@@ -9,9 +9,6 @@ const router = Router();
 
 /**
  * Admin Audit Logs Routes
- * 
- * Requirements: 11.2 - Display logs with admin identity, action, timestamp, and affected resource
- * Requirements: 11.3 - Support filtering by admin, action type, and date range
  */
 
 /* ---------------------- VALIDATION SCHEMAS ---------------------- */
@@ -35,8 +32,6 @@ const auditLogsQuerySchema = z.object({
 /**
  * GET /api/admin/audit-logs
  * Get paginated audit logs with filters
- * 
- * Requirements: 11.2, 11.3
  */
 router.get("/", requireAdmin, async (req, res) => {
     try {

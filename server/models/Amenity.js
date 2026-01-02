@@ -4,8 +4,6 @@ const { Schema } = mongoose;
 /**
  * Amenity Model
  * Stores the list of available amenities that can be selected for properties
- * 
- * Requirements: 5.5 - Allow add, edit, and delete operations for amenities
  */
 const AmenitySchema = new Schema(
     {

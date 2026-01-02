@@ -29,7 +29,6 @@ import { PropertyCard } from "../components/all_listing/property-card";
 /**
  * BuyPropertyDetail Page Component
  * Displays detailed view of a buy property with buy-specific fields
- * Requirements: 6.2, 6.4, 6.5, 6.7
  */
 
 // Loading skeleton
