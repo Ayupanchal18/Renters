@@ -45,12 +45,14 @@ const MOCK_SUGGESTIONS = [
     { id: 6, text: "Studio near University", type: "keyword" },
 ];
 
-import { useNavigate, useLocation } from "react-router-dom";
+import { useNavigate, useLocation, useSearchParams } from "react-router-dom";
 
 export function HeroSection({ onSearch }) {
     const dispatch = useDispatch();
     const navigate = useNavigate();
     const location = useLocation();
+    const [searchParams] = useSearchParams();
+    
     const {
         searchSuggestions,
         isSuggestionsLoading,
@@ -61,6 +63,10 @@ export function HeroSection({ onSearch }) {
     // Determine active tab from current route
     const currentPath = location.pathname;
     const initialTab = currentPath.includes('buy') ? 'buy' : 'rent';
+
+    // Read URL params for pre-populating search fields
+    const urlQuery = searchParams.get('q') || '';
+    const urlLocation = searchParams.get('loc') || '';
 
     // --- State Management ---
     const [activeTab, setActiveTab] = useState(initialTab);
@@ -75,8 +81,8 @@ export function HeroSection({ onSearch }) {
         }
     };
 
-    // Universal Search State (we treat this as Location)
-    const [locationInput, setLocationInput] = useState("");
+    // Universal Search State - initialize from URL params if present
+    const [locationInput, setLocationInput] = useState(urlLocation);
     const [suggestions, setSuggestions] = useState([]);
     const [showSuggestions, setShowSuggestions] = useState(false);
     const [showRecentSearches, setShowRecentSearches] = useState(false);
@@ -86,8 +92,8 @@ export function HeroSection({ onSearch }) {
 
     // Filters State
     const [propertyType, setPropertyType] = useState("All Types");
-    // REPLACED budget with keywordInput
-    const [keywordInput, setKeywordInput] = useState("");
+    // Initialize keyword from URL params
+    const [keywordInput, setKeywordInput] = useState(urlQuery);
 
     // Dropdown Visibility States
     const [openDropdown, setOpenDropdown] = useState(null); // 'type' or null

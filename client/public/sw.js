@@ -3,10 +3,10 @@
  * Validates: Requirements 6.4
  */
 
-const CACHE_NAME = 'property-app-v2';
-const STATIC_CACHE = 'static-v2';
-const DYNAMIC_CACHE = 'dynamic-v2';
-const IMAGE_CACHE = 'images-v2';
+const CACHE_NAME = 'property-app-v3';
+const STATIC_CACHE = 'static-v3';
+const DYNAMIC_CACHE = 'dynamic-v3';
+const IMAGE_CACHE = 'images-v3';
 
 // Static assets to cache immediately (only non-hashed assets)
 const STATIC_ASSETS = [
@@ -115,12 +115,27 @@ function isApiRequest(request) {
     return url.pathname.startsWith('/api/');
 }
 
-// Check if request is for images
+// Check if request is for images (local only - skip external like map tiles)
 function isImageRequest(request) {
     const url = new URL(request.url);
 
     // Skip chrome-extension and other non-http(s) schemes
     if (!url.protocol.startsWith('http')) {
+        return false;
+    }
+
+    // Skip external domains - let them be handled directly by the browser
+    // This includes map tiles (openstreetmap, etc.) and other CDNs
+    const externalDomains = [
+        'tile.openstreetmap.org',
+        'openstreetmap.org',
+        'tiles.stadiamaps.com',
+        'tiles.mapbox.com',
+        'cdnjs.cloudflare.com',
+        'unpkg.com'
+    ];
+
+    if (externalDomains.some(domain => url.hostname.includes(domain))) {
         return false;
     }
 

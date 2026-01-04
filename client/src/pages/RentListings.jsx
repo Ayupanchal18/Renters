@@ -1,5 +1,5 @@
 import { useState, useEffect, useCallback, useRef } from "react";
-import { useLocation, useNavigate } from "react-router-dom";
+import { useLocation, useNavigate, useSearchParams } from "react-router-dom";
 import { HeroSection } from "../components/all_listing/hero-section";
 import { RentFilterSidebar } from "../components/all_listing/rent-filter-sidebar";
 import { ListingsGrid } from "../components/all_listing/listings-grid";
@@ -20,6 +20,7 @@ import { SlidersHorizontal, X, Sparkles, Home, Key } from "lucide-react";
 export default function RentListings() {
     const navigate = useNavigate();
     const location = useLocation();
+    const [searchParams, setSearchParams] = useSearchParams();
 
     // Filter state for rent properties
     const [filters, setFilters] = useState({
@@ -33,8 +34,13 @@ export default function RentListings() {
         location: "",
     });
 
-    // View and sort state
-    const [viewMode, setViewMode] = useState("grid");
+    // View and sort state - persist view mode to localStorage
+    const [viewMode, setViewMode] = useState(() => {
+        if (typeof window !== 'undefined') {
+            return localStorage.getItem('propertyViewMode') || 'grid';
+        }
+        return 'grid';
+    });
     const [sortBy, setSortBy] = useState("newest");
 
     // Data state
@@ -49,10 +55,16 @@ export default function RentListings() {
     const [loadingMore, setLoadingMore] = useState(false);
     const [wishlistIds, setWishlistIds] = useState(new Set());
     const [mobileFiltersOpen, setMobileFiltersOpen] = useState(false);
-    const [isSearchMode, setIsSearchMode] = useState(!!location.state?.searchData);
+    
+    // Check for search params in URL on initial load
+    const urlQuery = searchParams.get('q') || '';
+    const urlLocation = searchParams.get('loc') || '';
+    const hasUrlSearch = !!(urlQuery || urlLocation);
+    
+    const [isSearchMode, setIsSearchMode] = useState(!!location.state?.searchData || hasUrlSearch);
     
     const initialLoadDone = useRef(false);
-    const initialSearchData = location.state?.searchData || null;
+    const initialSearchData = location.state?.searchData || (hasUrlSearch ? { query: urlQuery, location: urlLocation } : null);
 
     // Fetch wishlist IDs
     const fetchWishlistIds = useCallback(async () => {
@@ -169,13 +181,27 @@ export default function RentListings() {
         const loc = payload.location || "";
         
         if (query || loc) {
+            // Update URL with search params for persistence
+            const newParams = new URLSearchParams(searchParams);
+            if (query) newParams.set('q', query);
+            else newParams.delete('q');
+            if (loc) newParams.set('loc', loc);
+            else newParams.delete('loc');
+            setSearchParams(newParams, { replace: true });
+            
             setFilters(prev => ({ ...prev, location: loc }));
             searchRentProperties({ query, location: loc });
         } else {
+            // Clear URL params when search is cleared
+            const newParams = new URLSearchParams(searchParams);
+            newParams.delete('q');
+            newParams.delete('loc');
+            setSearchParams(newParams, { replace: true });
+            
             setIsSearchMode(false);
             fetchRentProperties(1);
         }
-    }, [searchRentProperties, fetchRentProperties]);
+    }, [searchRentProperties, fetchRentProperties, searchParams, setSearchParams]);
 
     // Handle load more
     const handleLoadMore = useCallback(async () => {
@@ -220,9 +246,12 @@ export default function RentListings() {
         setFilters(prev => ({ ...prev, [filterType]: value }));
     }, []);
 
-    // Handle view mode change
+    // Handle view mode change - persist to localStorage
     const handleViewModeChange = useCallback((newViewMode) => {
         setViewMode(newViewMode);
+        if (typeof window !== 'undefined') {
+            localStorage.setItem('propertyViewMode', newViewMode);
+        }
     }, []);
 
     // Handle sort change - trigger re-fetch with new sort

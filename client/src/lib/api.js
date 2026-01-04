@@ -222,6 +222,26 @@ export const authAPI = {
         }, navigate);
         return response.json();
     },
+
+    googleLogin: async (credential, navigate = null) => {
+        const response = await fetch(`${API_BASE}/auth/google`, {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            credentials: "include",
+            body: JSON.stringify({ credential }),
+        });
+        return response.json();
+    },
+
+    facebookLogin: async (accessToken, navigate = null) => {
+        const response = await fetch(`${API_BASE}/auth/facebook`, {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            credentials: "include",
+            body: JSON.stringify({ accessToken }),
+        });
+        return response.json();
+    },
 };
 
 /* -------------------------

@@ -24,6 +24,13 @@ export class AdminNotificationService {
             webhook: process.env.ADMIN_WEBHOOK_URL || null
         };
 
+        // Check if we're using placeholder credentials (development mode)
+        this.isDevelopmentMode = this.checkDevelopmentMode();
+
+        if (this.isDevelopmentMode) {
+            console.log('⚠️ AdminNotificationService: Running in development mode - notifications will be logged but not sent');
+        }
+
         this.notificationRules = {
             critical: {
                 channels: ['email', 'sms', 'slack'],
@@ -50,8 +57,28 @@ export class AdminNotificationService {
         this.notificationQueue = [];
         this.processingQueue = false;
 
-        // Start notification processing
-        this.startNotificationProcessor();
+        // Start notification processing (only if not in development mode)
+        if (!this.isDevelopmentMode) {
+            this.startNotificationProcessor();
+        }
+    }
+
+    /**
+     * Check if running with placeholder/development credentials
+     */
+    checkDevelopmentMode() {
+        const placeholderEmails = ['admin@example.com', 'support@example.com'];
+        const placeholderPhones = ['+1234567890'];
+
+        const hasPlaceholderEmail = this.adminContacts.email.some(e => placeholderEmails.includes(e));
+        const hasPlaceholderPhone = this.adminContacts.sms.some(p => placeholderPhones.includes(p));
+
+        // Also check if SMTP is properly configured
+        const isSmtpConfigured = process.env.SMTP_HOST &&
+            process.env.SMTP_USER &&
+            !process.env.SMTP_HOST.includes('sandbox');
+
+        return hasPlaceholderEmail || hasPlaceholderPhone || !isSmtpConfigured;
     }
 
     /**
@@ -78,6 +105,11 @@ export class AdminNotificationService {
      */
     async sendAlertNotification(alert) {
         try {
+            // Skip notifications in development mode
+            if (this.isDevelopmentMode) {
+                return;
+            }
+
             const rule = this.notificationRules[alert.severity];
             if (!rule) {
                 console.warn(`No notification rule for severity: ${alert.severity}`);
@@ -117,6 +149,9 @@ export class AdminNotificationService {
      * Process the notification queue
      */
     async processNotificationQueue() {
+        // Skip in development mode
+        if (this.isDevelopmentMode) return;
+
         if (this.processingQueue) return;
 
         this.processingQueue = true;
@@ -574,6 +609,11 @@ export class AdminNotificationService {
      * Check for escalation notifications
      */
     async checkEscalationNotifications() {
+        // Skip in development mode
+        if (this.isDevelopmentMode) {
+            return;
+        }
+
         try {
             const escalatedAlerts = await Alert.find({
                 status: { $in: ['active', 'acknowledged'] },

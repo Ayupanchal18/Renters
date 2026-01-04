@@ -1,5 +1,5 @@
 import { useState, useEffect, useCallback, useRef } from "react";
-import { useLocation } from "react-router-dom";
+import { useLocation, useSearchParams } from "react-router-dom";
 import { HeroSection } from "../components/all_listing/hero-section";
 import { BuyFilterSidebar } from "../components/all_listing/buy-filter-sidebar";
 import { ListingsGrid } from "../components/all_listing/listings-grid";
@@ -19,6 +19,7 @@ import { SlidersHorizontal, X, Sparkles, Building2 } from "lucide-react";
  */
 export default function BuyListings() {
     const location = useLocation();
+    const [searchParams, setSearchParams] = useSearchParams();
 
     // Filter state for buy properties
     const [filters, setFilters] = useState({
@@ -32,8 +33,13 @@ export default function BuyListings() {
         location: "",
     });
 
-    // View and sort state
-    const [viewMode, setViewMode] = useState("grid");
+    // View and sort state - persist view mode to localStorage
+    const [viewMode, setViewMode] = useState(() => {
+        if (typeof window !== 'undefined') {
+            return localStorage.getItem('propertyViewMode') || 'grid';
+        }
+        return 'grid';
+    });
     const [sortBy, setSortBy] = useState("newest");
 
     // Data state
@@ -48,10 +54,16 @@ export default function BuyListings() {
     const [loadingMore, setLoadingMore] = useState(false);
     const [wishlistIds, setWishlistIds] = useState(new Set());
     const [mobileFiltersOpen, setMobileFiltersOpen] = useState(false);
-    const [isSearchMode, setIsSearchMode] = useState(!!location.state?.searchData);
+    
+    // Check for search params in URL on initial load
+    const urlQuery = searchParams.get('q') || '';
+    const urlLocation = searchParams.get('loc') || '';
+    const hasUrlSearch = !!(urlQuery || urlLocation);
+    
+    const [isSearchMode, setIsSearchMode] = useState(!!location.state?.searchData || hasUrlSearch);
     
     const initialLoadDone = useRef(false);
-    const initialSearchData = location.state?.searchData || null;
+    const initialSearchData = location.state?.searchData || (hasUrlSearch ? { query: urlQuery, location: urlLocation } : null);
 
     // Fetch wishlist IDs
     const fetchWishlistIds = useCallback(async () => {
@@ -170,13 +182,27 @@ export default function BuyListings() {
         const loc = payload.location || "";
         
         if (query || loc) {
+            // Update URL with search params for persistence
+            const newParams = new URLSearchParams(searchParams);
+            if (query) newParams.set('q', query);
+            else newParams.delete('q');
+            if (loc) newParams.set('loc', loc);
+            else newParams.delete('loc');
+            setSearchParams(newParams, { replace: true });
+            
             setFilters(prev => ({ ...prev, location: loc }));
             searchBuyProperties({ query, location: loc });
         } else {
+            // Clear URL params when search is cleared
+            const newParams = new URLSearchParams(searchParams);
+            newParams.delete('q');
+            newParams.delete('loc');
+            setSearchParams(newParams, { replace: true });
+            
             setIsSearchMode(false);
             fetchBuyProperties(1);
         }
-    }, [searchBuyProperties, fetchBuyProperties]);
+    }, [searchBuyProperties, fetchBuyProperties, searchParams, setSearchParams]);
 
     // Handle load more
     const handleLoadMore = useCallback(async () => {
@@ -221,9 +247,12 @@ export default function BuyListings() {
         setFilters(prev => ({ ...prev, [filterType]: value }));
     }, []);
 
-    // Handle view mode change
+    // Handle view mode change - persist to localStorage
     const handleViewModeChange = useCallback((newViewMode) => {
         setViewMode(newViewMode);
+        if (typeof window !== 'undefined') {
+            localStorage.setItem('propertyViewMode', newViewMode);
+        }
     }, []);
 
     // Handle sort change - trigger re-fetch with new sort

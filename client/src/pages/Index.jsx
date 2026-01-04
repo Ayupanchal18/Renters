@@ -532,19 +532,7 @@ export default function Home() {
                                     </div>
                                 </div>
 
-                                {/* Popular Searches */}
-                                <div className="hidden sm:flex flex-wrap items-center gap-2 mt-4 pt-4 border-t border-border/50">
-                                    <span className="text-xs text-muted-foreground font-medium">Popular:</span>
-                                    {['Studio NYC', '1BHK LA', 'Pet Friendly', 'Near Metro'].map(tag => (
-                                        <button
-                                            key={tag}
-                                            onClick={() => setSearchQuery(tag)}
-                                            className="px-3 py-1 bg-muted hover:bg-primary/10 text-muted-foreground hover:text-primary text-xs rounded-full transition-colors"
-                                        >
-                                            {tag}
-                                        </button>
-                                    ))}
-                                </div>
+
                             </div>
                         </div>
 
@@ -842,7 +830,7 @@ export default function Home() {
                 </section>
 
                 {/* CTA Section */}
-                <section className="py-10 sm:py-14 lg:py-16 px-4 sm:px-6 lg:px-8 bg-gradient-to-br from-primary via-primary to-primary/90 relative overflow-hidden">
+                <section className="py-10 sm:py-14 lg:py-16 px-4 sm:px-6 lg:px-8 bg-gradient-to-br from-primary via-primary to-primary/90 dark:from-primary/90 dark:via-primary/80 dark:to-primary/70 relative overflow-hidden">
                     {/* Background Pattern */}
                     <div className="absolute inset-0 bg-[url('data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iNjAiIGhlaWdodD0iNjAiIHZpZXdCb3g9IjAgMCA2MCA2MCIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj48ZyBmaWxsPSJub25lIiBmaWxsLXJ1bGU9ImV2ZW5vZGQiPjxnIGZpbGw9IiNmZmYiIGZpbGwtb3BhY2l0eT0iMC4wNSI+PHBhdGggZD0iTTM2IDM0djItSDI0di0yaDEyek0zNiAyNHYySDI0di0yaDEyeiIvPjwvZz48L2c+PC9zdmc+')] opacity-50" />
                     
@@ -850,20 +838,20 @@ export default function Home() {
                         <div className="grid grid-cols-1 md:grid-cols-2 gap-8 sm:gap-10 items-center">
                             {/* For Renters */}
                             <div className="text-center md:text-left">
-                                <div className="inline-flex items-center gap-2 px-3 py-1.5 rounded-full bg-white/20 backdrop-blur mb-4">
-                                    <Key className="w-4 h-4 text-white" />
-                                    <span className="text-xs sm:text-sm font-medium text-white">For Renters</span>
+                                <div className="inline-flex items-center gap-2 px-3 py-1.5 rounded-full bg-white/20 dark:bg-white/10 backdrop-blur mb-4">
+                                    <Key className="w-4 h-4 text-primary-foreground" />
+                                    <span className="text-xs sm:text-sm font-medium text-primary-foreground">For Renters</span>
                                 </div>
-                                <h3 className="text-2xl sm:text-3xl lg:text-4xl font-bold text-white mb-3">
+                                <h3 className="text-2xl sm:text-3xl lg:text-4xl font-bold text-primary-foreground mb-3">
                                     Find Your Dream Home Today
                                 </h3>
-                                <p className="text-white/90 text-sm sm:text-base lg:text-lg mb-5 sm:mb-6 leading-relaxed">
+                                <p className="text-primary-foreground/90 text-sm sm:text-base lg:text-lg mb-5 sm:mb-6 leading-relaxed">
                                     Browse thousands of verified listings with detailed filters. Your perfect space is waiting.
                                 </p>
                                 <div className="flex flex-col sm:flex-row gap-3">
                                     <Button
                                         size="lg"
-                                        className="bg-white hover:bg-gray-100 text-gray-900 font-semibold shadow-xl"
+                                        className="bg-background hover:bg-background/90 text-foreground font-semibold shadow-xl"
                                         onClick={() => {
                                             setListingTypeContext(LISTING_TYPES.RENT);
                                             document.getElementById("search_box")?.scrollIntoView({ behavior: "smooth" });
@@ -875,7 +863,7 @@ export default function Home() {
                                     <Button
                                         size="lg"
                                         variant="outline"
-                                        className="border-2 border-white text-white hover:bg-white hover:text-gray-900 font-semibold"
+                                        className="border-2 border-primary-foreground/80 text-primary-foreground hover:bg-primary-foreground hover:text-primary font-semibold bg-transparent"
                                         onClick={() => handleBrowseListings(LISTING_TYPES.RENT)}
                                     >
                                         Browse All Rentals
@@ -885,21 +873,21 @@ export default function Home() {
                             </div>
 
                             {/* For Buyers */}
-                            <div className="text-center md:text-left md:border-l md:border-white/30 md:pl-12">
-                                <div className="inline-flex items-center gap-2 px-3 py-1.5 rounded-full bg-white/20 backdrop-blur mb-4">
-                                    <Building2 className="w-4 h-4 text-white" />
-                                    <span className="text-xs sm:text-sm font-medium text-white">For Buyers</span>
+                            <div className="text-center md:text-left md:border-l md:border-primary-foreground/30 md:pl-12">
+                                <div className="inline-flex items-center gap-2 px-3 py-1.5 rounded-full bg-white/20 dark:bg-white/10 backdrop-blur mb-4">
+                                    <Building2 className="w-4 h-4 text-primary-foreground" />
+                                    <span className="text-xs sm:text-sm font-medium text-primary-foreground">For Buyers</span>
                                 </div>
-                                <h3 className="text-2xl sm:text-3xl lg:text-4xl font-bold text-white mb-3">
+                                <h3 className="text-2xl sm:text-3xl lg:text-4xl font-bold text-primary-foreground mb-3">
                                     Own Your Dream Property
                                 </h3>
-                                <p className="text-white/90 text-sm sm:text-base lg:text-lg mb-5 sm:mb-6 leading-relaxed">
+                                <p className="text-primary-foreground/90 text-sm sm:text-base lg:text-lg mb-5 sm:mb-6 leading-relaxed">
                                     Explore properties for sale. Find your perfect investment or forever home.
                                 </p>
                                 <div className="flex flex-col sm:flex-row gap-3">
                                     <Button
                                         size="lg"
-                                        className="bg-white hover:bg-gray-100 text-gray-900 font-semibold shadow-xl"
+                                        className="bg-background hover:bg-background/90 text-foreground font-semibold shadow-xl"
                                         onClick={() => {
                                             setListingTypeContext(LISTING_TYPES.BUY);
                                             document.getElementById("search_box")?.scrollIntoView({ behavior: "smooth" });
@@ -911,7 +899,7 @@ export default function Home() {
                                     <Button
                                         size="lg"
                                         variant="outline"
-                                        className="border-2 border-white text-white hover:bg-white hover:text-gray-900 font-semibold"
+                                        className="border-2 border-primary-foreground/80 text-primary-foreground hover:bg-primary-foreground hover:text-primary font-semibold bg-transparent"
                                         onClick={() => handleBrowseListings(LISTING_TYPES.BUY)}
                                     >
                                         Browse For Sale

@@ -8,6 +8,7 @@ import { authAPI } from "../lib/api";
 import { setToken, setUser } from "../utils/auth";
 import { useSocket } from "../contexts/SocketContext";
 import { Building2, Mail, Lock, ArrowRight, Shield, Sparkles } from "lucide-react";
+import SocialLoginButtons from "../components/auth/SocialLoginButtons";
 
 export default function Login() {
     const [email, setEmail] = useState("");
@@ -149,7 +150,23 @@ export default function Login() {
                             </Button>
                         </form>
 
-                        {/* Divider */}
+                        {/* Divider for social login */}
+                        <div className="relative my-6">
+                            <div className="absolute inset-0 flex items-center">
+                                <div className="w-full border-t border-border"></div>
+                            </div>
+                            <div className="relative flex justify-center text-xs">
+                                <span className="px-3 bg-card text-muted-foreground">or continue with</span>
+                            </div>
+                        </div>
+
+                        {/* Social Login Buttons */}
+                        <SocialLoginButtons 
+                            disabled={loading}
+                            onError={(err) => setError(err)}
+                        />
+
+                        {/* Divider for Signup */}
                         <div className="relative my-6">
                             <div className="absolute inset-0 flex items-center">
                                 <div className="w-full border-t border-border"></div>

@@ -6,6 +6,7 @@ import { Link } from "react-router-dom";
 import { validatePasswordStrength } from "../../utils/passwordValidation";
 import PasswordStrengthIndicator from "../ui/password-strength-indicator";
 import { User, Mail, Phone, MapPin, Lock, CheckCircle, AlertCircle, Shield } from "lucide-react";
+import SocialLoginButtons from "./SocialLoginButtons";
 
 export default function SignupForm() {
     const [formData, setFormData] = useState({
@@ -169,6 +170,24 @@ export default function SignupForm() {
 
             {/* Card */}
             <div className="bg-card border border-border rounded-2xl shadow-lg p-6 md:p-8">
+                {/* Social Login at Top */}
+                <div className="mb-6">
+                    <SocialLoginButtons 
+                        disabled={loading || submitSuccess}
+                        onError={(err) => setSubmitError(err)}
+                    />
+                </div>
+
+                {/* Divider */}
+                <div className="relative mb-6">
+                    <div className="absolute inset-0 flex items-center">
+                        <div className="w-full border-t border-border"></div>
+                    </div>
+                    <div className="relative flex justify-center text-xs">
+                        <span className="px-3 bg-card text-muted-foreground">or register with email</span>
+                    </div>
+                </div>
+
                 <form onSubmit={handleSubmit} className="space-y-5">
                     {/* Messages */}
                     {submitError && (

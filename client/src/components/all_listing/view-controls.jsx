@@ -62,9 +62,32 @@ export function ViewControls({
 
                 {/* View Mode Toggle with sliding indicator */}
                 <div className="relative flex items-center bg-muted rounded-xl p-1 gap-0.5">
-                    {/* Sliding background indicator */}
+                    {/* Sliding background indicator - adjusts for mobile (2 buttons) vs desktop (3 buttons) */}
                     <div
                         className="absolute h-9 bg-card shadow-sm rounded-lg transition-all duration-300 ease-out"
+                        style={{
+                            // On mobile: 2 buttons (grid, map), on desktop: 3 buttons (grid, list, map)
+                            width: 'calc(33.333% - 2px)',
+                            left: viewMode === "grid"
+                                ? '4px'
+                                : viewMode === "list"
+                                    ? 'calc(33.333% + 2px)'
+                                    : 'calc(66.666%)',
+                        }}
+                    />
+                    {/* Mobile-only sliding indicator (2 buttons) */}
+                    <div
+                        className="absolute h-9 bg-card shadow-sm rounded-lg transition-all duration-300 ease-out sm:hidden"
+                        style={{
+                            width: 'calc(50% - 4px)',
+                            left: viewMode === "grid" || viewMode === "list"
+                                ? '4px'
+                                : 'calc(50%)',
+                        }}
+                    />
+                    {/* Desktop sliding indicator (3 buttons) */}
+                    <div
+                        className="absolute h-9 bg-card shadow-sm rounded-lg transition-all duration-300 ease-out hidden sm:block"
                         style={{
                             width: 'calc(33.333% - 2px)',
                             left: viewMode === "grid"
@@ -90,11 +113,12 @@ export function ViewControls({
                         <span className="ml-2 text-xs font-medium hidden sm:inline">Grid</span>
                     </Button>
 
+                    {/* List button - hidden on mobile since grid and list look the same */}
                     <Button
                         variant="ghost"
                         size="sm"
                         onClick={() => onViewChange("list")}
-                        className={`relative z-10 h-9 px-3 rounded-lg transition-colors duration-200 ${viewMode === "list"
+                        className={`relative z-10 h-9 px-3 rounded-lg transition-colors duration-200 hidden sm:flex ${viewMode === "list"
                                 ? "text-primary"
                                 : "text-muted-foreground hover:text-foreground"
                             }`}

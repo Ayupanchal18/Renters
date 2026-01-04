@@ -66,6 +66,9 @@ export default function Navbar({ variant = "default" }) {
     const location = useLocation();
     const navigate = useNavigate();
     const notificationDropdownRef = useRef(null);
+    // User info for profile avatar
+    const [userAvatar, setUserAvatar] = useState(null);
+    const [userName, setUserName] = useState('');
 
     // Use unread counts hook for real-time badge updates
     const {
@@ -86,9 +89,11 @@ export default function Navbar({ variant = "default" }) {
 
     useEffect(() => {
         setIsLoggedIn(isAuthenticated());
-        // Check if user is admin
+        // Check if user is admin and get user info for avatar
         const user = getUser();
         setIsAdmin(user?.role === 'admin');
+        setUserAvatar(user?.avatar || user?.picture || null);
+        setUserName(user?.name || '');
     }, [location.pathname]); // Re-check authentication when route changes
 
     // Detect listing type context from URL
@@ -394,16 +399,43 @@ export default function Navbar({ variant = "default" }) {
                                                 : "hover:bg-muted"
                                         )}
                                     >
-                                        <div className={cn(
-                                            "h-8 w-8 rounded-full flex items-center justify-center rounded-md",
-                                            isGradientVariant
-                                                ? "bg-white/20"
-                                                : "bg-gradient-to-br from-primary to-primary"
-                                        )}>
-                                            <User className={cn(
-                                                "h-4 w-4",
-                                                isGradientVariant ? "text-white" : "text-primary-foreground"
-                                            )} />
+                                        <div 
+                                            className={cn(
+                                                "h-8 w-8 rounded-full flex items-center justify-center overflow-hidden ring-2 ring-border/50",
+                                                !userAvatar && (isGradientVariant
+                                                    ? "bg-white/20"
+                                                    : "bg-gradient-to-br from-primary to-primary")
+                                            )}
+                                            style={{ borderRadius: '50%' }}
+                                        >
+                                            {userAvatar ? (
+                                                <img 
+                                                    src={userAvatar} 
+                                                    alt={userName || 'Profile'} 
+                                                    className="h-full w-full object-cover"
+                                                    style={{ borderRadius: '50%' }}
+                                                    onError={(e) => {
+                                                        e.target.style.display = 'none';
+                                                        e.target.nextSibling.style.display = 'flex';
+                                                    }}
+                                                />
+                                            ) : null}
+                                            {/* Fallback: Initials or User icon */}
+                                            <span 
+                                                className={cn(
+                                                    "text-xs font-semibold",
+                                                    isGradientVariant ? "text-white" : "text-primary-foreground",
+                                                    userAvatar && "hidden"
+                                                )}
+                                                style={{ display: userAvatar ? 'none' : 'flex' }}
+                                            >
+                                                {userName ? userName.split(' ').map(n => n[0]).join('').toUpperCase().slice(0, 2) : (
+                                                    <User className={cn(
+                                                        "h-4 w-4",
+                                                        isGradientVariant ? "text-white" : "text-primary-foreground"
+                                                    )} />
+                                                )}
+                                            </span>
                                         </div>
                                         <ChevronDown
                                             className={cn(

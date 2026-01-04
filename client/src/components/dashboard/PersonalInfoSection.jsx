@@ -1,19 +1,68 @@
 import React, { useState } from "react";
 import { User, Phone, Mail, Edit2, Sparkles } from "lucide-react";
 import EditModal from "../../model/EditModal";
+import { getToken, setUser as setUserInStorage, getUser } from "../../utils/auth";
+import { showSuccessToast, showErrorToast } from "../../utils/toastNotifications";
 
-export default function PersonalInfoSection({ user, onEdit }) {
+export default function PersonalInfoSection({ user }) {
     const info = [
-        { icon: User, label: "Full Name", value: user.name, color: "bg-blue-500" },
-        { icon: Mail, label: "Email", value: user.email || "Not provided", color: "bg-emerald-500" },
-        { icon: Phone, label: "Phone", value: user.phone || "Not provided", color: "bg-orange-500" },
+        { icon: User, label: "Full Name", value: user?.name, color: "bg-blue-500" },
+        { icon: Mail, label: "Email", value: user?.email || "Not provided", color: "bg-emerald-500" },
+        { icon: Phone, label: "Phone", value: user?.phone || "Not provided", color: "bg-orange-500" },
     ];
 
     const [openModal, setOpenModal] = useState(false);
+    const [isUpdating, setIsUpdating] = useState(false);
+    const [localUser, setLocalUser] = useState(user);
 
-    const handleSave = (updatedUser) => {
-        onSaveUser(updatedUser);
-        setOpenModal(false);
+    const handleSave = async (updatedUser) => {
+        const token = getToken();
+        if (!token) {
+            showErrorToast("Authentication required", "", { title: "Error" });
+            return;
+        }
+
+        setIsUpdating(true);
+        try {
+            // Only send allowed fields (not email)
+            const updateData = {
+                name: updatedUser.name,
+                phone: updatedUser.phone,
+                bio: updatedUser.about || updatedUser.bio,
+            };
+
+            const response = await fetch('/api/users/me', {
+                method: 'PATCH',
+                headers: {
+                    'Authorization': `Bearer ${token}`,
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify(updateData)
+            });
+
+            const data = await response.json();
+
+            if (!response.ok) {
+                throw new Error(data.message || data.error || 'Failed to update profile');
+            }
+
+            // Update local state and localStorage
+            const currentUser = getUser();
+            const newUserData = { ...currentUser, ...data.data };
+            setUserInStorage(newUserData);
+            setLocalUser(newUserData);
+
+            showSuccessToast("Profile updated successfully", "", { title: "Success" });
+            setOpenModal(false);
+
+            // Reload the page to reflect changes
+            window.location.reload();
+        } catch (error) {
+            console.error('Error updating profile:', error);
+            showErrorToast(error.message || "Failed to update profile", "", { title: "Error" });
+        } finally {
+            setIsUpdating(false);
+        }
     };
 
     return (
@@ -75,6 +124,7 @@ export default function PersonalInfoSection({ user, onEdit }) {
                 onClose={() => setOpenModal(false)}
                 user={user}
                 onSave={handleSave}
+                isLoading={isUpdating}
             />
         </div>
     );

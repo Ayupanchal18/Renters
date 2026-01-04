@@ -59,6 +59,15 @@ export default async function createServer(devMode = false) {
                 return callback(null, true);
             }
 
+            // In development, allow local network IPs (for testing on other devices over WiFi)
+            if (isDevelopment) {
+                // Match private IP ranges: 192.168.x.x, 10.x.x.x, 172.16.x.x - 172.31.x.x
+                const localNetworkPattern = /^https?:\/\/(192\.168\.\d{1,3}\.\d{1,3}|10\.\d{1,3}\.\d{1,3}\.\d{1,3}|172\.(1[6-9]|2[0-9]|3[0-1])\.\d{1,3}\.\d{1,3})(:\d+)?$/;
+                if (localNetworkPattern.test(origin)) {
+                    return callback(null, true);
+                }
+            }
+
             // Allow Railway deployment origins (production)
             if (origin.includes('.railway.app')) {
                 return callback(null, true);
@@ -105,26 +114,11 @@ export default async function createServer(devMode = false) {
     app.use(addRequestId);
     app.use(securityHeaders);
 
-    // More permissive rate limiting for polling endpoints
-    const pollingRateLimiter = createRateLimiter({
-        windowMs: 15 * 60 * 1000,
-        maxRequests: 1000,
-        message: "Too many requests, please try again later"
-    });
-    app.use('/api/notifications/unread-count', pollingRateLimiter);
-
-    // Global rate limiting - 100 requests per 15 minutes per IP
-    const globalRateLimiter = createRateLimiter({
-        windowMs: 15 * 60 * 1000,
-        maxRequests: 100,
-        message: "Too many requests from this IP, please try again later"
-    });
-    app.use('/api/', globalRateLimiter);
-
-    // Stricter rate limiting for auth endpoints
+    // Rate limiting ONLY for auth endpoints (login, register, OTP)
+    // This prevents brute force attacks while allowing normal browsing
     const authRateLimiter = createRateLimiter({
-        windowMs: 15 * 60 * 1000,
-        maxRequests: 10,
+        windowMs: 15 * 60 * 1000, // 15 minutes
+        maxRequests: 10, // 10 attempts per 15 minutes
         message: "Too many authentication attempts, please try again later"
     });
     app.use('/api/auth/login', authRateLimiter);
@@ -182,6 +176,7 @@ export default async function createServer(devMode = false) {
 
     try {
         app.use("/api/auth", (await safeImport("routes/auth.js")).default);
+        app.use("/api/auth", (await safeImport("routes/socialAuth.js")).default);
         app.use("/api/verification", (await safeImport("routes/verification.js")).default);
         app.use("/api/properties/rent", (await safeImport("routes/rentProperties.js")).default);
         app.use("/api/properties/buy", (await safeImport("routes/buyProperties.js")).default);

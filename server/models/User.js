@@ -14,7 +14,21 @@ const UserSchema = new Schema(
             default: "buyer",
         },
 
-        passwordHash: { type: String, required: true },
+        passwordHash: {
+            type: String,
+            required: function () {
+                return this.authProvider === 'local' || !this.authProvider;
+            }
+        },
+
+        // OAuth provider fields
+        authProvider: {
+            type: String,
+            enum: ["local", "google", "facebook"],
+            default: "local"
+        },
+        authProviderId: { type: String },
+        authProviderData: { type: Object },
 
         role: {
             type: String,

@@ -325,7 +325,8 @@ export const commonSchemas = {
         name: z.string().min(1).max(100).optional(),
         avatar: z.string().url().optional(),
         bio: z.string().max(500).optional(),
-        address: z.string().max(200).optional()
+        address: z.string().max(200).optional(),
+        phone: z.string().regex(/^\+?[\d\s\-\(\)]{10,}$/, "Invalid phone number format").optional().or(z.literal(''))
     }),
 
     // Password validation
@@ -566,23 +567,23 @@ export const securityHeaders = (req, res, next) => {
     if (process.env.NODE_ENV === 'development') {
         res.setHeader('Content-Security-Policy',
             "default-src 'self'; " +
-            "script-src 'self' 'unsafe-inline' 'unsafe-eval'; " +
-            "style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; " +
+            "script-src 'self' 'unsafe-inline' 'unsafe-eval' https://accounts.google.com https://apis.google.com https://connect.facebook.net; " +
+            "style-src 'self' 'unsafe-inline' https://fonts.googleapis.com https://accounts.google.com; " +
             "font-src 'self' https://fonts.gstatic.com; " +
             "img-src 'self' data: https: blob:; " +
-            "connect-src 'self' ws: wss: https://api.bigdatacloud.net; " +
-            "frame-src 'self' https://maps.google.com https://www.google.com https://*.google.com https://www.openstreetmap.org https://*.openstreetmap.org;"
+            "connect-src 'self' ws: wss: https://api.bigdatacloud.net https://accounts.google.com https://oauth2.googleapis.com https://graph.facebook.com https://*.tile.openstreetmap.org https://tile.openstreetmap.org https://cdnjs.cloudflare.com; " +
+            "frame-src 'self' https://maps.google.com https://www.google.com https://*.google.com https://www.openstreetmap.org https://*.openstreetmap.org https://accounts.google.com https://www.facebook.com;"
         );
     } else {
-        // Stricter CSP for production
+        // Stricter CSP for production (still allows OAuth)
         res.setHeader('Content-Security-Policy',
             "default-src 'self'; " +
-            "script-src 'self' 'unsafe-inline'; " +
-            "style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; " +
+            "script-src 'self' 'unsafe-inline' https://accounts.google.com https://apis.google.com https://connect.facebook.net; " +
+            "style-src 'self' 'unsafe-inline' https://fonts.googleapis.com https://accounts.google.com; " +
             "font-src 'self' https://fonts.gstatic.com; " +
             "img-src 'self' data: https: blob:; " +
-            "connect-src 'self' https://api.bigdatacloud.net; " +
-            "frame-src 'self' https://maps.google.com https://www.google.com https://*.google.com https://www.openstreetmap.org https://*.openstreetmap.org;"
+            "connect-src 'self' https://api.bigdatacloud.net https://accounts.google.com https://oauth2.googleapis.com https://graph.facebook.com https://*.tile.openstreetmap.org https://tile.openstreetmap.org https://cdnjs.cloudflare.com; " +
+            "frame-src 'self' https://maps.google.com https://www.google.com https://*.google.com https://www.openstreetmap.org https://*.openstreetmap.org https://accounts.google.com https://www.facebook.com;"
         );
     }
 

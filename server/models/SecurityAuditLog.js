@@ -47,12 +47,20 @@ const SecurityAuditLogSchema = new Schema(
                 'auth_login_blocked',
                 'auth_login_rate_limited',
                 'auth_logout',
+                // Social login actions
+                'auth_social_login_google',
+                'auth_social_login_facebook',
+                'auth_social_login_success',
+                'auth_social_login_failed',
                 // Admin notification actions
+                'admin_notification_queued',
                 'admin_notification_processed',
                 'admin_notification_sent',
                 'admin_notification_failed',
                 'admin_alert_triggered',
-                'admin_escalation_triggered'
+                'admin_escalation_triggered',
+                // Catch-all for any future actions
+                'other'
             ],
             required: true,
             index: true
