@@ -1,4 +1,5 @@
 import express from 'express';
+import amenityCacheService from '../src/services/amenityCacheService.js';
 
 const router = express.Router();
 
@@ -9,9 +10,63 @@ const OVERPASS_ENDPOINTS = [
     'https://maps.mail.ru/osm/tools/overpass/api/interpreter'
 ];
 
-// Simple in-memory cache
+// Simple in-memory cache with longer TTL for reliability
 const cache = new Map();
-const CACHE_TTL = 10 * 60 * 1000; // 10 minutes
+const CACHE_TTL = 60 * 60 * 1000; // 1 hour (increased from 10 minutes)
+const STALE_CACHE_TTL = 24 * 60 * 60 * 1000; // 24 hours for stale fallback
+
+// Circuit Breaker Pattern for resilient API calls
+const circuitBreaker = {
+    endpoints: new Map(), // endpoint -> { failures: number, openUntil: Date, lastError: string }
+    FAILURE_THRESHOLD: 3,
+    RECOVERY_TIME_MS: 5 * 60 * 1000, // 5 minutes
+
+    isOpen(endpoint) {
+        const state = this.endpoints.get(endpoint);
+        if (!state) return false;
+        if (state.openUntil && Date.now() < state.openUntil) {
+            return true; // Circuit is open, skip this endpoint
+        }
+        // Circuit was open but recovery time passed, allow retry
+        if (state.openUntil && Date.now() >= state.openUntil) {
+            state.failures = 0;
+            state.openUntil = null;
+        }
+        return false;
+    },
+
+    recordSuccess(endpoint) {
+        this.endpoints.set(endpoint, { failures: 0, openUntil: null, lastError: null });
+    },
+
+    recordFailure(endpoint, error) {
+        const state = this.endpoints.get(endpoint) || { failures: 0, openUntil: null, lastError: null };
+        state.failures++;
+        state.lastError = error;
+        if (state.failures >= this.FAILURE_THRESHOLD) {
+            state.openUntil = Date.now() + this.RECOVERY_TIME_MS;
+            console.warn(`[CircuitBreaker] Opening circuit for ${endpoint} until ${new Date(state.openUntil).toISOString()}`);
+        }
+        this.endpoints.set(endpoint, state);
+    },
+
+    getHealthyEndpoints() {
+        return OVERPASS_ENDPOINTS.filter(ep => !this.isOpen(ep));
+    },
+
+    getStatus() {
+        const status = {};
+        for (const endpoint of OVERPASS_ENDPOINTS) {
+            const state = this.endpoints.get(endpoint);
+            status[endpoint] = state ? {
+                failures: state.failures,
+                isOpen: this.isOpen(endpoint),
+                reopensAt: state.openUntil ? new Date(state.openUntil).toISOString() : null
+            } : { failures: 0, isOpen: false, reopensAt: null };
+        }
+        return status;
+    }
+};
 
 // Amenity type configurations
 const AMENITY_CONFIG = {
@@ -92,12 +147,20 @@ async function fetchWithTimeout(url, options, timeoutMs = 12000) {
     }
 }
 
-// Try multiple Overpass endpoints with retry
+// Try multiple Overpass endpoints with retry and circuit breaker
 async function queryOverpassWithRetry(query, maxRetries = 2) {
     let lastError;
 
     for (let attempt = 0; attempt < maxRetries; attempt++) {
-        for (const endpoint of OVERPASS_ENDPOINTS) {
+        // Only try endpoints that aren't in open circuit state
+        const healthyEndpoints = circuitBreaker.getHealthyEndpoints();
+
+        if (healthyEndpoints.length === 0) {
+            console.warn('[Nearby] All Overpass endpoints are in open circuit state');
+            throw new Error('All Overpass endpoints are temporarily unavailable');
+        }
+
+        for (const endpoint of healthyEndpoints) {
             try {
                 const response = await fetchWithTimeout(endpoint, {
                     method: 'POST',
@@ -106,22 +169,24 @@ async function queryOverpassWithRetry(query, maxRetries = 2) {
                 }, 12000);
 
                 if (response.ok) {
+                    circuitBreaker.recordSuccess(endpoint);
                     return await response.json();
                 }
 
-                // If rate limited (429) or server error, try next endpoint
+                // If rate limited (429) or server error, record failure and try next endpoint
                 if (response.status === 429 || response.status >= 500) {
-                    lastError = new Error(`${endpoint} returned ${response.status}`);
+                    const errorMsg = `${endpoint} returned ${response.status}`;
+                    circuitBreaker.recordFailure(endpoint, errorMsg);
+                    lastError = new Error(errorMsg);
                     continue;
                 }
 
                 throw new Error(`Overpass API error: ${response.status}`);
             } catch (error) {
-                lastError = error;
+                const errorMsg = error.name === 'AbortError' ? 'Request timeout' : error.message;
+                circuitBreaker.recordFailure(endpoint, errorMsg);
+                lastError = new Error(errorMsg);
                 // Continue to next endpoint on timeout or network error
-                if (error.name === 'AbortError') {
-                    lastError = new Error('Request timeout');
-                }
             }
         }
 
@@ -162,7 +227,33 @@ router.get('/', async (req, res) => {
             return res.status(400).json({ success: false, error: 'Invalid coordinates' });
         }
 
-        // Check cache first (round coords to reduce cache misses)
+        // Check database cache first (most reliable, persists across restarts)
+        try {
+            const dbCached = await amenityCacheService.getCachedAmenities(latitude, longitude);
+            if (dbCached && dbCached.success && dbCached.amenities.length > 0) {
+                console.log(`[Nearby] Serving from database cache (age: ${Math.round(dbCached.cacheAge / 60000)}min)`);
+                return res.json({
+                    success: true,
+                    amenities: dbCached.amenities.slice(0, 10).map(a => ({
+                        name: a.name,
+                        type: a.type,
+                        distance: formatDistance(calculateDistance(latitude, longitude, a.lat, a.lng)),
+                        distanceValue: calculateDistance(latitude, longitude, a.lat, a.lng),
+                        icon: a.icon,
+                        color: a.color,
+                        iconColor: a.iconColor
+                    })),
+                    searchRadius: radiusKm,
+                    totalFound: dbCached.amenities.length,
+                    fromDbCache: true,
+                    stale: dbCached.stale || false
+                });
+            }
+        } catch (dbError) {
+            console.warn('[Nearby] Database cache check failed:', dbError.message);
+        }
+
+        // Check in-memory cache second (faster but doesn't persist)
         const cacheKey = `${latitude.toFixed(3)}_${longitude.toFixed(3)}_${radiusKm}`;
         const cached = cache.get(cacheKey);
         if (cached && Date.now() - cached.timestamp < CACHE_TTL) {
@@ -171,13 +262,25 @@ router.get('/', async (req, res) => {
 
         const radiusMeters = radiusKm * 1000;
         const query = buildOverpassQuery(latitude, longitude, radiusMeters);
+        const fetchStartTime = Date.now();
 
         let data;
         try {
             data = await queryOverpassWithRetry(query);
         } catch (error) {
             console.error('Overpass API failed after retries:', error.message);
-            // Return empty results instead of error
+
+            // Try to return stale cache if available (within 24 hours)
+            if (cached && Date.now() - cached.timestamp < STALE_CACHE_TTL) {
+                console.log('[Nearby] Returning stale cache due to API failure');
+                return res.json({
+                    ...cached.data,
+                    stale: true,
+                    message: 'Using cached data (service temporarily unavailable)'
+                });
+            }
+
+            // Return empty results if no cache available
             return res.json({
                 success: true,
                 amenities: [],
@@ -247,8 +350,24 @@ router.get('/', async (req, res) => {
             totalFound: amenities.length
         };
 
-        // Cache the result
+        // Cache the result in memory
         cache.set(cacheKey, { data: result, timestamp: Date.now() });
+
+        // Also store in database cache for persistence
+        const fetchDurationMs = Date.now() - fetchStartTime;
+        const amenitiesForDb = amenities.map(a => ({
+            name: a.name,
+            type: a.type,
+            lat: latitude + (a.distanceValue * 0.009), // Approximate lat offset (rough)
+            lng: longitude + (a.distanceValue * 0.009), // Approximate lng offset (rough)
+            icon: a.icon,
+            color: a.color,
+            iconColor: a.iconColor
+        }));
+
+        // Don't await - let it save in background
+        amenityCacheService.setCachedAmenities(latitude, longitude, amenitiesForDb, null, fetchDurationMs)
+            .catch(err => console.warn('[Nearby] Failed to save to DB cache:', err.message));
 
         res.json(result);
     } catch (error) {
@@ -257,4 +376,16 @@ router.get('/', async (req, res) => {
     }
 });
 
+// Health check endpoint for monitoring circuit breaker status
+router.get('/health', (req, res) => {
+    res.json({
+        success: true,
+        circuitBreaker: circuitBreaker.getStatus(),
+        cacheSize: cache.size,
+        cacheTTL: CACHE_TTL,
+        staleCacheTTL: STALE_CACHE_TTL
+    });
+});
+
 export default router;
+

@@ -794,29 +794,7 @@ export default function BuyPropertyDetail() {
                                 {/* Price Card */}
                                 <BuyPriceDisplay property={propertyData} />
 
-                                {/* Contact Actions - "Request Site Visit" CTA (Requirement 6.7) */}
-                                <div className="bg-card rounded-xl border border-border p-4 space-y-3">
-                                    <Button
-                                        onClick={handleSiteVisit}
-                                        disabled={isCreatingConversation}
-                                        className="w-full h-11 bg-emerald-600 hover:bg-emerald-700"
-                                    >
-                                        <CalendarCheck className="w-4 h-4 mr-2" />
-                                        {isCreatingConversation ? 'Requesting...' : 'Request Site Visit'}
-                                    </Button>
-                                    {propertyData.ownerPhone && (
-                                        <Button
-                                            onClick={handleCall}
-                                            variant="outline"
-                                            className="w-full h-11"
-                                        >
-                                            <Phone className="w-4 h-4 mr-2" />
-                                            Call Owner
-                                        </Button>
-                                    )}
-                                </div>
-
-                                {/* Owner Card */}
+                                {/* Owner Card - Contains all contact options */}
                                 <OwnerCard 
                                     owner={{
                                         id: propertyData.ownerId || propertyData.owner?._id || propertyData.owner,

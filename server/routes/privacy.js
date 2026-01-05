@@ -364,7 +364,7 @@ router.delete("/delete-account",
             );
 
             if (!deletionResult.success) {
-                await logAccountEvent(req.user._id, 'account_deletion_request', false, {
+                await logAccountEvent(req.user._id, 'deletion_request', false, {
                     error: deletionResult.error,
                     options: { preserveAuditLogs, softDelete }
                 }, req);
@@ -375,7 +375,7 @@ router.delete("/delete-account",
                 });
             }
 
-            await logAccountEvent(req.user._id, 'account_deletion_request', true, {
+            await logAccountEvent(req.user._id, 'deletion_request', true, {
                 deletedRecords: deletionResult.deletedRecords,
                 options: { preserveAuditLogs, softDelete }
             }, req);
@@ -389,7 +389,7 @@ router.delete("/delete-account",
 
         } catch (error) {
             console.error('Account deletion error:', error);
-            await logAccountEvent(req.user._id, 'account_deletion_request', false, {
+            await logAccountEvent(req.user._id, 'deletion_request', false, {
                 error: error.message
             }, req);
             res.status(500).json({

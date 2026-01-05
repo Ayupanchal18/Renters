@@ -763,32 +763,10 @@ export default function RentPropertyDetail() {
                         {/* Right Column - Sidebar (Desktop) */}
                         <div className="hidden lg:block space-y-4">
                             <div className="sticky top-6 space-y-4">
-                                {/* Price Card */}
+                            {/* Price Card */}
                                 <RentPriceDisplay property={propertyData} />
 
-                                {/* Contact Actions - "Contact Owner" CTA (Requirement 6.6) */}
-                                <div className="bg-card rounded-xl border border-border p-4 space-y-3">
-                                    <Button
-                                        onClick={handleMessage}
-                                        disabled={isCreatingConversation}
-                                        className="w-full h-11"
-                                    >
-                                        <MessageCircle className="w-4 h-4 mr-2" />
-                                        {isCreatingConversation ? 'Starting chat...' : 'Contact Owner'}
-                                    </Button>
-                                    {propertyData.ownerPhone && (
-                                        <Button
-                                            onClick={handleCall}
-                                            variant="outline"
-                                            className="w-full h-11"
-                                        >
-                                            <Phone className="w-4 h-4 mr-2" />
-                                            Call Owner
-                                        </Button>
-                                    )}
-                                </div>
-
-                                {/* Owner Card */}
+                                {/* Owner Card - Contains all contact options */}
                                 <OwnerCard 
                                     owner={{
                                         id: propertyData.ownerId || propertyData.owner?._id || propertyData.owner,

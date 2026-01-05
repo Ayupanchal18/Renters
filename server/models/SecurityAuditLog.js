@@ -29,6 +29,7 @@ const SecurityAuditLogSchema = new Schema(
                 'password_change_request',
                 'phone_update_request',
                 'account_deletion_request',
+                'account_deletion',
                 'account_phone_update',
                 'otp_request',
                 'otp_verification_request',
@@ -50,6 +51,8 @@ const SecurityAuditLogSchema = new Schema(
                 // Social login actions
                 'auth_social_login_google',
                 'auth_social_login_facebook',
+                'auth_social_register_google',
+                'auth_social_register_facebook',
                 'auth_social_login_success',
                 'auth_social_login_failed',
                 // Admin notification actions

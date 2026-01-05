@@ -21,19 +21,70 @@ class DataCleanupService {
     }
 
     /**
-     * DISABLED: Account deletion operations are disabled for data safety
+     * Perform account deletion (soft delete by default for data safety)
      * @param {string} userId - User ID to delete
      * @param {object} options - Cleanup options
-     * @returns {Promise<{success: boolean, error: string}>}
+     * @returns {Promise<{success: boolean, deletedRecords: object, errors: array}>}
      */
     async performAccountDeletion(userId, options = {}) {
-        console.error('❌ Account deletion is DISABLED for data safety');
-        return {
-            success: false,
-            error: 'Account deletion operations are disabled to prevent accidental data loss. Contact system administrator if account deletion is required.',
-            deletedRecords: {},
-            errors: ['Account deletion disabled for data safety']
-        };
+        const { preserveAuditLogs = true, softDelete = true } = options;
+        const deletedRecords = {};
+        const errors = [];
+
+        try {
+            await connectDB();
+
+            // Find the user first
+            const user = await User.findById(userId);
+            if (!user) {
+                return {
+                    success: false,
+                    error: 'User not found',
+                    deletedRecords: {},
+                    errors: ['User not found']
+                };
+            }
+
+            if (user.isDeleted) {
+                return {
+                    success: false,
+                    error: 'Account has already been deleted',
+                    deletedRecords: {},
+                    errors: ['Account already deleted']
+                };
+            }
+
+            // Soft delete: Mark user as deleted but preserve data
+            user.isDeleted = true;
+            user.deletedAt = new Date();
+            user.email = `deleted_${userId}_${user.email}`; // Prevent email reuse
+            await user.save();
+            deletedRecords.user = 1;
+
+            // Clean up expired OTPs (safe operation)
+            const otpResult = await this.deleteUserOTPs(userId);
+            deletedRecords.expiredOTPs = otpResult.count;
+            if (otpResult.errors.length > 0) {
+                errors.push(...otpResult.errors);
+            }
+
+            console.log(`✅ Account soft-deleted for user ${userId}`);
+
+            return {
+                success: true,
+                deletedRecords,
+                errors: errors.length > 0 ? errors : undefined
+            };
+
+        } catch (error) {
+            console.error('Account deletion error:', error);
+            return {
+                success: false,
+                error: error.message,
+                deletedRecords,
+                errors: [...errors, error.message]
+            };
+        }
     }
 
     /**

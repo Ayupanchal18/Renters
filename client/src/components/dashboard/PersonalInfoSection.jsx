@@ -24,12 +24,16 @@ export default function PersonalInfoSection({ user }) {
 
         setIsUpdating(true);
         try {
-            // Only send allowed fields (not email)
+            // Only send allowed fields (not email or phone - phone requires OTP verification)
             const updateData = {
                 name: updatedUser.name,
-                phone: updatedUser.phone,
                 bio: updatedUser.about || updatedUser.bio,
             };
+
+            // Include avatar if it was updated
+            if (updatedUser.avatar !== undefined) {
+                updateData.avatar = updatedUser.avatar;
+            }
 
             const response = await fetch('/api/users/me', {
                 method: 'PATCH',

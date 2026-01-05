@@ -6,6 +6,7 @@ import {
     showSuccessToast, 
     OPERATION_CONTEXTS 
 } from "../../utils/toastNotifications";
+import { getToken, clearAuth } from "../../utils/auth";
 
 const SecurityModal = React.memo(function SecurityModal({ isOpen, onClose, type, user, onSecurityUpdate }) {
     const [showPassword, setShowPassword] = useState(false);
@@ -117,7 +118,10 @@ const SecurityModal = React.memo(function SecurityModal({ isOpen, onClose, type,
                 }
             }
         } else if (type === "delete") {
-            if (!formData.currentPassword) {
+            // Check if user is OAuth user (no password required)
+            const isOAuthUser = user?.authProvider && user?.authProvider !== 'local';
+            
+            if (!isOAuthUser && !formData.currentPassword) {
                 newErrors.currentPassword = "Password is required to confirm account deletion";
             }
             if (formData.deleteConfirmation !== "DELETE_MY_ACCOUNT") {
@@ -164,9 +168,42 @@ const SecurityModal = React.memo(function SecurityModal({ isOpen, onClose, type,
                     onClose();
                 }
             } else if (type === "delete") {
-                // Simulate account deletion
-                await new Promise(resolve => setTimeout(resolve, 1000));
+                // Call the account deletion API
+                const token = getToken();
+                if (!token) {
+                    throw new Error("You must be logged in to delete your account");
+                }
+
+                const response = await fetch("/api/privacy/delete-account", {
+                    method: "DELETE",
+                    headers: { 
+                        "Content-Type": "application/json",
+                        "Authorization": `Bearer ${token}`
+                    },
+                    credentials: "include",
+                    body: JSON.stringify({ 
+                        // Only send password for local auth users
+                        ...(formData.currentPassword && { password: formData.currentPassword }),
+                        softDelete: false 
+                    }),
+                });
+
+                const data = await response.json();
+
+                if (!response.ok) {
+                    throw new Error(data.error || data.message || "Failed to delete account");
+                }
+
+                // Clear all auth data
+                clearAuth();
+                
+                showSuccessToast("Your account has been deleted successfully", OPERATION_CONTEXTS.ACCOUNT_DELETE);
                 onSecurityUpdate?.("delete");
+                
+                // Redirect to home page after a short delay
+                setTimeout(() => {
+                    window.location.href = "/";
+                }, 1500);
             }
         } catch (error) {
             console.error("Security operation error:", error);
@@ -262,11 +299,21 @@ const SecurityModal = React.memo(function SecurityModal({ isOpen, onClose, type,
                 };
 
             case "delete":
+                // Check if user is OAuth user (no password required)
+                const isOAuthUser = user?.authProvider && user?.authProvider !== 'local';
+                
                 return {
                     title: "Delete Account",
                     description: "This action cannot be undone. All your data will be permanently deleted.",
                     icon: Trash2,
-                    fields: [
+                    fields: isOAuthUser ? [
+                        { 
+                            label: 'Type "DELETE_MY_ACCOUNT" to confirm', 
+                            type: "text", 
+                            key: "deleteConfirmation",
+                            placeholder: "DELETE_MY_ACCOUNT"
+                        },
+                    ] : [
                         { 
                             label: "Current Password", 
                             type: "password", 
@@ -284,6 +331,7 @@ const SecurityModal = React.memo(function SecurityModal({ isOpen, onClose, type,
                     ],
                     buttonText: "Delete Account",
                     dangerous: true,
+                    isOAuthUser,
                 };
 
             default:

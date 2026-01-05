@@ -6,6 +6,7 @@ import { connectDB } from "../src/config/db.js";
 import { authenticateToken } from "../src/middleware/security.js";
 import { propertyUpload, uploadPropertyPhotos } from "../src/middleware/cloudinaryUpload.js";
 import { LISTING_TYPES } from "../../shared/propertyTypes.js";
+import listingLifecycleService from "../src/services/listingLifecycleService.js";
 
 const router = Router();
 
@@ -106,6 +107,7 @@ router.post("/rent", propertyUpload.array("photos", 10), async (req, res) => {
             slug,
             listingNumber,
             location: body.location || (body.lat && body.lng ? { type: "Point", coordinates: [body.lng, body.lat] } : undefined),
+            expiresAt: listingLifecycleService.calculateExpirationDate(), // Auto-expire in 30 days
         });
 
         await doc.save();
@@ -162,6 +164,7 @@ router.post("/buy", propertyUpload.array("photos", 10), async (req, res) => {
             slug,
             listingNumber,
             location: body.location || (body.lat && body.lng ? { type: "Point", coordinates: [body.lng, body.lat] } : undefined),
+            expiresAt: listingLifecycleService.calculateExpirationDate(), // Auto-expire in 30 days
         });
 
         await doc.save();
@@ -221,6 +224,7 @@ router.post("/", propertyUpload.array("photos", 10), async (req, res) => {
             slug,
             listingNumber,
             location: body.location || (body.lat && body.lng ? { type: "Point", coordinates: [body.lng, body.lat] } : undefined),
+            expiresAt: listingLifecycleService.calculateExpirationDate(), // Auto-expire in 30 days
         });
 
         await doc.save();
@@ -987,21 +991,31 @@ router.post("/search", async (req, res) => {
 
         const andConditions = [];
 
-        // 3. Text Search (Title, Description, etc.)
+        // 3. Text Search - Use MongoDB $text index for performance (O(log n) vs O(n) for regex)
+        // Fallback to regex only for short queries or special characters where $text doesn't work well
         if (searchText) {
-            const escapedQuery = String(searchText).replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
-            const regex = new RegExp(escapedQuery, "i");
+            const trimmedSearch = searchText.trim();
 
-            andConditions.push({
-                $or: [
-                    { title: regex },
-                    { description: regex },
-                    { category: regex },
-                    { propertyType: regex },
-                    { "address.city": regex }, // adjust field path based on your Schema
-                    { city: regex }
-                ]
-            });
+            // Use $text search for queries with 3+ characters (more efficient, uses index)
+            if (trimmedSearch.length >= 3 && /^[a-zA-Z0-9\s]+$/.test(trimmedSearch)) {
+                // MongoDB $text search - uses the text index defined on Property model
+                matchStage.$text = { $search: trimmedSearch };
+            } else {
+                // Fallback to regex for short queries or special characters
+                const escapedQuery = String(trimmedSearch).replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+                const regex = new RegExp(escapedQuery, "i");
+
+                andConditions.push({
+                    $or: [
+                        { title: regex },
+                        { description: regex },
+                        { category: regex },
+                        { propertyType: regex },
+                        { "address.city": regex },
+                        { city: regex }
+                    ]
+                });
+            }
         }
 
         // 4. Location Search
@@ -1117,19 +1131,35 @@ router.post("/search", async (req, res) => {
                 sortStage = { createdAt: -1 };
         }
 
-        // Relevance Scoring (Only if searching text)
+        // Relevance Scoring
+        // When using $text search, MongoDB provides a textScore for relevance
+        // When using regex fallback, calculate relevance manually
         if (searchText) {
-            pipeline.push({
-                $addFields: {
-                    relevanceScore: {
-                        $add: [
-                            { $cond: [{ $regexMatch: { input: "$title", regex: searchText, options: "i" } }, 10, 0] },
-                            { $cond: [{ $regexMatch: { input: "$category", regex: searchText, options: "i" } }, 5, 0] },
-                            { $cond: [{ $regexMatch: { input: "$propertyType", regex: searchText, options: "i" } }, 3, 0] }
-                        ]
+            const trimmedSearch = searchText.trim();
+            const isTextSearch = trimmedSearch.length >= 3 && /^[a-zA-Z0-9\s]+$/.test(trimmedSearch);
+
+            if (isTextSearch) {
+                // Use MongoDB's native textScore for $text searches (highly optimized)
+                pipeline.push({
+                    $addFields: {
+                        relevanceScore: { $meta: "textScore" }
                     }
-                }
-            });
+                });
+            } else {
+                // Fallback: manual relevance scoring for regex searches
+                pipeline.push({
+                    $addFields: {
+                        relevanceScore: {
+                            $add: [
+                                { $cond: [{ $regexMatch: { input: "$title", regex: trimmedSearch, options: "i" } }, 10, 0] },
+                                { $cond: [{ $regexMatch: { input: "$category", regex: trimmedSearch, options: "i" } }, 5, 0] },
+                                { $cond: [{ $regexMatch: { input: "$propertyType", regex: trimmedSearch, options: "i" } }, 3, 0] }
+                            ]
+                        }
+                    }
+                });
+            }
+
             if (sort === "newest" || sort === "relevance") {
                 sortStage = { relevanceScore: -1, createdAt: -1 };
             }
@@ -1311,6 +1341,50 @@ router.patch("/:id/status", authenticateToken, async (req, res) => {
 
     } catch (err) {
         console.error("PATCH /properties/:id/status error:", err);
+        res.status(500).json({
+            success: false,
+            error: "Server error",
+            message: err.message
+        });
+    }
+});
+
+// POST renew property listing (extend expiration by 30 days)
+router.post("/:id/renew", authenticateToken, async (req, res) => {
+    try {
+        await connectDB();
+
+        const { id } = req.params;
+        const userId = req.user._id;
+
+        // Validate the property ID
+        if (!mongoose.Types.ObjectId.isValid(id)) {
+            return res.status(400).json({
+                success: false,
+                error: "Invalid property ID",
+                message: "The provided property ID is not valid"
+            });
+        }
+
+        // Use the lifecycle service to renew
+        const result = await listingLifecycleService.renewListing(id, userId);
+
+        if (!result.success) {
+            return res.status(400).json({
+                success: false,
+                error: result.error,
+                message: result.error
+            });
+        }
+
+        res.json({
+            success: true,
+            message: "Listing renewed successfully",
+            data: result.property
+        });
+
+    } catch (err) {
+        console.error("POST /properties/:id/renew error:", err);
         res.status(500).json({
             success: false,
             error: "Server error",

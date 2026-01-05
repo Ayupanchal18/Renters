@@ -45,7 +45,7 @@ const updatePhoneSchema = z.object({
 });
 
 const deleteAccountSchema = z.object({
-    password: z.string().min(1),
+    password: z.string().optional(), // Optional for OAuth users
     confirmation: z.literal("DELETE_MY_ACCOUNT")
 });
 
@@ -315,11 +315,24 @@ router.delete("/delete-account", async (req, res) => {
             return res.status(404).json({ error: "User not found" });
         }
 
-        // Verify password
-        const isPasswordValid = await bcrypt.compare(password, user.passwordHash);
-        if (!isPasswordValid) {
-            await logAccountEvent(userId, 'deletion', false, { reason: 'invalid_password' }, req);
-            return res.status(401).json({ error: "Password is incorrect" });
+        // Check if user is OAuth user (no password required)
+        const isOAuthUser = user.authProvider && user.authProvider !== 'local';
+
+        if (isOAuthUser) {
+            // OAuth users don't need password verification
+            // The confirmation text is sufficient
+        } else {
+            // Local users must provide password
+            if (!password) {
+                return res.status(400).json({ error: "Password is required for local accounts" });
+            }
+
+            // Verify password
+            const isPasswordValid = await bcrypt.compare(password, user.passwordHash);
+            if (!isPasswordValid) {
+                await logAccountEvent(userId, 'deletion', false, { reason: 'invalid_password' }, req);
+                return res.status(401).json({ error: "Password is incorrect" });
+            }
         }
 
         // Log successful deletion attempt before removing data

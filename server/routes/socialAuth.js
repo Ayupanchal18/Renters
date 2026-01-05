@@ -54,12 +54,78 @@ const setRefreshTokenCookie = (res, refreshToken) => {
 
 /* ---------------------- GOOGLE OAUTH ---------------------- */
 /**
- * Verify Google ID token and return user info
- * Uses Google's tokeninfo endpoint for verification
+ * Exchange Google authorization code for tokens and user info
+ * Uses OAuth2 authorization code flow (more reliable than FedCM)
+ */
+async function exchangeGoogleCode(code) {
+    try {
+        const clientId = process.env.GOOGLE_CLIENT_ID;
+        const clientSecret = process.env.GOOGLE_CLIENT_SECRET;
+
+        if (!clientId || !clientSecret) {
+            throw new Error('Google OAuth is not configured');
+        }
+
+        // Exchange authorization code for tokens
+        // For popup flow, redirect_uri must be 'postmessage'
+        const tokenParams = new URLSearchParams({
+            code,
+            client_id: clientId,
+            client_secret: clientSecret,
+            redirect_uri: 'postmessage',
+            grant_type: 'authorization_code',
+        });
+
+        console.log('Exchanging Google auth code...');
+
+        const tokenResponse = await fetch('https://oauth2.googleapis.com/token', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+            body: tokenParams,
+        });
+
+        const tokenData = await tokenResponse.json();
+
+        if (!tokenResponse.ok) {
+            console.error('Google token exchange failed:', {
+                status: tokenResponse.status,
+                error: tokenData.error,
+                description: tokenData.error_description,
+            });
+            throw new Error(tokenData.error_description || 'Failed to exchange authorization code');
+        }
+
+        const tokens = tokenData;
+
+        // Get user info using the access token
+        const userInfoResponse = await fetch('https://www.googleapis.com/oauth2/v2/userinfo', {
+            headers: { Authorization: `Bearer ${tokens.access_token}` },
+        });
+
+        if (!userInfoResponse.ok) {
+            throw new Error('Failed to fetch user info from Google');
+        }
+
+        const userInfo = await userInfoResponse.json();
+
+        return {
+            id: userInfo.id,
+            email: userInfo.email,
+            name: userInfo.name,
+            picture: userInfo.picture,
+            emailVerified: userInfo.verified_email,
+        };
+    } catch (error) {
+        console.error('Google code exchange failed:', error.message);
+        throw new Error('Failed to authenticate with Google');
+    }
+}
+
+/**
+ * Verify Google ID token (legacy support for credential flow)
  */
 async function verifyGoogleToken(credential) {
     try {
-        // Use Google's tokeninfo endpoint to verify the ID token
         const response = await fetch(
             `https://oauth2.googleapis.com/tokeninfo?id_token=${credential}`
         );
@@ -70,7 +136,6 @@ async function verifyGoogleToken(credential) {
 
         const payload = await response.json();
 
-        // Verify the audience (client ID)
         const expectedClientId = process.env.GOOGLE_CLIENT_ID;
         if (expectedClientId && payload.aud !== expectedClientId) {
             throw new Error('Token was not issued for this application');
@@ -93,17 +158,24 @@ router.post("/google", async (req, res) => {
     try {
         await connectDB();
 
-        const { credential } = req.body;
+        const { code, credential } = req.body;
 
-        if (!credential) {
+        if (!code && !credential) {
             return res.status(400).json({
                 success: false,
-                error: "Google credential is required"
+                error: "Google authorization code or credential is required"
             });
         }
 
-        // Verify the Google token
-        const googleUser = await verifyGoogleToken(credential);
+        // Get Google user info - support both auth code and credential flows
+        let googleUser;
+        if (code) {
+            // New OAuth2 popup flow (authorization code)
+            googleUser = await exchangeGoogleCode(code);
+        } else {
+            // Legacy FedCM/One Tap flow (ID token credential)
+            googleUser = await verifyGoogleToken(credential);
+        }
 
         if (!googleUser.email) {
             return res.status(400).json({
@@ -128,6 +200,22 @@ router.post("/google", async (req, res) => {
                     picture: googleUser.picture,
                     linkedAt: new Date()
                 };
+                // Set avatar from Google if user doesn't have one
+                if (!user.avatar && googleUser.picture) {
+                    user.avatar = googleUser.picture;
+                }
+            } else if (user.authProvider === 'google') {
+                // Returning Google user - update picture if changed or missing
+                if (googleUser.picture) {
+                    user.authProviderData = {
+                        ...user.authProviderData,
+                        picture: googleUser.picture
+                    };
+                    // Update avatar if user doesn't have one or if it's still the old Google picture
+                    if (!user.avatar) {
+                        user.avatar = googleUser.picture;
+                    }
+                }
             }
 
             // Update last login
@@ -138,6 +226,11 @@ router.post("/google", async (req, res) => {
             if (!user.emailVerified) {
                 user.emailVerified = true;
                 user.emailVerifiedAt = new Date();
+            }
+
+            // Update avatar from Google if user still doesn't have one
+            if (!user.avatar && googleUser.picture) {
+                user.avatar = googleUser.picture;
             }
 
             await user.save();
@@ -286,6 +379,22 @@ router.post("/facebook", async (req, res) => {
                     picture: facebookUser.picture,
                     linkedAt: new Date()
                 };
+                // Set avatar from Facebook if user doesn't have one
+                if (!user.avatar && facebookUser.picture) {
+                    user.avatar = facebookUser.picture;
+                }
+            } else if (user.authProvider === 'facebook') {
+                // Returning Facebook user - update picture if changed or missing
+                if (facebookUser.picture) {
+                    user.authProviderData = {
+                        ...user.authProviderData,
+                        picture: facebookUser.picture
+                    };
+                    // Update avatar if user doesn't have one
+                    if (!user.avatar) {
+                        user.avatar = facebookUser.picture;
+                    }
+                }
             }
 
             // Update last login
@@ -296,6 +405,11 @@ router.post("/facebook", async (req, res) => {
             if (!user.emailVerified) {
                 user.emailVerified = true;
                 user.emailVerifiedAt = new Date();
+            }
+
+            // Update avatar from Facebook if user still doesn't have one
+            if (!user.avatar && facebookUser.picture) {
+                user.avatar = facebookUser.picture;
             }
 
             await user.save();

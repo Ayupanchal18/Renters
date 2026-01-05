@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useRef } from "react";
 import { Link, useLocation, useNavigate } from "react-router-dom";
 import { Button } from "./ui/button";
-import { Building2, Menu, X, Bell, LogOut, User, Heart, ChevronDown, Shield, MessageSquare, Check, Key, Home as HomeIcon } from 'lucide-react';
+import { Menu, X, Bell, LogOut, User, Heart, ChevronDown, Shield, MessageSquare, Check, Key, Home as HomeIcon } from 'lucide-react';
 import { isAuthenticated, logout, getUser } from "../utils/auth";
 import { ThemeToggle } from "./ui/theme-toggle";
 import { cva } from "class-variance-authority";
@@ -200,17 +200,11 @@ export default function Navbar({ variant = "default" }) {
                                 : "bg-gradient-to-r from-primary to-primary bg-clip-text text-transparent"
                         )}
                     >
-                        <div className={cn(
-                            "p-2 rounded-lg",
-                            isGradientVariant
-                                ? "bg-white/20"
-                                : "bg-gradient-to-br from-primary to-primary"
-                        )}>
-                            <Building2 className={cn(
-                                "h-6 w-6",
-                                isGradientVariant ? "text-white" : "text-primary-foreground"
-                            )} />
-                        </div>
+                        <img 
+                            src="/Logo2.png" 
+                            alt="Renters Logo" 
+                            className="h-8 w-8 object-contain"
+                        />
                         <span>Renters</span>
                     </Link>
 

@@ -106,8 +106,14 @@ const propertySchema = new mongoose.Schema(
         ownerType: { type: String, enum: ["owner", "agent", "builder"], default: "owner" },
 
         // admin / status
-        status: { type: String, enum: ["active", "inactive", "blocked"], default: "active" },
+        status: { type: String, enum: ["active", "inactive", "blocked", "expired"], default: "active" },
         isDeleted: { type: Boolean, default: false },
+
+        // Listing Lifecycle Management
+        expiresAt: { type: Date, index: true }, // When the listing auto-expires
+        lastRenewedAt: { type: Date }, // When last renewed
+        renewalCount: { type: Number, default: 0 }, // How many times renewed
+        expirationWarned: { type: Boolean, default: false }, // Whether owner was notified of upcoming expiration
 
         // metrics
         views: { type: Number, default: 0 },
@@ -151,4 +157,9 @@ propertySchema.index({ listingType: 1, sellingPrice: 1, status: 1, isDeleted: 1 
 propertySchema.index({ listingType: 1, category: 1, status: 1, isDeleted: 1 }); // listing type + category
 propertySchema.index({ listingType: 1, status: 1, isDeleted: 1, createdAt: -1 }); // listing type with date sort
 
+// Listing Lifecycle indexes
+propertySchema.index({ expiresAt: 1, status: 1, isDeleted: 1 }); // for expiration processing
+propertySchema.index({ expiresAt: 1, expirationWarned: 1, status: 1, isDeleted: 1 }); // for warning notifications
+
 export const Property = mongoose.models.Property || mongoose.model("Property", propertySchema);
+

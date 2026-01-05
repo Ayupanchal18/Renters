@@ -7,7 +7,7 @@ import { Link, useNavigate } from "react-router-dom";
 import { authAPI } from "../lib/api";
 import { setToken, setUser } from "../utils/auth";
 import { useSocket } from "../contexts/SocketContext";
-import { Building2, Mail, Lock, ArrowRight, Shield, Sparkles } from "lucide-react";
+import { Mail, Lock, ArrowRight, Shield, Sparkles } from "lucide-react";
 import SocialLoginButtons from "../components/auth/SocialLoginButtons";
 
 export default function Login() {
@@ -66,9 +66,11 @@ export default function Login() {
                     <div className="bg-card/80 backdrop-blur-xl border border-border rounded-2xl shadow-2xl p-6 sm:p-8">
                         {/* Header */}
                         <div className="text-center mb-8">
-                            <div className="inline-flex items-center justify-center w-14 h-14 rounded-2xl bg-gradient-to-br from-primary to-primary/80 shadow-lg shadow-primary/25 mb-4">
-                                <Building2 className="w-7 h-7 text-primary-foreground" />
-                            </div>
+                            <img 
+                                src="/Logo1.png" 
+                                alt="Renters Logo" 
+                                className="w-14 h-14 object-contain"
+                            />
                             <h1 className="text-2xl font-bold text-foreground mb-2">Welcome Back</h1>
                             <p className="text-muted-foreground text-sm">
                                 Sign in to manage your listings and messages

@@ -32,25 +32,28 @@ export default function SocialLoginButtons({ onSuccess, onError, disabled = fals
 
         try {
             // Load Google Identity Services library if not loaded
-            if (!window.google?.accounts?.id) {
+            if (!window.google?.accounts?.oauth2) {
                 await loadGoogleScript();
             }
 
-            // Initialize Google Identity Services
-            window.google.accounts.id.initialize({
+            // Use OAuth2 popup flow instead of FedCM (more reliable, avoids COOP issues)
+            const client = window.google.accounts.oauth2.initCodeClient({
                 client_id: googleClientId,
-                callback: handleGoogleCallback,
-                auto_select: false,
-                cancel_on_tap_outside: true,
+                scope: 'email profile',
+                ux_mode: 'popup',
+                callback: async (response) => {
+                    if (response.error) {
+                        console.error("Google OAuth error:", response.error);
+                        setLoading(prev => ({ ...prev, google: false }));
+                        onError?.(response.error_description || "Google login failed");
+                        return;
+                    }
+                    // Exchange auth code for credential on backend
+                    await handleGoogleAuthCode(response.code);
+                },
             });
 
-            // Render the Google One Tap or prompt
-            window.google.accounts.id.prompt((notification) => {
-                if (notification.isNotDisplayed() || notification.isSkippedMoment()) {
-                    // If One Tap is blocked, use popup method
-                    renderGoogleButton();
-                }
-            });
+            client.requestCode();
         } catch (error) {
             console.error("Google login error:", error);
             setLoading(prev => ({ ...prev, google: false }));
@@ -58,92 +61,13 @@ export default function SocialLoginButtons({ onSuccess, onError, disabled = fals
         }
     };
 
-    const loadGoogleScript = () => {
-        return new Promise((resolve, reject) => {
-            // Check if already loaded
-            if (window.google?.accounts?.id) {
-                resolve();
-                return;
-            }
-
-            // Check if script is already being loaded
-            const existingScript = document.querySelector('script[src*="accounts.google.com/gsi/client"]');
-            if (existingScript) {
-                // Wait for it to load
-                existingScript.addEventListener('load', () => {
-                    if (window.google?.accounts?.id) {
-                        resolve();
-                    } else {
-                        reject(new Error("Google SDK loaded but not initialized"));
-                    }
-                });
-                existingScript.addEventListener('error', () => {
-                    reject(new Error("Failed to load Google SDK. Please check your internet connection or disable ad blockers."));
-                });
-                return;
-            }
-
-            const script = document.createElement("script");
-            script.src = "https://accounts.google.com/gsi/client";
-            script.async = true;
-            script.defer = true;
-            
-            // Set timeout for slow networks
-            const timeout = setTimeout(() => {
-                reject(new Error("Google SDK loading timed out. Please check your internet connection."));
-            }, 10000); // 10 second timeout
-
-            script.onload = () => {
-                clearTimeout(timeout);
-                // Give the SDK time to initialize
-                setTimeout(() => {
-                    if (window.google?.accounts?.id) {
-                        resolve();
-                    } else {
-                        reject(new Error("Google SDK loaded but not initialized"));
-                    }
-                }, 100);
-            };
-            
-            script.onerror = () => {
-                clearTimeout(timeout);
-                reject(new Error("Failed to load Google SDK. Please check your internet connection or disable ad blockers."));
-            };
-            
-            document.head.appendChild(script);
-        });
-    };
-
-    const renderGoogleButton = () => {
-        // Create a temporary container for Google button
-        const container = document.createElement("div");
-        container.id = "google-signin-button";
-        container.style.display = "none";
-        document.body.appendChild(container);
-
-        window.google.accounts.id.renderButton(container, {
-            type: "standard",
-            theme: "outline",
-            size: "large",
-        });
-
-        // Trigger click on the hidden button
-        const googleButton = container.querySelector('[role="button"]');
-        if (googleButton) {
-            googleButton.click();
-        }
-
-        // Clean up
-        setTimeout(() => container.remove(), 100);
-    };
-
-    const handleGoogleCallback = async (response) => {
+    const handleGoogleAuthCode = async (code) => {
         try {
             const result = await fetch("/api/auth/google", {
                 method: "POST",
                 headers: { "Content-Type": "application/json" },
                 credentials: "include",
-                body: JSON.stringify({ credential: response.credential }),
+                body: JSON.stringify({ code }),
             });
 
             const data = await result.json();
@@ -161,11 +85,64 @@ export default function SocialLoginButtons({ onSuccess, onError, disabled = fals
             onSuccess?.(data);
             navigate("/dashboard");
         } catch (error) {
-            console.error("Google callback error:", error);
+            console.error("Google auth error:", error);
             onError?.(error.message || "Google login failed");
         } finally {
             setLoading(prev => ({ ...prev, google: false }));
         }
+    };
+
+    const loadGoogleScript = () => {
+        return new Promise((resolve, reject) => {
+            // Check if already loaded
+            if (window.google?.accounts?.oauth2) {
+                resolve();
+                return;
+            }
+
+            // Check if script is already being loaded
+            const existingScript = document.querySelector('script[src*="accounts.google.com/gsi/client"]');
+            if (existingScript) {
+                existingScript.addEventListener('load', () => {
+                    if (window.google?.accounts?.oauth2) {
+                        resolve();
+                    } else {
+                        reject(new Error("Google SDK loaded but not initialized"));
+                    }
+                });
+                existingScript.addEventListener('error', () => {
+                    reject(new Error("Failed to load Google SDK. Please check your internet connection or disable ad blockers."));
+                });
+                return;
+            }
+
+            const script = document.createElement("script");
+            script.src = "https://accounts.google.com/gsi/client";
+            script.async = true;
+            script.defer = true;
+            
+            const timeout = setTimeout(() => {
+                reject(new Error("Google SDK loading timed out. Please check your internet connection."));
+            }, 10000);
+
+            script.onload = () => {
+                clearTimeout(timeout);
+                setTimeout(() => {
+                    if (window.google?.accounts?.oauth2) {
+                        resolve();
+                    } else {
+                        reject(new Error("Google SDK loaded but not initialized"));
+                    }
+                }, 100);
+            };
+            
+            script.onerror = () => {
+                clearTimeout(timeout);
+                reject(new Error("Failed to load Google SDK. Please check your internet connection or disable ad blockers."));
+            };
+            
+            document.head.appendChild(script);
+        });
     };
 
     /* ─────────────────────── FACEBOOK LOGIN ─────────────────────── */

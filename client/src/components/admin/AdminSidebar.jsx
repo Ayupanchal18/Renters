@@ -83,9 +83,11 @@ const AdminSidebar = ({ onClose }) => {
       {/* Sidebar header */}
       <div className="flex h-16 items-center justify-between px-4 border-b border-border">
         <Link to="/admin" className="flex items-center gap-2">
-          <div className="p-2 rounded-lg bg-primary">
-            <Building2 className="h-5 w-5 text-primary-foreground" />
-          </div>
+          <img 
+            src="/Logo2.png" 
+            alt="Renters Logo" 
+            className="h-8 w-8 object-contain"
+          />
           <span className="text-lg font-bold text-foreground">Admin Panel</span>
         </Link>
         
@@ -153,9 +155,11 @@ const AdminSidebar = ({ onClose }) => {
       {/* Sidebar footer */}
       <div className="border-t border-border p-4">
         <div className="flex items-center gap-3 rounded-lg bg-muted/50 px-3 py-2">
-          <div className="h-8 w-8 rounded-full bg-primary/10 flex items-center justify-center">
-            <Building2 className="h-4 w-4 text-primary" />
-          </div>
+          <img 
+            src="/Logo2.png" 
+            alt="Renters Logo" 
+            className="h-8 w-8 object-contain"
+          />
           <div className="flex-1 min-w-0">
             <p className="text-sm font-medium text-foreground truncate">Renters</p>
             <p className="text-xs text-muted-foreground">Admin v1.0</p>

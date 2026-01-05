@@ -571,8 +571,9 @@ export const securityHeaders = (req, res, next) => {
             "style-src 'self' 'unsafe-inline' https://fonts.googleapis.com https://accounts.google.com; " +
             "font-src 'self' https://fonts.gstatic.com; " +
             "img-src 'self' data: https: blob:; " +
-            "connect-src 'self' ws: wss: https://api.bigdatacloud.net https://accounts.google.com https://oauth2.googleapis.com https://graph.facebook.com https://*.tile.openstreetmap.org https://tile.openstreetmap.org https://cdnjs.cloudflare.com; " +
-            "frame-src 'self' https://maps.google.com https://www.google.com https://*.google.com https://www.openstreetmap.org https://*.openstreetmap.org https://accounts.google.com https://www.facebook.com;"
+            "connect-src 'self' ws: wss: https://api.bigdatacloud.net https://accounts.google.com https://oauth2.googleapis.com https://graph.facebook.com https://*.tile.openstreetmap.org https://tile.openstreetmap.org https://cdnjs.cloudflare.com https://res.cloudinary.com https://*.cloudinary.com; " +
+            "frame-src 'self' https://maps.google.com https://www.google.com https://*.google.com https://www.openstreetmap.org https://*.openstreetmap.org https://accounts.google.com https://www.facebook.com; " +
+            "worker-src 'self' blob:;"
         );
     } else {
         // Stricter CSP for production (still allows OAuth)
@@ -582,8 +583,9 @@ export const securityHeaders = (req, res, next) => {
             "style-src 'self' 'unsafe-inline' https://fonts.googleapis.com https://accounts.google.com; " +
             "font-src 'self' https://fonts.gstatic.com; " +
             "img-src 'self' data: https: blob:; " +
-            "connect-src 'self' https://api.bigdatacloud.net https://accounts.google.com https://oauth2.googleapis.com https://graph.facebook.com https://*.tile.openstreetmap.org https://tile.openstreetmap.org https://cdnjs.cloudflare.com; " +
-            "frame-src 'self' https://maps.google.com https://www.google.com https://*.google.com https://www.openstreetmap.org https://*.openstreetmap.org https://accounts.google.com https://www.facebook.com;"
+            "connect-src 'self' https://api.bigdatacloud.net https://accounts.google.com https://oauth2.googleapis.com https://graph.facebook.com https://*.tile.openstreetmap.org https://tile.openstreetmap.org https://cdnjs.cloudflare.com https://res.cloudinary.com https://*.cloudinary.com; " +
+            "frame-src 'self' https://maps.google.com https://www.google.com https://*.google.com https://www.openstreetmap.org https://*.openstreetmap.org https://accounts.google.com https://www.facebook.com; " +
+            "worker-src 'self' blob:;"
         );
     }
 

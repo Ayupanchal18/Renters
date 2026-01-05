@@ -2,6 +2,7 @@ import { Router } from "express";
 import { z } from "zod";
 import multer from "multer";
 import { uploadToCloudinary, deleteFromCloudinary } from "../src/config/cloudinary.js";
+import { authenticateToken } from "../src/middleware/security.js";
 
 const router = Router();
 
@@ -20,6 +21,67 @@ const upload = multer({
         } else {
             cb(new Error('File type not supported'), false);
         }
+    }
+});
+
+/**
+ * POST /api/upload/profile-photo
+ * Upload a profile photo to Cloudinary (requires authentication)
+ */
+router.post("/profile-photo", authenticateToken, upload.single('image'), async (req, res) => {
+    try {
+        if (!req.file) {
+            return res.status(400).json({
+                success: false,
+                error: "No file provided"
+            });
+        }
+
+        const result = await uploadToCloudinary(req.file.buffer, {
+            folder: 'profile-photos',
+            resource_type: 'image',
+            transformation: [
+                { width: 400, height: 400, crop: 'fill', gravity: 'face' },
+                { quality: 'auto:good' },
+                { fetch_format: 'auto' }
+            ]
+        });
+
+        res.json({
+            success: true,
+            data: {
+                url: result.secure_url,
+                publicId: result.public_id
+            },
+            url: result.secure_url,
+            publicId: result.public_id,
+            format: result.format,
+            width: result.width,
+            height: result.height,
+            size: result.bytes,
+            uploadedAt: new Date()
+        });
+    } catch (error) {
+        console.error('Profile photo upload error:', error);
+
+        if (error.message === 'File type not supported') {
+            return res.status(400).json({
+                success: false,
+                error: "File type not supported. Please use JPEG, PNG, GIF, or WebP."
+            });
+        }
+        if (error.code === 'LIMIT_FILE_SIZE') {
+            return res.status(400).json({
+                success: false,
+                error: "File size exceeds 10MB limit"
+            });
+        }
+
+        res.status(500).json({
+            success: false,
+            error: "Upload failed",
+            message: error.message
+        });
     }
 });
 

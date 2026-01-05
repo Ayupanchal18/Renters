@@ -696,29 +696,7 @@ export default function PropertyPage() {
                                 {/* Price Card */}
                                 <PriceDisplay property={propertyData} />
 
-                                {/* Contact Actions */}
-                                <div className="bg-card rounded-xl border border-border p-4 space-y-3">
-                                    <Button
-                                        onClick={handleMessage}
-                                        disabled={isCreatingConversation}
-                                        className="w-full h-11"
-                                    >
-                                        <MessageCircle className="w-4 h-4 mr-2" />
-                                        {isCreatingConversation ? 'Starting chat...' : 'Send Message'}
-                                    </Button>
-                                    {propertyData.ownerPhone && (
-                                        <Button
-                                            onClick={handleCall}
-                                            variant="outline"
-                                            className="w-full h-11"
-                                        >
-                                            <Phone className="w-4 h-4 mr-2" />
-                                            Call Owner
-                                        </Button>
-                                    )}
-                                </div>
-
-                                {/* Owner Card */}
+                                {/* Owner Card - Contains all contact options */}
                                 <OwnerCard 
                                     owner={{
                                         id: propertyData.ownerId || propertyData.owner?._id || propertyData.owner,

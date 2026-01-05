@@ -1,7 +1,6 @@
 import React from "react";
 import { Link } from "react-router-dom";
 import {
-    Building2,
     Facebook,
     Twitter,
     Instagram,
@@ -52,9 +51,11 @@ export default function Footer() {
                     {/* Brand Section */}
                     <div className="lg:col-span-4">
                         <Link to="/" className="inline-flex items-center gap-2 mb-4">
-                            <div className="p-2 rounded-lg bg-gradient-to-br from-primary to-primary">
-                                <Building2 className="h-5 w-5 text-primary-foreground" />
-                            </div>
+                            <img 
+                                src="/Logo2.png" 
+                                alt="Renters Logo" 
+                                className="h-7 w-7 object-contain"
+                            />
                             <span className="text-xl font-bold bg-gradient-to-r from-primary to-primary bg-clip-text text-transparent">
                                 Renters
                             </span>
