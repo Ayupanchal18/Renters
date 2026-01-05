@@ -150,6 +150,15 @@ export default async function createServer(devMode = false) {
         res.json({ message: process.env.PING_MESSAGE ?? "ping" });
     });
 
+    // Public config endpoint for client-side OAuth configuration
+    // Only exposes non-sensitive public client IDs
+    app.get("/api/config/public", (_req, res) => {
+        res.json({
+            googleClientId: process.env.GOOGLE_CLIENT_ID || process.env.VITE_GOOGLE_CLIENT_ID || null,
+            facebookAppId: process.env.FACEBOOK_APP_ID || process.env.VITE_FACEBOOK_APP_ID || null,
+        });
+    });
+
     // -------------------------
     //   CONNECT DATABASE
     // -------------------------

@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { Button } from "../ui/button";
 import { setToken, setUser } from "../../utils/auth";
@@ -12,12 +12,39 @@ import { useSocket } from "../../contexts/SocketContext";
  */
 export default function SocialLoginButtons({ onSuccess, onError, disabled = false }) {
     const [loading, setLoading] = useState({ google: false, facebook: false });
+    const [config, setConfig] = useState({ googleClientId: null, facebookAppId: null });
     const navigate = useNavigate();
     const { initializeSocket } = useSocket();
 
-    // Get OAuth client IDs from environment
-    const googleClientId = import.meta.env.VITE_GOOGLE_CLIENT_ID;
-    const facebookAppId = import.meta.env.VITE_FACEBOOK_APP_ID;
+    // Get OAuth client IDs from environment or fetch from server
+    useEffect(() => {
+        const envGoogleId = import.meta.env.VITE_GOOGLE_CLIENT_ID;
+        const envFacebookId = import.meta.env.VITE_FACEBOOK_APP_ID;
+
+        // If env vars are set and not placeholders, use them
+        if (envGoogleId && envGoogleId !== 'your_google_client_id') {
+            setConfig(prev => ({ ...prev, googleClientId: envGoogleId }));
+        }
+        if (envFacebookId && envFacebookId !== 'your_facebook_app_id') {
+            setConfig(prev => ({ ...prev, facebookAppId: envFacebookId }));
+        }
+
+        // Fetch from server as fallback (for production where VITE_ vars aren't baked in)
+        if (!envGoogleId || envGoogleId === 'your_google_client_id' || !envFacebookId || envFacebookId === 'your_facebook_app_id') {
+            fetch('/api/config/public')
+                .then(res => res.json())
+                .then(data => {
+                    setConfig(prev => ({
+                        googleClientId: prev.googleClientId || data.googleClientId,
+                        facebookAppId: prev.facebookAppId || data.facebookAppId,
+                    }));
+                })
+                .catch(err => console.warn('Failed to fetch OAuth config:', err));
+        }
+    }, []);
+
+    const googleClientId = config.googleClientId;
+    const facebookAppId = config.facebookAppId;
 
     /* ─────────────────────── GOOGLE LOGIN ─────────────────────── */
     const handleGoogleLogin = async () => {
