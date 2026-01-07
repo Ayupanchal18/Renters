@@ -137,63 +137,64 @@ const PropertyDetailCard = ({ property, onClose, onViewDetails }) => {
     if (!property) return null;
     
     return (
-        <div className="absolute bottom-16 left-1/2 -translate-x-1/2 z-[1000] w-[90%] max-w-[320px] sm:max-w-[360px] animate-slide-up">
-            <div className="bg-card rounded-2xl shadow-2xl border border-border overflow-hidden">
+        <div className="absolute bottom-14 left-1/2 -translate-x-1/2 z-[1000] w-[85%] max-w-[280px] animate-slide-up">
+            <div className="bg-card rounded-xl shadow-2xl border border-border overflow-hidden">
                 {/* Close button */}
                 <button 
                     onClick={onClose}
-                    className="absolute top-2 right-2 z-10 bg-black/50 hover:bg-black/70 text-white rounded-full p-1.5 transition-colors"
+                    className="absolute top-1.5 right-1.5 z-10 bg-black/50 hover:bg-black/70 text-white rounded-full p-1 transition-colors"
                 >
-                    <X className="w-4 h-4" />
+                    <X className="w-3.5 h-3.5" />
                 </button>
                 
                 {/* Image */}
-                <div className="relative h-32 sm:h-40">
+                <div className="relative h-24">
                     <img 
                         src={property.photos?.[0] || '/placeholder.svg'} 
                         alt={property.title}
                         className="w-full h-full object-cover"
                     />
-                    <div className="absolute inset-0 bg-gradient-to-t from-black/60 to-transparent" />
-                    <div className="absolute bottom-3 left-3 right-3">
-                        <h3 className="font-bold text-white text-base sm:text-lg line-clamp-1">{property.title}</h3>
-                        <p className="text-white/80 text-xs sm:text-sm flex items-center gap-1 mt-0.5">
-                            <MapPin className="w-3 h-3" />
+                    <div className="absolute inset-0 bg-gradient-to-t from-black/70 to-transparent" />
+                    <div className="absolute bottom-2 left-2 right-2">
+                        <h3 className="font-semibold text-white text-sm line-clamp-1">{property.title}</h3>
+                        <p className="text-white/80 text-[11px] flex items-center gap-1">
+                            <MapPin className="w-2.5 h-2.5" />
                             <span className="truncate">{property.address || property.city}</span>
                         </p>
                     </div>
                 </div>
                 
                 {/* Details */}
-                <div className="p-3 sm:p-4">
-                    <div className="flex items-center gap-4 text-sm text-muted-foreground mb-3">
-                        {property.bedrooms && (
-                            <span className="flex items-center gap-1">
-                                <Bed className="w-4 h-4 text-primary" /> 
-                                {property.bedrooms} Beds
-                            </span>
-                        )}
+                <div className="p-2.5">
+                    <div className="flex items-center gap-3 text-xs text-muted-foreground mb-2">
                         {property.bathrooms && (
                             <span className="flex items-center gap-1">
-                                <Bath className="w-4 h-4 text-primary" /> 
+                                <Bath className="w-3 h-3 text-primary" /> 
                                 {property.bathrooms} Bath
+                            </span>
+                        )}
+                        {property.bedrooms && (
+                            <span className="flex items-center gap-1">
+                                <Bed className="w-3 h-3 text-primary" /> 
+                                {property.bedrooms} Bed
                             </span>
                         )}
                     </div>
                     
-                    <div className="flex items-center justify-between">
-                        <div>
-                            <p className="text-xs text-muted-foreground">Monthly Rent</p>
-                            <p className="text-primary font-bold text-lg sm:text-xl">
+                    <div className="flex items-center justify-between gap-2">
+                        <div className="min-w-0">
+                            <p className="text-[10px] text-muted-foreground">Monthly Rent</p>
+                            <p className="text-primary font-bold text-base">
                                 ₹{property.monthlyRent?.toLocaleString()}
                             </p>
                         </div>
                         <Button 
+                            size="sm"
                             onClick={() => onViewDetails(property.slug)}
-                            className="gap-2"
+                            className="gap-1 h-8 text-xs px-3"
                         >
                             View Details
-                            <ArrowRight className="w-4 h-4" />
+                            <ArrowRight className="w-3 h-3" />
                         </Button>
                     </div>
                 </div>

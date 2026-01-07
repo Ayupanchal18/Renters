@@ -43,19 +43,18 @@ const nearbyService = {
     },
 
     /**
-     * Get nearby amenities by address (geocodes first via Nominatim)
+     * Get nearby amenities by address (geocodes first via backend proxy)
      * @param {string} address - Property address
      * @param {string} city - Property city
      */
     getNearbyAmenitiesByAddress: async (address, city) => {
         try {
-            // Use Nominatim to geocode the address
-            const searchQuery = encodeURIComponent(`${address}, ${city}, India`);
-            const geocodeUrl = `https://nominatim.openstreetmap.org/search?q=${searchQuery}&format=json&limit=1`;
+            // Use backend proxy to geocode the address (avoids CORS/CSP issues with Nominatim)
+            const params = new URLSearchParams();
+            if (address) params.append('address', address);
+            if (city) params.append('city', city);
 
-            const geocodeResponse = await fetch(geocodeUrl, {
-                headers: { 'User-Agent': 'PropertyApp/1.0' }
-            });
+            const geocodeResponse = await fetch(`/api/geocode?${params.toString()}`);
 
             if (!geocodeResponse.ok) {
                 throw new Error('Geocoding failed');
@@ -63,30 +62,21 @@ const nearbyService = {
 
             const geocodeData = await geocodeResponse.json();
 
-            if (!geocodeData || geocodeData.length === 0) {
+            if (!geocodeData.success || !geocodeData.coordinates) {
                 // Fallback: try with just city
-                const cityQuery = encodeURIComponent(`${city}, India`);
-                const cityGeoUrl = `https://nominatim.openstreetmap.org/search?q=${cityQuery}&format=json&limit=1`;
+                if (city && address) {
+                    const cityResponse = await fetch(`/api/geocode?city=${encodeURIComponent(city)}`);
+                    const cityData = await cityResponse.json();
 
-                const cityResponse = await fetch(cityGeoUrl, {
-                    headers: { 'User-Agent': 'PropertyApp/1.0' }
-                });
-
-                const cityData = await cityResponse.json();
-                if (!cityData || cityData.length === 0) {
-                    return { success: false, amenities: [], error: 'Could not geocode address' };
+                    if (!cityData.success || !cityData.coordinates) {
+                        return { success: false, amenities: [], error: 'Could not geocode address' };
+                    }
+                    return nearbyService.getNearbyAmenities(cityData.coordinates, 2);
                 }
-
-                const coords = { lat: parseFloat(cityData[0].lat), lng: parseFloat(cityData[0].lon) };
-                return nearbyService.getNearbyAmenities(coords, 2);
+                return { success: false, amenities: [], error: 'Could not geocode address' };
             }
 
-            const coords = {
-                lat: parseFloat(geocodeData[0].lat),
-                lng: parseFloat(geocodeData[0].lon)
-            };
-
-            return nearbyService.getNearbyAmenities(coords, 2);
+            return nearbyService.getNearbyAmenities(geocodeData.coordinates, 2);
         } catch (error) {
             console.error('Error fetching nearby amenities by address:', error);
             return { success: false, amenities: [], error: error.message };

@@ -240,6 +240,29 @@ export function ListingsGrid({
                             </Button>
                         </div>
                     )}
+
+                    {/* Loading More Indicator */}
+                    {isLoadingMore && (
+                        <div className="flex flex-col items-center justify-center py-6 animate-in fade-in duration-300">
+                            <div className="flex items-center gap-2 px-4 py-2 bg-primary/10 rounded-full">
+                                <Loader2 className="w-4 h-4 animate-spin text-primary" />
+                                <span className="text-sm font-medium text-primary">Loading more properties...</span>
+                            </div>
+                        </div>
+                    )}
+
+                    {/* End of Results Message */}
+                    {!hasMore && !isLoadingMore && properties.length > 0 && (
+                        <div className="flex flex-col items-center justify-center py-8 border-t border-border mt-4">
+                            <div className="w-10 h-1 bg-muted-foreground/20 rounded-full mb-3" />
+                            <p className="text-sm text-muted-foreground">
+                                You've reached the end
+                            </p>
+                            <p className="text-xs text-muted-foreground/70 mt-1">
+                                {properties.length} {properties.length === 1 ? 'property' : 'properties'} shown
+                            </p>
+                        </div>
+                    )}
                 </>
             )}
 

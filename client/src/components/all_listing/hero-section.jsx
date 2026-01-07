@@ -67,6 +67,16 @@ export function HeroSection({ onSearch }) {
     // Read URL params for pre-populating search fields
     const urlQuery = searchParams.get('q') || '';
     const urlLocation = searchParams.get('loc') || '';
+    
+    // Also check for search data passed via navigation state (from homepage)
+    const navSearchData = location.state?.searchData;
+    
+    // Determine initial values: navigation state takes priority, then URL params
+    const initialLocation = navSearchData?.location || navSearchData?.city || urlLocation || '';
+    const initialQuery = navSearchData?.query || urlQuery || '';
+    const initialPropertyType = navSearchData?.category 
+        ? getPropertyTypeLabel(navSearchData.category) 
+        : "All Types";
 
     // --- State Management ---
     const [activeTab, setActiveTab] = useState(initialTab);
@@ -81,8 +91,8 @@ export function HeroSection({ onSearch }) {
         }
     };
 
-    // Universal Search State - initialize from URL params if present
-    const [locationInput, setLocationInput] = useState(urlLocation);
+    // Universal Search State - initialize from navigation state or URL params
+    const [locationInput, setLocationInput] = useState(initialLocation);
     const [suggestions, setSuggestions] = useState([]);
     const [showSuggestions, setShowSuggestions] = useState(false);
     const [showRecentSearches, setShowRecentSearches] = useState(false);
@@ -90,10 +100,10 @@ export function HeroSection({ onSearch }) {
     const searchWrapperRef = useRef(null);
     const suggestionTimeoutRef = useRef(null);
 
-    // Filters State
-    const [propertyType, setPropertyType] = useState("All Types");
-    // Initialize keyword from URL params
-    const [keywordInput, setKeywordInput] = useState(urlQuery);
+    // Filters State - initialize from navigation state
+    const [propertyType, setPropertyType] = useState(initialPropertyType);
+    // Initialize keyword from navigation state or URL params
+    const [keywordInput, setKeywordInput] = useState(initialQuery);
 
     // Dropdown Visibility States
     const [openDropdown, setOpenDropdown] = useState(null); // 'type' or null
@@ -430,7 +440,7 @@ export function HeroSection({ onSearch }) {
                         {/* 1. Location Input (Spans 5 columns) */}
                         <div className="md:col-span-5 relative group">
                             <div className={`
-                                flex items-center px-4 h-14 bg-slate-50 dark:bg-slate-700 rounded-xl border-2 transition-all
+                                flex items-center px-3 sm:px-4 h-12 sm:h-14 bg-slate-50 dark:bg-slate-700 rounded-xl border-2 transition-all
                                ${(showSuggestions || showRecentSearches) ? 'border-indigo-500 rounded-b-none' :
                                     !inputValidation.location.isValid ? 'border-red-500' :
                                         'border-transparent group-hover:border-slate-200 dark:group-hover:border-slate-600'}
@@ -581,7 +591,7 @@ export function HeroSection({ onSearch }) {
                             <button
                                 onClick={() => setOpenDropdown(openDropdown === 'type' ? null : 'type')}
                                 className={`
-                                    w-full flex items-center px-4 h-14 bg-slate-50 dark:bg-slate-700 rounded-xl border-2 text-left transition-all
+                                    w-full flex items-center px-3 sm:px-4 h-12 sm:h-14 bg-slate-50 dark:bg-slate-700 rounded-xl border-2 text-left transition-all
                                    ${openDropdown === 'type' ? 'border-indigo-500' : 'border-transparent hover:border-slate-200 dark:hover:border-slate-600'}
                                 `}
                             >
@@ -633,7 +643,7 @@ export function HeroSection({ onSearch }) {
                         {/* 3. Keyword Input (REPLACES Budget) (Spans 3 columns) */}
                         <div className="md:col-span-3 relative">
                             <div className={`
-                                w-full flex items-center px-4 h-14 bg-slate-50 dark:bg-slate-700 rounded-xl border-2 text-left transition-all
+                                w-full flex items-center px-3 sm:px-4 h-12 sm:h-14 bg-slate-50 dark:bg-slate-700 rounded-xl border-2 text-left transition-all
                                ${!inputValidation.keywords.isValid ? 'border-red-500' : 'border-transparent hover:border-slate-200 dark:hover:border-slate-600'}
                             `}>
                                 <div className="flex-1 overflow-hidden">

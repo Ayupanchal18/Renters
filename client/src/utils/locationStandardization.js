@@ -23,11 +23,17 @@ export const GEOLOCATION_CONFIG = {
     primaryService: 'bigdatacloud',
     // Fallback service: Nominatim (OpenStreetMap)
     fallbackService: 'nominatim',
-    // Geolocation options
+    // Geolocation options - first attempt uses faster network-based location
     options: {
-        enableHighAccuracy: true,
-        timeout: 10000,
+        enableHighAccuracy: false, // Use network location first (faster)
+        timeout: 8000,
         maximumAge: 300000 // 5 minutes cache
+    },
+    // High accuracy options for retry
+    highAccuracyOptions: {
+        enableHighAccuracy: true,
+        timeout: 15000,
+        maximumAge: 300000
     }
 };
 
@@ -182,7 +188,19 @@ export function validateGeolocationSupport() {
 }
 
 /**
+ * Internal function to get position with specific options
+ * @param {Object} geoOptions - Geolocation options
+ * @returns {Promise<GeolocationPosition>} - Promise resolving to position
+ */
+function getPositionWithOptions(geoOptions) {
+    return new Promise((resolve, reject) => {
+        navigator.geolocation.getCurrentPosition(resolve, reject, geoOptions);
+    });
+}
+
+/**
  * Gets current location using standardized geolocation service
+ * Uses a two-phase approach: fast network location first, then high accuracy retry on timeout
  * @param {Object} options - Geolocation options (optional)
  * @returns {Promise<Object>} - Promise resolving to standardized location object
  */
@@ -193,58 +211,72 @@ export async function getCurrentLocation(options = {}) {
     }
 
     const geoOptions = { ...GEOLOCATION_CONFIG.options, ...options };
+    let position;
+    let lastError;
 
-    return new Promise((resolve, reject) => {
-        navigator.geolocation.getCurrentPosition(
-            async (position) => {
-                const { latitude, longitude } = position.coords;
-                const coordinates = { lat: latitude, lng: longitude };
+    // First attempt: fast network-based location
+    try {
+        position = await getPositionWithOptions(geoOptions);
+    } catch (error) {
+        lastError = error;
 
-                try {
-                    // Try primary service first
-                    const location = await reverseGeocode(latitude, longitude, GEOLOCATION_CONFIG.primaryService);
-                    if (location) {
-                        resolve(location);
-                        return;
-                    }
+        // On timeout, retry with high accuracy and longer timeout
+        if (error.code === error.TIMEOUT) {
+            console.log('First location attempt timed out, retrying with high accuracy...');
+            try {
+                const highAccuracyOptions = { ...GEOLOCATION_CONFIG.highAccuracyOptions, ...options };
+                position = await getPositionWithOptions(highAccuracyOptions);
+            } catch (retryError) {
+                lastError = retryError;
+            }
+        }
+    }
 
-                    // Fallback to secondary service
-                    const fallbackLocation = await reverseGeocode(latitude, longitude, GEOLOCATION_CONFIG.fallbackService);
-                    if (fallbackLocation) {
-                        resolve(fallbackLocation);
-                        return;
-                    }
+    // If we got a position, do reverse geocoding
+    if (position) {
+        const { latitude, longitude } = position.coords;
 
-                    // If both services fail, reject with error instead of showing coordinates
-                    reject(new Error('Unable to determine your city. Please enter your location manually.'));
-                } catch (error) {
-                    console.error('Reverse geocoding failed:', error);
-                    // Reject instead of showing coordinates
-                    reject(new Error('Unable to determine your city. Please enter your location manually.'));
-                }
-            },
-            (error) => {
-                let errorMessage = 'Unable to retrieve your location';
+        try {
+            // Try primary service first
+            const location = await reverseGeocode(latitude, longitude, GEOLOCATION_CONFIG.primaryService);
+            if (location) {
+                return location;
+            }
 
-                switch (error.code) {
-                    case error.PERMISSION_DENIED:
-                        errorMessage = 'Location permission denied. Please enable location access in your browser settings.';
-                        break;
-                    case error.POSITION_UNAVAILABLE:
-                        errorMessage = 'Location unavailable. Please check your device settings.';
-                        break;
-                    case error.TIMEOUT:
-                        errorMessage = 'Location request timeout. Please try again.';
-                        break;
-                    default:
-                        errorMessage = 'An unknown error occurred while retrieving location.';
-                }
+            // Fallback to secondary service
+            const fallbackLocation = await reverseGeocode(latitude, longitude, GEOLOCATION_CONFIG.fallbackService);
+            if (fallbackLocation) {
+                return fallbackLocation;
+            }
 
-                reject(new Error(errorMessage));
-            },
-            geoOptions
-        );
-    });
+            // If both services fail, reject with error
+            throw new Error('Unable to determine your city. Please enter your location manually.');
+        } catch (error) {
+            console.error('Reverse geocoding failed:', error);
+            throw new Error('Unable to determine your city. Please enter your location manually.');
+        }
+    }
+
+    // Handle the geolocation error
+    let errorMessage = 'Unable to retrieve your location';
+
+    if (lastError) {
+        switch (lastError.code) {
+            case 1: // PERMISSION_DENIED
+                errorMessage = 'Location permission denied. Please enable location access in your browser settings.';
+                break;
+            case 2: // POSITION_UNAVAILABLE
+                errorMessage = 'Location unavailable. Please check your device settings.';
+                break;
+            case 3: // TIMEOUT
+                errorMessage = 'Location request timeout. Please try again.';
+                break;
+            default:
+                errorMessage = 'An unknown error occurred while retrieving location.';
+        }
+    }
+
+    throw new Error(errorMessage);
 }
 
 /**

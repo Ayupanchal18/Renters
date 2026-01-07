@@ -1,6 +1,6 @@
 import React, { useState, useRef } from "react";
 import { Button } from "../ui/button";
-import { ChevronDown, ShieldCheck, Check, SlidersHorizontal, X, RotateCcw, Banknote } from "lucide-react";
+import { ChevronDown, ShieldCheck, Check, SlidersHorizontal, X, RotateCcw, Banknote, Building2, Bed, Wallet, Calendar, Wifi } from "lucide-react";
 import { 
     FILTER_PROPERTY_TYPE_OPTIONS, 
 } from "../../utils/propertyTypeStandardization";
@@ -10,7 +10,7 @@ import { POSSESSION_STATUS_LABELS } from "@shared/propertyTypes";
  * Buy-specific filter sidebar component
  * Displays filters relevant to properties for sale: city, price range, possession status, loan available
  */
-export function BuyFilterSidebar({ filters, onFilterChange, hideHeader = false }) {
+export function BuyFilterSidebar({ filters, onFilterChange, hideHeader = false, compact = false }) {
     const [expandedSections, setExpandedSections] = useState({
         propertyType: true,
         bedrooms: true,
@@ -60,7 +60,7 @@ export function BuyFilterSidebar({ filters, onFilterChange, hideHeader = false }
         if (value === "" || value === null || value === undefined) {
             const newPriceRange = {
                 ...filters.priceRange,
-                [type]: type === "min" ? 0 : 50000000 // 5 Cr max for buy
+                [type]: type === "min" ? 0 : 50000000
             };
             onFilterChange("priceRange", newPriceRange);
             return;
@@ -112,38 +112,69 @@ export function BuyFilterSidebar({ filters, onFilterChange, hideHeader = false }
     // Format price for display (in Lakhs/Crores)
     const formatPrice = (price) => {
         if (price >= 10000000) {
-            return `₹${(price / 10000000).toFixed(1)} Cr`;
+            return `${(price / 10000000).toFixed(1)}Cr`;
         } else if (price >= 100000) {
-            return `₹${(price / 100000).toFixed(0)} L`;
+            return `${(price / 100000).toFixed(0)}L`;
         }
         return `₹${price.toLocaleString('en-IN')}`;
     };
 
-    const FilterSection = ({ id, title, children }) => {
+    // Section icons mapping
+    const sectionIcons = {
+        propertyType: Building2,
+        bedrooms: Bed,
+        price: Wallet,
+        possessionStatus: Calendar,
+        loanAvailable: Banknote,
+        amenities: Wifi,
+    };
+
+    const FilterSection = ({ id, title, children, badge }) => {
         const isExpanded = expandedSections[id];
+        const Icon = sectionIcons[id];
         
         return (
-            <div className="border-b border-border last:border-0">
+            <div className="group">
                 <button
                     onClick={() => toggleSection(id)}
-                    className="flex items-center justify-between w-full py-4 text-left group"
+                    className={`flex items-center justify-between w-full text-left rounded-xl transition-all duration-200 ${
+                        compact ? 'py-3 px-1' : 'py-3.5 px-3 hover:bg-muted/50'
+                    }`}
                     aria-expanded={isExpanded}
                     aria-controls={`${id}-content`}
                 >
-                    <span className="text-sm font-semibold text-foreground group-hover:text-primary transition-colors">
-                        {title}
-                    </span>
+                    <div className="flex items-center gap-2.5">
+                        {Icon && (
+                            <div className={`w-8 h-8 rounded-lg flex items-center justify-center transition-colors ${
+                                isExpanded ? 'bg-emerald-500/10' : 'bg-muted/50 group-hover:bg-emerald-500/5'
+                            }`}>
+                                <Icon className={`w-4 h-4 transition-colors ${
+                                    isExpanded ? 'text-emerald-600' : 'text-muted-foreground group-hover:text-emerald-600/70'
+                                }`} />
+                            </div>
+                        )}
+                        <span className={`text-sm font-semibold transition-colors ${
+                            isExpanded ? 'text-foreground' : 'text-muted-foreground group-hover:text-foreground'
+                        }`}>
+                            {title}
+                        </span>
+                        {badge && (
+                            <span className="px-1.5 py-0.5 text-[10px] font-bold bg-emerald-500 text-white rounded-md">
+                                {badge}
+                            </span>
+                        )}
+                    </div>
                     <ChevronDown
-                        className={`w-4 h-4 text-muted-foreground transition-transform duration-200 ${
-                            isExpanded ? "rotate-180" : ""
+                        className={`w-4 h-4 text-muted-foreground transition-all duration-300 ${
+                            isExpanded ? "rotate-180 text-emerald-600" : ""
                         }`}
                     />
                 </button>
                 
                 <div
                     id={`${id}-content`}
-                    className={`overflow-hidden transition-all duration-200 ${
-                        isExpanded ? "max-h-[500px] pb-4" : "max-h-0"
+                    className={`overflow-hidden transition-all duration-300 ease-out ${
+                        isExpanded ? `max-h-[500px] opacity-100 ${compact ? 'pb-4' : 'pb-5 px-3'}` : "max-h-0 opacity-0"
                     }`}
                 >
                     {children}
@@ -155,44 +186,62 @@ export function BuyFilterSidebar({ filters, onFilterChange, hideHeader = false }
     return (
         <aside 
             ref={sidebarRef}
-            className="w-full lg:w-80 bg-card border border-border rounded-2xl shadow-sm overflow-hidden"
+            className={`w-full lg:w-80 overflow-hidden ${
+                compact 
+                    ? 'bg-transparent' 
+                    : 'bg-card/50 backdrop-blur-sm border border-border/50 rounded-2xl shadow-lg shadow-black/5'
+            }`}
             role="complementary"
             aria-label="Buy property filters"
         >
             {/* Header */}
             {!hideHeader && (
-                <div className="flex items-center justify-between p-5 border-b border-border bg-muted/30">
-                    <div className="flex items-center gap-3">
-                        <div className="w-9 h-9 rounded-xl bg-emerald-500/10 flex items-center justify-center">
-                            <SlidersHorizontal className="w-4 h-4 text-emerald-600" />
-                        </div>
-                        <div>
-                            <h2 className="font-semibold text-foreground">Buy Filters</h2>
-                            {activeFilterCount > 0 && (
+                <div className="relative overflow-hidden">
+                    {/* Gradient Background */}
+                    <div className="absolute inset-0 bg-gradient-to-br from-emerald-500/5 via-transparent to-teal-500/5" />
+                    
+                    <div className="relative flex items-center justify-between p-4 border-b border-border/50">
+                        <div className="flex items-center gap-3">
+                            <div className="relative">
+                                <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-emerald-500 to-teal-500 flex items-center justify-center shadow-lg shadow-emerald-500/25">
+                                    <SlidersHorizontal className="w-5 h-5 text-white" />
+                                </div>
+                                {activeFilterCount > 0 && (
+                                    <span className="absolute -top-1 -right-1 w-5 h-5 bg-amber-500 text-white text-[10px] font-bold rounded-full flex items-center justify-center shadow-sm">
+                                        {activeFilterCount}
+                                    </span>
+                                )}
+                            </div>
+                            <div>
+                                <h2 className="font-bold text-foreground">Buy Filters</h2>
                                 <p className="text-xs text-muted-foreground">
-                                    {activeFilterCount} active
+                                    {activeFilterCount > 0 ? `${activeFilterCount} filter${activeFilterCount > 1 ? 's' : ''} applied` : 'Refine your search'}
                                 </p>
-                            )}
+                            </div>
                         </div>
+                        {activeFilterCount > 0 && (
+                            <button
+                                onClick={handleClearFilters}
+                                className="flex items-center gap-1.5 text-xs font-semibold text-muted-foreground hover:text-destructive transition-all px-3 py-2 rounded-lg hover:bg-destructive/10 group"
+                                aria-label="Clear all filters"
+                            >
+                                <RotateCcw className="w-3.5 h-3.5 group-hover:rotate-[-360deg] transition-transform duration-500" />
+                                Reset
+                            </button>
+                        )}
                     </div>
-                    {activeFilterCount > 0 && (
-                        <button
-                            onClick={handleClearFilters}
-                            className="flex items-center gap-1.5 text-xs font-medium text-muted-foreground hover:text-destructive transition-colors px-2 py-1 rounded-lg hover:bg-destructive/10"
-                            aria-label="Clear all filters"
-                        >
-                            <RotateCcw className="w-3.5 h-3.5" />
-                            Reset
-                        </button>
-                    )}
                 </div>
             )}
 
             {/* Filter Sections */}
-            <div className="p-5 space-y-0 max-h-[calc(100vh-12rem)] overflow-y-auto">
+            <div className={`${compact ? 'p-3' : 'p-4'} space-y-1 ${compact ? '' : 'max-h-[calc(100vh-12rem)] overflow-y-auto'}`}>
                 
                 {/* Property Type */}
-                <FilterSection id="propertyType" title="Property Type">
+                <FilterSection 
+                    id="propertyType" 
+                    title="Property Type"
+                    badge={filters.propertyType ? "1" : null}
+                >
                     <div className="grid grid-cols-2 gap-2">
                         {FILTER_PROPERTY_TYPE_OPTIONS.map((option) => {
                             const isSelected = filters.propertyType === option.value;
@@ -200,10 +249,10 @@ export function BuyFilterSidebar({ filters, onFilterChange, hideHeader = false }
                                 <label
                                     key={option.value}
                                     className={`
-                                        relative flex items-center justify-center px-3 py-2.5 rounded-xl border-2 cursor-pointer text-sm font-medium transition-all duration-200
+                                        relative flex items-center justify-center px-3 py-3 rounded-xl cursor-pointer text-sm font-medium transition-all duration-200
                                         ${isSelected
-                                            ? "bg-emerald-500/10 border-emerald-500 text-emerald-700 dark:text-emerald-400"
-                                            : "bg-card border-border text-muted-foreground hover:border-emerald-500/30 hover:bg-muted/50"
+                                            ? "bg-gradient-to-br from-emerald-500 to-teal-500 text-white shadow-lg shadow-emerald-500/25 scale-[1.02]"
+                                            : "bg-muted/50 text-muted-foreground hover:bg-muted hover:text-foreground hover:scale-[1.01]"
                                         }
                                     `}
                                 >
@@ -217,7 +266,9 @@ export function BuyFilterSidebar({ filters, onFilterChange, hideHeader = false }
                                     />
                                     <span className="truncate">{option.label}</span>
                                     {isSelected && (
-                                        <Check className="w-3.5 h-3.5 absolute top-1.5 right-1.5 text-emerald-600" />
+                                        <div className="absolute top-1.5 right-1.5 w-4 h-4 bg-white/20 rounded-full flex items-center justify-center">
+                                            <Check className="w-2.5 h-2.5" />
+                                        </div>
                                     )}
                                 </label>
                             );
@@ -226,7 +277,11 @@ export function BuyFilterSidebar({ filters, onFilterChange, hideHeader = false }
                 </FilterSection>
 
                 {/* Bedrooms (BHK) */}
-                <FilterSection id="bedrooms" title="BHK">
+                <FilterSection 
+                    id="bedrooms" 
+                    title="BHK"
+                    badge={filters.bedrooms.length > 0 ? filters.bedrooms.length : null}
+                >
                     <div className="flex flex-wrap gap-2">
                         {["1", "2", "3", "4", "5+"].map((bed) => {
                             const isSelected = filters.bedrooms.includes(bed);
@@ -234,10 +289,10 @@ export function BuyFilterSidebar({ filters, onFilterChange, hideHeader = false }
                                 <label
                                     key={bed}
                                     className={`
-                                        flex items-center justify-center w-12 h-12 rounded-xl border-2 cursor-pointer text-sm font-semibold transition-all duration-200
+                                        flex items-center justify-center w-14 h-14 rounded-xl cursor-pointer text-sm font-bold transition-all duration-200
                                         ${isSelected
-                                            ? "bg-emerald-500 border-emerald-500 text-white shadow-md"
-                                            : "bg-card border-border text-muted-foreground hover:border-emerald-500/30"
+                                            ? "bg-gradient-to-br from-emerald-500 to-teal-500 text-white shadow-lg shadow-emerald-500/25 scale-105"
+                                            : "bg-muted/50 text-muted-foreground hover:bg-muted hover:text-foreground hover:scale-[1.02]"
                                         }
                                     `}
                                 >
@@ -255,15 +310,19 @@ export function BuyFilterSidebar({ filters, onFilterChange, hideHeader = false }
                 </FilterSection>
 
                 {/* Price Range for Buy */}
-                <FilterSection id="price" title="Price Range">
+                <FilterSection 
+                    id="price" 
+                    title="Price Range"
+                    badge={(filters.priceRange.min > 0 || filters.priceRange.max < 50000000) ? "1" : null}
+                >
                     <div className="space-y-4">
                         <div className="grid grid-cols-2 gap-3">
-                            <div className="space-y-1.5">
-                                <label htmlFor="price-min" className="text-xs font-medium text-muted-foreground">
-                                    Minimum
+                            <div className="space-y-2">
+                                <label htmlFor="price-min" className="text-xs font-semibold text-muted-foreground uppercase tracking-wide">
+                                    Min
                                 </label>
-                                <div className="relative">
-                                    <span className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground text-sm">₹</span>
+                                <div className="relative group">
+                                    <span className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground text-sm font-medium">₹</span>
                                     <input
                                         id="price-min"
                                         type="number"
@@ -271,17 +330,17 @@ export function BuyFilterSidebar({ filters, onFilterChange, hideHeader = false }
                                         min="0"
                                         value={filters.priceRange.min || ""}
                                         onChange={(e) => handlePriceChange("min", e.target.value)}
-                                        className="w-full pl-7 pr-3 py-2.5 bg-muted/50 border border-border rounded-xl text-sm font-medium text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500 transition-all"
+                                        className="w-full pl-7 pr-3 py-3 bg-muted/30 border-2 border-transparent rounded-xl text-sm font-semibold text-foreground placeholder:text-muted-foreground focus:outline-none focus:bg-background focus:border-emerald-500/50 focus:shadow-lg focus:shadow-emerald-500/10 transition-all"
                                     />
                                 </div>
                             </div>
 
-                            <div className="space-y-1.5">
-                                <label htmlFor="price-max" className="text-xs font-medium text-muted-foreground">
-                                    Maximum
+                            <div className="space-y-2">
+                                <label htmlFor="price-max" className="text-xs font-semibold text-muted-foreground uppercase tracking-wide">
+                                    Max
                                 </label>
-                                <div className="relative">
-                                    <span className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground text-sm">₹</span>
+                                <div className="relative group">
+                                    <span className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground text-sm font-medium">₹</span>
                                     <input
                                         id="price-max"
                                         type="number"
@@ -289,47 +348,63 @@ export function BuyFilterSidebar({ filters, onFilterChange, hideHeader = false }
                                         min="0"
                                         value={filters.priceRange.max === 50000000 ? "" : filters.priceRange.max || ""}
                                         onChange={(e) => handlePriceChange("max", e.target.value)}
-                                        className="w-full pl-7 pr-3 py-2.5 bg-muted/50 border border-border rounded-xl text-sm font-medium text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500 transition-all"
+                                        className="w-full pl-7 pr-3 py-3 bg-muted/30 border-2 border-transparent rounded-xl text-sm font-semibold text-foreground placeholder:text-muted-foreground focus:outline-none focus:bg-background focus:border-emerald-500/50 focus:shadow-lg focus:shadow-emerald-500/10 transition-all"
                                     />
                                 </div>
                             </div>
                         </div>
                         
-                        {/* Quick Price Buttons for Buy (in Lakhs/Crores) */}
-                        <div className="flex flex-wrap gap-2">
-                            {[5000000, 10000000, 20000000, 50000000].map((price) => (
-                                <button
-                                    key={price}
-                                    onClick={() => handlePriceChange("max", price)}
-                                    className={`px-3 py-1.5 text-xs font-medium rounded-lg transition-all ${
-                                        filters.priceRange.max === price
-                                            ? "bg-emerald-500 text-white"
-                                            : "bg-muted text-muted-foreground hover:bg-muted/80"
-                                    }`}
-                                >
-                                    Under {formatPrice(price)}
-                                </button>
-                            ))}
+                        {/* Quick Price Buttons */}
+                        <div className="flex flex-wrap gap-1.5">
+                            {[5000000, 10000000, 20000000, 50000000].map((price) => {
+                                const isSelected = filters.priceRange.max === price;
+                                return (
+                                    <button
+                                        key={price}
+                                        onClick={() => handlePriceChange("max", price)}
+                                        className={`px-3 py-1.5 text-xs font-semibold rounded-lg transition-all duration-200 ${
+                                            isSelected
+                                                ? "bg-emerald-500 text-white shadow-md"
+                                                : "bg-muted/50 text-muted-foreground hover:bg-muted hover:text-foreground"
+                                        }`}
+                                    >
+                                        ≤₹{formatPrice(price)}
+                                    </button>
+                                );
+                            })}
                         </div>
                     </div>
                 </FilterSection>
 
-                {/* Possession Status - Buy Specific */}
-                <FilterSection id="possessionStatus" title="Possession Status">
-                    <div className="flex flex-wrap gap-2">
+                {/* Possession Status */}
+                <FilterSection 
+                    id="possessionStatus" 
+                    title="Possession"
+                    badge={filters.possessionStatus ? "1" : null}
+                >
+                    <div className="space-y-2">
                         {Object.entries(POSSESSION_STATUS_LABELS).map(([value, label]) => {
                             const isSelected = filters.possessionStatus === value;
                             return (
                                 <label
                                     key={value}
                                     className={`
-                                        flex items-center gap-2 px-3 py-2 rounded-xl border-2 cursor-pointer text-sm font-medium transition-all duration-200
+                                        flex items-center gap-3 px-4 py-3 rounded-xl cursor-pointer transition-all duration-200
                                         ${isSelected
-                                            ? "bg-emerald-500/10 border-emerald-500 text-emerald-700 dark:text-emerald-400"
-                                            : "bg-card border-border text-muted-foreground hover:border-emerald-500/30"
+                                            ? "bg-emerald-500/10 ring-2 ring-emerald-500/30"
+                                            : "bg-muted/30 hover:bg-muted/50"
                                         }
                                     `}
                                 >
+                                    <div className={`
+                                        w-5 h-5 rounded-full border-2 flex items-center justify-center transition-all
+                                        ${isSelected 
+                                            ? "bg-emerald-500 border-emerald-500" 
+                                            : "border-muted-foreground/30"
+                                        }
+                                    `}>
+                                        {isSelected && <Check className="w-3 h-3 text-white" />}
+                                    </div>
                                     <input
                                         type="radio"
                                         name="possessionStatus"
@@ -338,30 +413,35 @@ export function BuyFilterSidebar({ filters, onFilterChange, hideHeader = false }
                                         onChange={() => handlePossessionStatusChange(value)}
                                         className="sr-only"
                                     />
-                                    {isSelected && <Check className="w-3.5 h-3.5" />}
-                                    {label}
+                                    <span className={`text-sm font-semibold ${isSelected ? 'text-emerald-700 dark:text-emerald-300' : 'text-foreground'}`}>
+                                        {label}
+                                    </span>
                                 </label>
                             );
                         })}
                     </div>
                 </FilterSection>
 
-                {/* Loan Available - Buy Specific */}
-                <FilterSection id="loanAvailable" title="Loan Available">
-                    <div className="flex flex-wrap gap-2">
+                {/* Loan Available */}
+                <FilterSection 
+                    id="loanAvailable" 
+                    title="Loan Available"
+                    badge={(filters.loanAvailable !== null && filters.loanAvailable !== undefined) ? "1" : null}
+                >
+                    <div className="grid grid-cols-2 gap-2">
                         {[
-                            { value: true, label: "Yes, Loan Available" },
-                            { value: false, label: "No Loan" }
+                            { value: true, label: "Yes" },
+                            { value: false, label: "No" }
                         ].map((option) => {
                             const isSelected = filters.loanAvailable === option.value;
                             return (
                                 <label
                                     key={String(option.value)}
                                     className={`
-                                        flex items-center gap-2 px-4 py-2.5 rounded-xl border-2 cursor-pointer text-sm font-medium transition-all duration-200
+                                        flex items-center justify-center gap-2 px-4 py-3 rounded-xl cursor-pointer text-sm font-semibold transition-all duration-200
                                         ${isSelected
-                                            ? "bg-emerald-500/10 border-emerald-500 text-emerald-700 dark:text-emerald-400"
-                                            : "bg-card border-border text-muted-foreground hover:border-emerald-500/30"
+                                            ? "bg-gradient-to-br from-emerald-500 to-teal-500 text-white shadow-lg shadow-emerald-500/25"
+                                            : "bg-muted/50 text-muted-foreground hover:bg-muted hover:text-foreground"
                                         }
                                     `}
                                 >
@@ -372,7 +452,6 @@ export function BuyFilterSidebar({ filters, onFilterChange, hideHeader = false }
                                         onChange={() => handleLoanAvailableChange(option.value)}
                                         className="sr-only"
                                     />
-                                    {isSelected && <Check className="w-3.5 h-3.5" />}
                                     <Banknote className="w-4 h-4" />
                                     {option.label}
                                 </label>
@@ -382,7 +461,11 @@ export function BuyFilterSidebar({ filters, onFilterChange, hideHeader = false }
                 </FilterSection>
 
                 {/* Amenities */}
-                <FilterSection id="amenities" title="Amenities">
+                <FilterSection 
+                    id="amenities" 
+                    title="Amenities"
+                    badge={filters.amenities.length > 0 ? filters.amenities.length : null}
+                >
                     <div className="grid grid-cols-2 gap-2">
                         {["Parking", "Garden", "Swimming Pool", "Gym", "Clubhouse", "Security", "Power Backup", "Lift"].map((amenity) => {
                             const isSelected = filters.amenities.includes(amenity);
@@ -390,10 +473,10 @@ export function BuyFilterSidebar({ filters, onFilterChange, hideHeader = false }
                                 <label 
                                     key={amenity} 
                                     className={`
-                                        flex items-center gap-2 px-3 py-2.5 rounded-xl cursor-pointer transition-all duration-200
+                                        flex items-center gap-2.5 px-3 py-2.5 rounded-xl cursor-pointer transition-all duration-200
                                         ${isSelected 
-                                            ? "bg-emerald-500/10 text-emerald-700 dark:text-emerald-400" 
-                                            : "bg-muted/50 text-muted-foreground hover:bg-muted"
+                                            ? "bg-emerald-500/10 ring-1 ring-emerald-500/30" 
+                                            : "bg-muted/30 hover:bg-muted/50"
                                         }
                                     `}
                                 >
@@ -401,10 +484,10 @@ export function BuyFilterSidebar({ filters, onFilterChange, hideHeader = false }
                                         w-4 h-4 rounded border-2 flex items-center justify-center transition-all
                                         ${isSelected 
                                             ? "bg-emerald-500 border-emerald-500" 
-                                            : "border-border"
+                                            : "border-muted-foreground/30"
                                         }
                                     `}>
-                                        {isSelected && <Check className="w-3 h-3 text-white" />}
+                                        {isSelected && <Check className="w-2.5 h-2.5 text-white" />}
                                     </div>
                                     <input
                                         type="checkbox"
@@ -412,7 +495,9 @@ export function BuyFilterSidebar({ filters, onFilterChange, hideHeader = false }
                                         onChange={() => handleAmenityChange(amenity)}
                                         className="sr-only"
                                     />
-                                    <span className="text-sm font-medium">{amenity}</span>
+                                    <span className={`text-sm font-medium ${isSelected ? 'text-emerald-700 dark:text-emerald-300' : 'text-muted-foreground'}`}>
+                                        {amenity}
+                                    </span>
                                 </label>
                             );
                         })}
@@ -420,18 +505,28 @@ export function BuyFilterSidebar({ filters, onFilterChange, hideHeader = false }
                 </FilterSection>
 
                 {/* Verified Toggle */}
-                <div className="pt-4">
-                    <label className="flex items-center justify-between p-4 bg-gradient-to-r from-emerald-50 to-teal-50 dark:from-emerald-950/30 dark:to-teal-950/30 border border-emerald-200 dark:border-emerald-800/50 rounded-xl cursor-pointer hover:shadow-sm transition-all">
+                <div className="pt-3">
+                    <label className={`
+                        flex items-center justify-between p-4 rounded-xl cursor-pointer transition-all duration-200
+                        ${filters.verifiedOnly 
+                            ? 'bg-gradient-to-r from-emerald-500/10 to-teal-500/10 ring-2 ring-emerald-500/30' 
+                            : 'bg-muted/30 hover:bg-muted/50'
+                        }
+                    `}>
                         <div className="flex items-center gap-3">
-                            <div className="w-10 h-10 rounded-xl bg-emerald-500/10 flex items-center justify-center">
-                                <ShieldCheck className="w-5 h-5 text-emerald-600 dark:text-emerald-400" />
+                            <div className={`w-10 h-10 rounded-xl flex items-center justify-center transition-all ${
+                                filters.verifiedOnly 
+                                    ? 'bg-gradient-to-br from-emerald-500 to-teal-500 shadow-lg shadow-emerald-500/25' 
+                                    : 'bg-muted'
+                            }`}>
+                                <ShieldCheck className={`w-5 h-5 ${filters.verifiedOnly ? 'text-white' : 'text-muted-foreground'}`} />
                             </div>
                             <div>
-                                <span className="text-sm font-semibold text-emerald-900 dark:text-emerald-100 block">
+                                <span className={`text-sm font-bold block ${filters.verifiedOnly ? 'text-emerald-700 dark:text-emerald-300' : 'text-foreground'}`}>
                                     Verified Only
                                 </span>
-                                <span className="text-xs text-emerald-600 dark:text-emerald-400">
-                                    Show trusted listings
+                                <span className="text-xs text-muted-foreground">
+                                    Trusted & verified listings
                                 </span>
                             </div>
                         </div>
@@ -442,9 +537,11 @@ export function BuyFilterSidebar({ filters, onFilterChange, hideHeader = false }
                                 onChange={(e) => handleVerifiedToggle(e.target.checked)}
                                 className="sr-only peer"
                             />
-                            <div className="w-11 h-6 bg-muted rounded-full peer peer-checked:bg-emerald-500 transition-colors">
-                                <div className={`absolute top-0.5 left-0.5 w-5 h-5 bg-white rounded-full shadow-sm transition-transform ${
-                                    filters.verifiedOnly ? "translate-x-5" : ""
+                            <div className={`w-12 h-7 rounded-full transition-all duration-300 ${
+                                filters.verifiedOnly ? 'bg-emerald-500' : 'bg-muted'
+                            }`}>
+                                <div className={`absolute top-1 w-5 h-5 bg-white rounded-full shadow-md transition-all duration-300 ${
+                                    filters.verifiedOnly ? "left-6" : "left-1"
                                 }`} />
                             </div>
                         </div>
@@ -453,14 +550,14 @@ export function BuyFilterSidebar({ filters, onFilterChange, hideHeader = false }
             </div>
 
             {/* Footer - Clear All */}
-            {activeFilterCount > 0 && (
-                <div className="p-4 border-t border-border bg-muted/30">
+            {activeFilterCount > 0 && !compact && (
+                <div className="p-4 border-t border-border/50 bg-muted/20">
                     <Button
                         onClick={handleClearFilters}
                         variant="outline"
-                        className="w-full h-11 border-dashed border-border hover:border-destructive/50 hover:bg-destructive/5 hover:text-destructive rounded-xl font-medium transition-all"
+                        className="w-full h-12 border-2 border-dashed border-muted-foreground/20 hover:border-destructive/50 hover:bg-destructive/5 hover:text-destructive rounded-xl font-semibold transition-all group"
                     >
-                        <X className="w-4 h-4 mr-2" />
+                        <X className="w-4 h-4 mr-2 group-hover:rotate-90 transition-transform duration-300" />
                         Clear all filters ({activeFilterCount})
                     </Button>
                 </div>

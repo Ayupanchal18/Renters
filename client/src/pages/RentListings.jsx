@@ -64,7 +64,13 @@ export default function RentListings() {
     const [isSearchMode, setIsSearchMode] = useState(!!location.state?.searchData || hasUrlSearch);
     
     const initialLoadDone = useRef(false);
-    const initialSearchData = location.state?.searchData || (hasUrlSearch ? { query: urlQuery, location: urlLocation } : null);
+    const initialSearchTriggered = useRef(false);
+    
+    // Capture initial search data on first render using a ref to prevent it from being lost
+    const initialSearchDataRef = useRef(
+        location.state?.searchData || (hasUrlSearch ? { q: urlQuery, location: urlLocation } : null)
+    );
+    const initialSearchData = initialSearchDataRef.current;
 
     // Fetch wishlist IDs
     const fetchWishlistIds = useCallback(async () => {
@@ -126,61 +132,98 @@ export default function RentListings() {
     }, [filters, sortBy, pagination.pageSize]);
 
     // Search rent properties
-    const searchRentProperties = useCallback(async (searchPayload, overrideSort = null) => {
+    const searchRentProperties = useCallback(async (searchPayload, overrideSort = null, page = 1, append = false) => {
         try {
-            setIsLoading(true);
-            setIsSearchMode(true); // Mark as search mode to prevent filter useEffect from overwriting
+            if (!append) {
+                setIsLoading(true);
+            }
+            setIsSearchMode(true);
 
+            // Extract search parameters - handle both old and new payload formats
             const searchLocation = searchPayload.location || searchPayload.city || "";
+            const searchQuery = searchPayload.q || searchPayload.query || "";
+            const searchCategory = searchPayload.category || searchPayload.propertyType || searchPayload.type || "";
             const effectiveSort = overrideSort || sortBy;
 
+            // If no search criteria, fall back to regular fetch
+            if (!searchLocation && !searchQuery && !searchCategory) {
+                setIsSearchMode(false);
+                await fetchRentProperties(1);
+                return;
+            }
+
             const payload = {
-                q: searchPayload.query || "",
+                q: searchQuery,
                 location: searchLocation,
                 city: searchLocation,
+                category: searchCategory,
+                propertyType: searchCategory,
                 sort: effectiveSort,
+                page: page,
+                limit: pagination.pageSize,
                 filters: {
-                    category: filters.propertyType || searchPayload.filters?.category,
-                    minRent: filters.priceRange.min > 0 ? filters.priceRange.min : undefined,
-                    maxRent: filters.priceRange.max < 100000 ? filters.priceRange.max : undefined,
+                    priceRange: {
+                        min: filters.priceRange.min > 0 ? filters.priceRange.min : undefined,
+                        max: filters.priceRange.max < 100000 ? filters.priceRange.max : undefined,
+                    },
                     bedrooms: filters.bedrooms,
                     furnishing: filters.furnishing,
                     preferredTenants: filters.preferredTenants,
+                    amenities: filters.amenities,
                 }
             };
 
             // Update location filter state
-            if (searchLocation) {
+            if (searchLocation && !append) {
                 setFilters(prev => ({ ...prev, location: searchLocation }));
             }
 
             const response = await propertyService.searchRentProperties(payload);
-            // Handle nested response structure: response.data.data.searchResultData
+            
+            // Handle nested response structure
             const responseData = response.data?.data || response.data;
             const items = responseData.searchResultData || responseData.items || responseData.properties || responseData.results || [];
 
-            setProperties(items);
+            if (append) {
+                setProperties(prev => [...prev, ...items]);
+            } else {
+                setProperties(items);
+            }
+            
+            // Calculate hasMore based on response pagination
+            const paginationData = response.data?.pagination || {};
+            const responseTotal = paginationData.total || responseData.total || items.length;
+            const currentPage = paginationData.page || responseData.page || page;
+            const pageSize = paginationData.pageSize || responseData.pageSize || pagination.pageSize;
+            const totalPages = paginationData.totalPages || Math.ceil(responseTotal / pageSize);
+            const calculatedHasMore = currentPage < totalPages;
+            
             setPagination(prev => ({
                 ...prev,
-                total: response.data?.pagination?.total || responseData.total || items.length,
-                hasMore: false
+                page: currentPage,
+                total: responseTotal,
+                hasMore: calculatedHasMore
             }));
         } catch (error) {
             console.error('Error searching rent properties:', error);
-            setProperties([]);
+            if (!append) {
+                setProperties([]);
+            }
         } finally {
             setIsLoading(false);
+            setLoadingMore(false);
         }
-    }, [filters, sortBy]);
+    }, [filters, sortBy, fetchRentProperties, pagination.pageSize]);
 
     // Handle search from hero section
     const handleHeroSearch = useCallback((payload) => {
         if (!payload) return;
         
-        const query = payload.query || payload.searchQuery || "";
-        const loc = payload.location || "";
+        const query = payload.q || payload.query || payload.searchQuery || "";
+        const loc = payload.location || payload.city || "";
+        const category = payload.category || payload.propertyType || "";
         
-        if (query || loc) {
+        if (query || loc || category) {
             // Update URL with search params for persistence
             const newParams = new URLSearchParams(searchParams);
             if (query) newParams.set('q', query);
@@ -190,7 +233,7 @@ export default function RentListings() {
             setSearchParams(newParams, { replace: true });
             
             setFilters(prev => ({ ...prev, location: loc }));
-            searchRentProperties({ query, location: loc });
+            searchRentProperties({ query, location: loc, category });
         } else {
             // Clear URL params when search is cleared
             const newParams = new URLSearchParams(searchParams);
@@ -207,9 +250,19 @@ export default function RentListings() {
     const handleLoadMore = useCallback(async () => {
         if (pagination.hasMore && !loadingMore) {
             setLoadingMore(true);
-            await fetchRentProperties(pagination.page + 1, true);
+            if (isSearchMode) {
+                // Load more in search mode
+                await searchRentProperties(
+                    { location: filters.location || "", query: urlQuery || "" },
+                    null,
+                    pagination.page + 1,
+                    true
+                );
+            } else {
+                await fetchRentProperties(pagination.page + 1, true);
+            }
         }
-    }, [pagination, loadingMore, fetchRentProperties]);
+    }, [pagination, loadingMore, fetchRentProperties, searchRentProperties, isSearchMode, filters.location, urlQuery]);
 
     // Get active filter count
     const activeFilterCount = (() => {
@@ -226,9 +279,6 @@ export default function RentListings() {
 
     // Handle filter changes
     const handleFilterChange = useCallback((filterType, value) => {
-        // Exit search mode when user interacts with filters
-        setIsSearchMode(false);
-        
         if (filterType === 'clearAll') {
             setFilters({
                 propertyType: "",
@@ -240,6 +290,8 @@ export default function RentListings() {
                 verifiedOnly: false,
                 location: "",
             });
+            // Exit search mode when clearing all filters
+            setIsSearchMode(false);
             return;
         }
 
@@ -263,28 +315,75 @@ export default function RentListings() {
         }
     }, [isSearchMode, filters.location, searchRentProperties]);
 
-    // Initial load
+    // Track if initial data load is complete
+    const isInitialLoadComplete = useRef(false);
+    
+    // Store the current search payload for re-fetching when filters change
+    const currentSearchPayload = useRef(initialSearchData);
+
+    // Initial load - runs once on mount
     useEffect(() => {
-        if (!initialLoadDone.current) {
+        const doInitialLoad = async () => {
+            if (initialLoadDone.current) return;
             initialLoadDone.current = true;
+            
             fetchWishlistIds();
             
-            if (initialSearchData) {
+            if (initialSearchData && !initialSearchTriggered.current) {
+                initialSearchTriggered.current = true;
                 setIsSearchMode(true);
-                searchRentProperties(initialSearchData);
-            } else {
-                fetchRentProperties(1);
+                
+                // Pre-fill location filter from search data
+                const searchLocation = initialSearchData.location || initialSearchData.city || "";
+                if (searchLocation) {
+                    setFilters(prev => ({ ...prev, location: searchLocation }));
+                }
+                
+                await searchRentProperties(initialSearchData);
+            } else if (!initialSearchData) {
+                await fetchRentProperties(1);
             }
-        }
+            
+            // Mark initial load as complete after a small delay to ensure state is settled
+            setTimeout(() => {
+                isInitialLoadComplete.current = true;
+            }, 100);
+        };
+        
+        doInitialLoad();
     }, [fetchWishlistIds, fetchRentProperties, searchRentProperties, initialSearchData]);
 
-    // Refetch when filters or sort changes (only if not in search mode and no location filter)
+    // Refetch when filters or sort changes (only after initial load is complete)
+    const filterChangeCount = useRef(0);
     useEffect(() => {
-        // Skip if initial load not done, or in search mode, or if location filter is set (city search)
-        if (initialLoadDone.current && !isSearchMode && !filters.location) {
+        // Increment change count
+        filterChangeCount.current += 1;
+        
+        // Skip the first 2 runs - initial render and state settling
+        if (filterChangeCount.current <= 2) {
+            return;
+        }
+        
+        // Skip if initial load not complete
+        if (!isInitialLoadComplete.current) return;
+        
+        // Build search payload from current state
+        const searchPayload = {
+            location: filters.location || "",
+            query: urlQuery || currentSearchPayload.current?.q || "",
+            category: filters.propertyType || ""
+        };
+        
+        // Update stored payload
+        currentSearchPayload.current = searchPayload;
+        
+        // If in search mode or has location filter, re-search with current filters
+        if (isSearchMode || filters.location) {
+            searchRentProperties(searchPayload);
+        } else {
             fetchRentProperties(1);
         }
-    }, [filters.propertyType, filters.priceRange, filters.bedrooms, filters.furnishing, filters.preferredTenants, filters.verifiedOnly, sortBy, isSearchMode, filters.location]);
+    }, [filters.propertyType, filters.priceRange, filters.bedrooms, filters.furnishing, filters.preferredTenants, filters.amenities, filters.verifiedOnly, sortBy]);
 
     return (
         <div className="min-h-screen flex flex-col">
@@ -298,15 +397,18 @@ export default function RentListings() {
             <main className="flex-1 bg-background">
                 <HeroSection onSearch={handleHeroSearch} />
 
-                {/* Rent Properties Header */}
-                <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pt-8">
-                    <div className="flex items-center gap-3 mb-6">
-                        <div className="w-12 h-12 rounded-2xl bg-primary/10 flex items-center justify-center">
+                {/* Rent Properties Header - Simplified on mobile */}
+                <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pt-6 sm:pt-8">
+                    <div className="flex items-center gap-3 mb-4 sm:mb-6">
+                        <div className="hidden sm:flex w-12 h-12 rounded-2xl bg-primary/10 items-center justify-center">
                             <Key className="w-6 h-6 text-primary" />
                         </div>
                         <div>
-                            <h1 className="text-2xl font-bold text-foreground">Properties for Rent</h1>
-                            <p className="text-sm text-muted-foreground">
+                            <h1 className="text-lg sm:text-2xl font-bold text-foreground">
+                                <span className="sm:hidden">Showing results for rent properties</span>
+                                <span className="hidden sm:inline">Properties for Rent</span>
+                            </h1>
+                            <p className="text-xs sm:text-sm text-muted-foreground hidden sm:block">
                                 Find your perfect rental home from {pagination.total} verified listings
                             </p>
                         </div>
@@ -315,85 +417,54 @@ export default function RentListings() {
 
                 {/* Main Content Area */}
                 <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pb-8">
-                    
-                    {/* Mobile Filter Toggle Bar */}
-                    <div className="lg:hidden mb-6">
-                        <div className="flex items-center justify-between gap-3 p-4 bg-card border border-border rounded-2xl">
-                            <button
-                                onClick={() => setMobileFiltersOpen(true)}
-                                className="flex items-center gap-3 flex-1"
-                            >
-                                <div className="w-10 h-10 rounded-xl bg-primary/10 flex items-center justify-center">
-                                    <SlidersHorizontal className="w-5 h-5 text-primary" />
-                                </div>
-                                <div className="text-left">
-                                    <p className="text-sm font-semibold text-foreground">Rent Filters</p>
-                                    <p className="text-xs text-muted-foreground">
-                                        {activeFilterCount > 0 ? `${activeFilterCount} active` : 'Refine results'}
-                                    </p>
-                                </div>
-                            </button>
-                            
-                            {activeFilterCount > 0 && (
-                                <>
-                                    <div className="w-px h-8 bg-border" />
-                                    <button
-                                        onClick={() => handleFilterChange('clearAll')}
-                                        className="px-4 py-2 text-sm font-medium text-destructive hover:bg-destructive/10 rounded-xl transition-colors"
-                                    >
-                                        Clear all
-                                    </button>
-                                </>
-                            )}
-                        </div>
-                    </div>
 
                     {/* Mobile Filter Drawer */}
                     {mobileFiltersOpen && (
                         <>
                             {/* Backdrop */}
                             <div 
-                                className="lg:hidden fixed inset-0 bg-black/60 backdrop-blur-sm z-40 transition-opacity"
+                                className="lg:hidden fixed inset-0 bg-black/60 backdrop-blur-sm z-[60] transition-opacity"
                                 onClick={() => setMobileFiltersOpen(false)}
                             />
                             
                             {/* Drawer */}
-                            <div className="lg:hidden fixed inset-y-0 left-0 z-50 w-full max-w-sm bg-background shadow-2xl overflow-hidden flex flex-col animate-in slide-in-from-left duration-300">
+                            <div className="lg:hidden fixed top-0 bottom-0 left-0 z-[70] w-full max-w-sm bg-background shadow-2xl overflow-hidden flex flex-col animate-in slide-in-from-left duration-300">
                                 {/* Drawer Header */}
-                                <div className="flex items-center justify-between p-4 border-b border-border bg-card">
-                                    <div className="flex items-center gap-3">
-                                        <div className="w-9 h-9 rounded-xl bg-primary/10 flex items-center justify-center">
+                                <div className="flex items-center justify-between px-4 py-3 border-b border-border bg-card safe-area-top">
+                                    <div className="flex items-center gap-2.5">
+                                        <div className="w-8 h-8 rounded-lg bg-primary/10 flex items-center justify-center">
                                             <SlidersHorizontal className="w-4 h-4 text-primary" />
                                         </div>
                                         <div>
-                                            <h2 className="font-semibold text-foreground">Rent Filters</h2>
+                                            <h2 className="font-semibold text-foreground text-sm">Rent Filters</h2>
                                             {activeFilterCount > 0 && (
-                                                <p className="text-xs text-muted-foreground">{activeFilterCount} active</p>
+                                                <p className="text-[11px] text-muted-foreground">{activeFilterCount} active</p>
                                             )}
                                         </div>
                                     </div>
                                     <button
                                         onClick={() => setMobileFiltersOpen(false)}
-                                        className="w-9 h-9 rounded-xl hover:bg-muted flex items-center justify-center transition-colors"
+                                        className="w-8 h-8 rounded-lg hover:bg-muted flex items-center justify-center transition-colors"
                                     >
                                         <X className="w-5 h-5 text-muted-foreground" />
                                     </button>
                                 </div>
                                 
                                 {/* Drawer Content */}
-                                <div className="flex-1 overflow-y-auto">
+                                <div className="flex-1 overflow-y-auto overscroll-contain">
                                     <RentFilterSidebar 
                                         filters={filters} 
                                         onFilterChange={handleFilterChange}
                                         hideHeader={true}
+                                        compact={true}
                                     />
                                 </div>
                                 
                                 {/* Drawer Footer */}
-                                <div className="p-4 border-t border-border bg-card">
+                                <div className="px-4 py-3 border-t border-border bg-card safe-area-bottom">
                                     <button
                                         onClick={() => setMobileFiltersOpen(false)}
-                                        className="w-full py-3.5 bg-primary hover:bg-primary/90 text-primary-foreground font-semibold rounded-xl transition-colors flex items-center justify-center gap-2"
+                                        className="w-full py-3 bg-primary hover:bg-primary/90 text-primary-foreground font-semibold rounded-xl transition-colors flex items-center justify-center gap-2"
                                     >
                                         <Sparkles className="w-4 h-4" />
                                         Show {properties.length} Results
@@ -423,7 +494,11 @@ export default function RentListings() {
                                 sortBy={sortBy}
                                 onSortChange={handleSortChange}
                                 properties={properties}
+                                total={pagination.total}
                                 listingType="rent"
+                                activeFilterCount={activeFilterCount}
+                                onFilterClick={() => setMobileFiltersOpen(true)}
+                                onClearFilters={() => handleFilterChange('clearAll')}
                             />
 
                             <ListingsGrid

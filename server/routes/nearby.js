@@ -234,7 +234,7 @@ router.get('/', async (req, res) => {
                 console.log(`[Nearby] Serving from database cache (age: ${Math.round(dbCached.cacheAge / 60000)}min)`);
                 return res.json({
                     success: true,
-                    amenities: dbCached.amenities.slice(0, 10).map(a => ({
+                    amenities: dbCached.amenities.slice(0, 5).map(a => ({
                         name: a.name,
                         type: a.type,
                         distance: formatDistance(calculateDistance(latitude, longitude, a.lat, a.lng)),
@@ -345,7 +345,7 @@ router.get('/', async (req, res) => {
 
         const result = {
             success: true,
-            amenities: amenities.slice(0, 10),
+            amenities: amenities.slice(0, 5),
             searchRadius: radiusKm,
             totalFound: amenities.length
         };

@@ -107,6 +107,10 @@ export default function Home() {
                 type: validation.errors.propertyType || "",
                 query: validation.errors.keywords || ""
             });
+            // Show general error as alert if no specific field errors
+            if (validation.errors.general && !validation.errors.location && !validation.errors.keywords) {
+                alert(validation.errors.general);
+            }
             return;
         }
         const searchPayload = convertToApiPayload(validation.normalized);
@@ -632,6 +636,7 @@ export default function Home() {
                                             property={{ ...property, featured: true }}
                                             viewMode="grid"
                                             initialSaved={wishlistIds.has(property._id)}
+                                            priority={index < 3}
                                             onWishlistChange={(propertyId, isFavorited) => {
                                                 setWishlistIds(prev => {
                                                     const newSet = new Set(prev);
@@ -736,6 +741,10 @@ export default function Home() {
                                     <img
                                         src={city.image || "/placeholder.svg"}
                                         alt={city.name}
+                                        width={400}
+                                        height={300}
+                                        loading={idx < 2 ? "eager" : "lazy"}
+                                        decoding="async"
                                         className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-700"
                                     />
                                     <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/40 to-transparent" />

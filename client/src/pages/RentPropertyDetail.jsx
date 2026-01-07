@@ -437,7 +437,10 @@ export default function RentPropertyDetail() {
         setIsCreatingConversation(true);
         try {
             const result = await createConversation(ownerId, propertyData._id);
-            if (result.success) navigate('/messages');
+            if (result.success) {
+                const conversationId = result.data?._id || result.data?.id;
+                navigate('/messages', { state: { conversationId } });
+            }
         } catch (error) {
             console.error('Error creating conversation:', error);
         } finally {

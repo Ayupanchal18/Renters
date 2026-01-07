@@ -15,6 +15,19 @@ const router = Router();
 
 /* ---------------------- HELPER FUNCTIONS ---------------------- */
 
+/**
+ * Escape special regex characters in a string
+ */
+function escapeRegex(str) {
+    if (!str) return "";
+    const specialChars = ['\\', '.', '*', '+', '?', '^', '$', '{', '}', '(', ')', '|', '[', ']'];
+    let result = String(str);
+    for (const char of specialChars) {
+        result = result.split(char).join('\\' + char);
+    }
+    return result;
+}
+
 function slugify(text) {
     return String(text || "")
         .toLowerCase()
@@ -45,21 +58,11 @@ function makeListingNumber() {
     return `LIST-${stamp}-${randomSuffix(4)}`;
 }
 
-/**
- * Generate property URL path for rent properties
- * @param {Object} property - Property object with slug
- * @returns {string} URL path in format /rent/{slug}
- */
 function generateRentPropertyUrlPath(property) {
     if (!property || !property.slug) return null;
     return `/rent/${property.slug}`;
 }
 
-/**
- * Add URL path to property object
- * @param {Object} property - Property object
- * @returns {Object} Property with urlPath added
- */
 function addUrlPathToProperty(property) {
     if (!property) return property;
     return {
@@ -96,7 +99,6 @@ router.post("/", propertyUpload.array("photos", 10), validatePropertyByListingTy
 
         const body = req.body || {};
 
-        // Ensure listingType is set to rent
         if (body.listingType && body.listingType !== LISTING_TYPES.RENT) {
             return res.status(400).json({
                 success: false,
@@ -106,7 +108,6 @@ router.post("/", propertyUpload.array("photos", 10), validatePropertyByListingTy
         }
         body.listingType = LISTING_TYPES.RENT;
 
-        // Validate required fields for rent properties
         const required = ["category", "title", "propertyType", "furnishing", "availableFrom", "city", "address", "monthlyRent"];
         for (const r of required) {
             if (body[r] === undefined || body[r] === null || body[r] === "") {
@@ -132,8 +133,6 @@ router.post("/", propertyUpload.array("photos", 10), validatePropertyByListingTy
         const baseSlug = slugify(`${body.title}-${body.city || ""}`.slice(0, 120));
         const slug = await makeUniqueSlug(baseSlug);
         const listingNumber = makeListingNumber();
-
-        // Upload photos to Cloudinary
         const photoPaths = await uploadPropertyPhotos(req.files);
 
         const doc = new Property({
@@ -150,27 +149,17 @@ router.post("/", propertyUpload.array("photos", 10), validatePropertyByListingTy
         });
 
         await doc.save();
-        res.status(201).json({
-            success: true,
-            data: doc
-        });
+        res.status(201).json({ success: true, data: doc });
     } catch (err) {
         if (err.name === "ValidationError") {
             const messages = Object.values(err.errors).map(e => e.message);
-            return res.status(400).json({
-                success: false,
-                error: "Validation failed",
-                details: messages
-            });
+            return res.status(400).json({ success: false, error: "Validation failed", details: messages });
         }
         console.error("POST /properties/rent error:", err);
-        res.status(500).json({
-            success: false,
-            error: "Server error",
-            message: err.message
-        });
+        res.status(500).json({ success: false, error: "Server error", message: err.message });
     }
 });
+
 
 /**
  * GET /api/properties/rent
@@ -182,8 +171,6 @@ router.get("/", async (req, res) => {
         const limit = Math.min(100, Number(req.query.limit) || 12);
         const skip = (page - 1) * limit;
 
-        // Base filter: only rent properties that are active and not deleted
-        // Include properties without listingType for backward compatibility (legacy data)
         const filter = {
             $or: [
                 { listingType: LISTING_TYPES.RENT },
@@ -193,7 +180,6 @@ router.get("/", async (req, res) => {
             status: "active"
         };
 
-        // Apply optional filters
         if (req.query.city) filter.city = String(req.query.city);
         if (req.query.category) filter.category = String(req.query.category);
         if (req.query.propertyType) filter.propertyType = String(req.query.propertyType);
@@ -201,22 +187,14 @@ router.get("/", async (req, res) => {
             filter.ownerId = req.query.ownerId;
         }
 
-        // Rent-specific price filters
         if (req.query.minRent) filter.monthlyRent = { ...(filter.monthlyRent || {}), $gte: Number(req.query.minRent) };
         if (req.query.maxRent) filter.monthlyRent = { ...(filter.monthlyRent || {}), $lte: Number(req.query.maxRent) };
-
-        // Rent-specific filters
         if (req.query.preferredTenants) filter.preferredTenants = String(req.query.preferredTenants);
         if (req.query.furnished) filter.furnishing = String(req.query.furnished);
-
         if (req.query.bedrooms) filter.bedrooms = Number(req.query.bedrooms);
         if (req.query.furnishing) filter.furnishing = String(req.query.furnishing);
+        if (req.query.q) filter.$text = { $search: String(req.query.q) };
 
-        if (req.query.q) {
-            filter.$text = { $search: String(req.query.q) };
-        }
-
-        // Sorting
         const sortParam = String(req.query.sort || "newest");
         let mongoSort = { createdAt: -1 };
         if (sortParam === "rent_low_to_high") mongoSort = { monthlyRent: 1, createdAt: -1 };
@@ -238,21 +216,12 @@ router.get("/", async (req, res) => {
 
         res.json({
             success: true,
-            data: {
-                items,
-                total,
-                page,
-                pageSize: limit
-            }
+            data: { items, total, page, pageSize: limit }
         });
 
     } catch (err) {
         console.error("GET /properties/rent error:", err);
-        res.status(500).json({
-            success: false,
-            error: "Server error",
-            message: err.message
-        });
+        res.status(500).json({ success: false, error: "Server error", message: err.message });
     }
 });
 
@@ -263,7 +232,6 @@ router.get("/", async (req, res) => {
 router.get("/:identifier", async (req, res) => {
     try {
         const { identifier } = req.params;
-
         let property;
 
         if (mongoose.Types.ObjectId.isValid(identifier)) {
@@ -291,7 +259,6 @@ router.get("/:identifier", async (req, res) => {
         }
 
         if (!property) {
-            // Check if property exists but is a buy property
             const buyProperty = await Property.findOne({
                 $or: [
                     { _id: mongoose.Types.ObjectId.isValid(identifier) ? identifier : null },
@@ -316,23 +283,15 @@ router.get("/:identifier", async (req, res) => {
             });
         }
 
-        // Add URL path
         const propertyWithUrl = addUrlPathToProperty(property);
-
-        res.json({
-            success: true,
-            data: propertyWithUrl
-        });
+        res.json({ success: true, data: propertyWithUrl });
 
     } catch (err) {
         console.error("GET /properties/rent/:identifier error:", err);
-        res.status(500).json({
-            success: false,
-            error: "Server error",
-            message: err.message
-        });
+        res.status(500).json({ success: false, error: "Server error", message: err.message });
     }
 });
+
 
 /**
  * POST /api/properties/rent/search
@@ -357,7 +316,6 @@ router.post("/search", async (req, res) => {
 
         const searchText = q || query || searchQuery || "";
         const searchPropertyType = propertyType || type || filters.propertyType || "";
-
         const safeFilters = filters || {};
 
         const extractCity = (str) => {
@@ -385,7 +343,7 @@ router.post("/search", async (req, res) => {
 
         // Text search
         if (searchText) {
-            const escapedQuery = String(searchText).replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+            const escapedQuery = escapeRegex(searchText);
             const regex = new RegExp(escapedQuery, "i");
 
             andConditions.push({
@@ -401,7 +359,7 @@ router.post("/search", async (req, res) => {
 
         // Location search
         if (searchLocation) {
-            const locationRegex = new RegExp(searchLocation.replace(/[.*+?^${}()|[\]\\]/g, "\\$&"), "i");
+            const locationRegex = new RegExp(escapeRegex(searchLocation), "i");
             andConditions.push({
                 $or: [
                     { city: locationRegex },
@@ -412,13 +370,13 @@ router.post("/search", async (req, res) => {
 
         // Property type filter
         if (searchPropertyType) {
-            const typeRegex = new RegExp(searchPropertyType.replace(/[.*+?^${}()|[\]\\]/g, "\\$&"), "i");
+            const typeRegex = new RegExp(escapeRegex(searchPropertyType), "i");
             matchStage.propertyType = typeRegex;
         }
 
         // Category filter
         if (category) {
-            const categoryRegex = new RegExp(category.replace(/[.*+?^${}()|[\]\\]/g, "\\$&"), "i");
+            const categoryRegex = new RegExp(escapeRegex(category), "i");
             matchStage.category = categoryRegex;
         }
 

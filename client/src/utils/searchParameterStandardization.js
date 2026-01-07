@@ -35,7 +35,7 @@ export const STANDARD_SEARCH_STRUCTURE = {
 // Search parameter validation rules
 export const SEARCH_VALIDATION_RULES = {
     location: {
-        required: true,
+        required: false,  // Location is optional - users can search by keywords only
         minLength: 2,
         maxLength: 100
     },
@@ -44,7 +44,7 @@ export const SEARCH_VALIDATION_RULES = {
         allowedValues: ['apartment', 'house', 'room', 'studio', 'pg', 'shared']
     },
     keywords: {
-        required: true,
+        required: false,  // Keywords are optional - users can search by location only
         minLength: 2,
         maxLength: 200
     },
@@ -118,16 +118,22 @@ export function validateSearchParameters(searchParams) {
         };
     }
 
+    // Track if we have at least one search criterion
+    let hasSearchCriteria = false;
+
     // Validate location
-    if (searchParams.location !== undefined) {
+    if (searchParams.location !== undefined && searchParams.location !== '') {
         const locationStr = typeof searchParams.location === 'string'
             ? searchParams.location
             : searchParams.location?.formatted || '';
 
-        const locationValidation = validateLocationInput(locationStr);
-        if (!locationValidation.isValid) {
-            errors.location = locationValidation.error;
-            isValid = false;
+        if (locationStr.trim()) {
+            hasSearchCriteria = true;
+            const locationValidation = validateLocationInput(locationStr);
+            if (!locationValidation.isValid) {
+                errors.location = locationValidation.error;
+                isValid = false;
+            }
         }
     } else if (SEARCH_VALIDATION_RULES.location.required) {
         errors.location = VALIDATION_ERROR_MESSAGES.location.required;
@@ -153,23 +159,37 @@ export function validateSearchParameters(searchParams) {
             isValid = false;
         } else {
             const trimmed = keywords.trim();
-            if (trimmed.length < SEARCH_VALIDATION_RULES.keywords.minLength) {
-                errors.keywords = VALIDATION_ERROR_MESSAGES.keywords.minLength;
-                isValid = false;
-            } else if (trimmed.length > SEARCH_VALIDATION_RULES.keywords.maxLength) {
-                errors.keywords = VALIDATION_ERROR_MESSAGES.keywords.maxLength;
-                isValid = false;
-            }
+            if (trimmed.length > 0) {
+                hasSearchCriteria = true;
+                if (trimmed.length < SEARCH_VALIDATION_RULES.keywords.minLength) {
+                    errors.keywords = VALIDATION_ERROR_MESSAGES.keywords.minLength;
+                    isValid = false;
+                } else if (trimmed.length > SEARCH_VALIDATION_RULES.keywords.maxLength) {
+                    errors.keywords = VALIDATION_ERROR_MESSAGES.keywords.maxLength;
+                    isValid = false;
+                }
 
-            // Check for harmful patterns
-            const harmfulPatterns = [/<script/i, /javascript:/i, /on\w+=/i];
-            if (harmfulPatterns.some(pattern => pattern.test(trimmed))) {
-                errors.keywords = VALIDATION_ERROR_MESSAGES.keywords.invalid;
-                isValid = false;
+                // Check for harmful patterns
+                const harmfulPatterns = [/<script/i, /javascript:/i, /on\w+=/i];
+                if (harmfulPatterns.some(pattern => pattern.test(trimmed))) {
+                    errors.keywords = VALIDATION_ERROR_MESSAGES.keywords.invalid;
+                    isValid = false;
+                }
             }
         }
     } else if (SEARCH_VALIDATION_RULES.keywords.required) {
         errors.keywords = VALIDATION_ERROR_MESSAGES.keywords.required;
+        isValid = false;
+    }
+
+    // Check if property type is provided (also counts as search criteria)
+    if (searchParams.propertyType || searchParams.type) {
+        hasSearchCriteria = true;
+    }
+
+    // Require at least one search criterion
+    if (!hasSearchCriteria) {
+        errors.general = 'Please provide at least a location, keywords, or property type to search';
         isValid = false;
     }
 
@@ -393,9 +413,11 @@ export function convertToApiPayload(standardParams) {
     }
 
     return {
+        q: standardParams.keywords || '',
         location: standardParams.location?.formatted || '',
-        type: standardParams.propertyType || '',
-        query: standardParams.keywords || '',
+        city: standardParams.location?.city || standardParams.location?.formatted || '',
+        propertyType: standardParams.propertyType || '',
+        category: standardParams.propertyType || '',
         filters: standardParams.filters || {},
         page: standardParams.pagination?.page || 1,
         limit: standardParams.pagination?.limit || 20,

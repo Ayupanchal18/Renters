@@ -1,4 +1,5 @@
-import { useState, useMemo, useCallback } from "react";
+import { useState, useMemo, useCallback, useEffect } from "react";
+import { useLocation } from "react-router-dom";
 import { ConversationList } from "../components/chatComponents/ConversationList";
 import { ChatWindow } from "../components/chatComponents/ChatWindow.jsx";
 import { EmptyChatState } from "../components/chatComponents/EmptyChatState.jsx";
@@ -9,6 +10,7 @@ import { getUser } from "../utils/auth";
 
 export default function Messages() {
     const [showMobileChat, setShowMobileChat] = useState(false);
+    const location = useLocation();
     
     // Get current user
     const user = getUser();
@@ -30,6 +32,23 @@ export default function Messages() {
         fetchConversations,
         setError
     } = useMessages({ autoConnect: true });
+
+    // Auto-select conversation if passed via navigation state
+    useEffect(() => {
+        const conversationId = location.state?.conversationId;
+        if (conversationId && conversations.length > 0 && !selectedConversation) {
+            const targetConversation = conversations.find(
+                conv => (conv._id || conv.id) === conversationId
+            );
+            if (targetConversation) {
+                handleSelectConversation(targetConversation);
+            } else {
+                // If not in list yet, select by ID directly
+                selectConversation(conversationId);
+                setShowMobileChat(true);
+            }
+        }
+    }, [location.state?.conversationId, conversations, selectedConversation]);
 
     // Handle selecting a conversation
     const handleSelectConversation = async (conversation) => {

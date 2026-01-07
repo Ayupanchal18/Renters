@@ -228,6 +228,7 @@ export default async function createServer(devMode = false) {
         app.use("/api/user-diagnostics", (await safeImport("routes/userDiagnostics.js")).default);
         app.use("/api/alerts", (await safeImport("routes/alertRoutes.js")).default);
         app.use("/api/nearby", (await safeImport("routes/nearby.js")).default);
+        app.use("/api/geocode", (await safeImport("routes/geocode.js")).default);
         app.use("/api/price-trends", (await safeImport("routes/priceTrendsRoutes.js")).default);
         app.use("/api/properties", propertiesRouter);
 

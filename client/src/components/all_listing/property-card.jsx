@@ -1,18 +1,21 @@
 import { useState, useEffect } from "react";
-import { Heart, MapPin, Bed, Bath, Home, Phone, MessageCircle, Sparkles, BadgeCheck, ArrowRight } from "lucide-react";
+import { Heart, MapPin, Bed, Bath, Home, Phone, MessageCircle, Sparkles, BadgeCheck } from "lucide-react";
 import { Button } from "../ui/button";
 import { useNavigate } from "react-router-dom";
 import { PropertyImage } from "../ui/lazy-image";
 import { useNavigationStateContext } from "../ui/navigation-state-provider";
 import wishlistService from "../../api/wishlistService";
 import { isAuthenticated } from "../../utils/auth";
+import { useMessages } from "../../hooks/useMessages";
 
-export function PropertyCard({ property, viewMode, initialSaved = false, onWishlistChange }) {
+export function PropertyCard({ property, viewMode, initialSaved = false, onWishlistChange, priority = false }) {
     const navigate = useNavigate();
     const { navigateWithState } = useNavigationStateContext();
+    const { createConversation } = useMessages();
 
     const [isSaved, setIsSaved] = useState(initialSaved);
     const [isLoading, setIsLoading] = useState(false);
+    const [isCreatingConversation, setIsCreatingConversation] = useState(false);
 
     // Sync with initialSaved prop when it changes
     useEffect(() => {
@@ -99,21 +102,33 @@ export function PropertyCard({ property, viewMode, initialSaved = false, onWishl
         window.location.href = `tel:${phone}`;
     };
 
-    // Handle message button click - navigate to messages
-    const handleMessage = (e) => {
+    // Handle message button click - create conversation and navigate to messages
+    const handleMessage = async (e) => {
         e.stopPropagation();
         if (!isAuthenticated()) {
             navigate('/login');
             return;
         }
-        // Navigate to messages with property context
-        navigate('/messages', {
-            state: {
-                propertyId: property._id,
-                ownerId: property.owner?._id || property.ownerId,
-                propertyTitle: property.title
+
+        const ownerId = property?.ownerId || property?.owner?._id || property?.owner;
+        if (!ownerId || !property?._id) return;
+
+        // Don't message yourself
+        const currentUser = JSON.parse(localStorage.getItem('user') || '{}');
+        if (currentUser._id === ownerId || currentUser.id === ownerId) return;
+
+        setIsCreatingConversation(true);
+        try {
+            const result = await createConversation(ownerId, property._id);
+            if (result.success) {
+                const conversationId = result.data?._id || result.data?.id;
+                navigate('/messages', { state: { conversationId } });
             }
-        });
+        } catch (error) {
+            console.error('Error creating conversation:', error);
+        } finally {
+            setIsCreatingConversation(false);
+        }
     };
 
     // Capitalize first letter
@@ -135,7 +150,7 @@ export function PropertyCard({ property, viewMode, initialSaved = false, onWishl
                         <PropertyImage
                             property={property}
                             className="w-full h-full object-cover transition-transform duration-300 group-hover:scale-105"
-                            priority={false}
+                            priority={priority}
                         />
                         
                         {/* Badges */}
@@ -242,9 +257,10 @@ export function PropertyCard({ property, viewMode, initialSaved = false, onWishl
                                     size="sm"
                                     className="h-9 px-5 text-xs bg-primary hover:bg-primary/90 text-primary-foreground rounded-xl gap-1.5"
                                     onClick={handleMessage}
+                                    disabled={isCreatingConversation}
                                 >
                                     <MessageCircle className="w-3.5 h-3.5" />
-                                    Message
+                                    {isCreatingConversation ? 'Starting...' : 'Message'}
                                 </Button>
                             </div>
                         </div>
@@ -265,7 +281,7 @@ export function PropertyCard({ property, viewMode, initialSaved = false, onWishl
                 <PropertyImage
                     property={property}
                     className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-110"
-                    priority={false}
+                    priority={priority}
                 />
 
                 {/* Gradient Overlay */}
@@ -355,9 +371,10 @@ export function PropertyCard({ property, viewMode, initialSaved = false, onWishl
                         size="sm"
                         className="flex-1 h-9 text-xs bg-primary hover:bg-primary/90 text-primary-foreground rounded-xl"
                         onClick={handleMessage}
+                        disabled={isCreatingConversation}
                     >
                         <MessageCircle className="w-3.5 h-3.5 mr-1.5" />
-                        Message
+                        {isCreatingConversation ? 'Starting...' : 'Message'}
                     </Button>
                 </div>
             </div>
