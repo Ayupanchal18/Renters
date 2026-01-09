@@ -3,6 +3,7 @@ import { Button } from "../components/ui/button";
 import { Input } from "../components/ui/input";
 import { Badge } from "../components/ui/badge";
 import { BackToTop } from "../components/ui/back-to-top";
+import { MainContent } from "../components/ui/main-content";
 import { PropertyCard } from "../components/all_listing/property-card";
 import { 
     MapPin, Search, Star, ArrowRight, Mail, CheckCircle2, 
@@ -221,7 +222,7 @@ export default function Home() {
         { name: 'Mumbai', properties: 4520, image: 'https://images.unsplash.com/photo-1570168007204-dfb528c6958f?w=400&h=300&fit=crop', avgRent: '₹25,000' },
         { name: 'Delhi', properties: 3850, image: 'https://images.unsplash.com/photo-1587474260584-136574528ed5?w=400&h=300&fit=crop', avgRent: '₹20,000' },
         { name: 'Bangalore', properties: 3200, image: 'https://images.unsplash.com/photo-1596176530529-78163a4f7af2?w=400&h=300&fit=crop', avgRent: '₹22,000' },
-        { name: 'Hyderabad', properties: 2150, image: 'https://images.unsplash.com/photo-1572638029678-d0beee1bb64d?w=400&h=300&fit=crop', avgRent: '₹18,000' },
+        { name: 'Hyderabad', properties: 2150, image: 'https://images.unsplash.com/photo-1600850056064-a8b380df8395?w=400&h=300&fit=crop', avgRent: '₹18,000' },
     ];
 
     // Fetch wishlist IDs for the current user
@@ -316,7 +317,7 @@ export default function Home() {
             />
             <JsonLd data={[generateOrganization(), generateWebsiteSchema()]} />
             <Navbar />
-            <div className="min-h-screen bg-background">
+            <MainContent className="min-h-screen bg-background">
                 {/* Hero Section */}
                 <section id="search_box" className="relative overflow-hidden">
                     {/* Background Pattern */}
@@ -950,7 +951,7 @@ export default function Home() {
 
                 <Footer />
                 <BackToTop />
-            </div>
+            </MainContent>
         </>
     );
 }

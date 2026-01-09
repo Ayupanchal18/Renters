@@ -8,6 +8,7 @@ import { BrowserRouter, Routes, Route } from "react-router-dom";
 import { register as registerSW } from "./utils/serviceWorker";
 import { NavigationStateProvider } from "./components/ui/navigation-state-provider";
 import { ThemeLoadingState } from "./components/ui/theme-error-boundary";
+import { RouteErrorBoundary } from "./components/ui/route-error-boundary";
 import { SocketProvider } from "./contexts/SocketContext";
 import { HelmetProvider } from "react-helmet-async";
 import { useWebVitals, WEB_VITALS_THRESHOLDS } from "./hooks/useWebVitals";
@@ -75,25 +76,38 @@ function PageLoader() {
     );
 }
 
-// Admin route wrapper with lazy loading
+// Admin route wrapper with lazy loading and error boundary
 function AdminRouteWrapper({ children }) {
     return (
-        <Suspense fallback={<PageLoader />}>
-            <AdminRoute>
-                <AdminLayout>{children}</AdminLayout>
-            </AdminRoute>
-        </Suspense>
+        <RouteErrorBoundary routeName="admin">
+            <Suspense fallback={<PageLoader />}>
+                <AdminRoute>
+                    <AdminLayout>{children}</AdminLayout>
+                </AdminRoute>
+            </Suspense>
+        </RouteErrorBoundary>
     );
 }
 
-// Protected route wrapper for authenticated users
+// Protected route wrapper for authenticated users with error boundary
 function ProtectedRouteWrapper({ children }) {
     return (
-        <Suspense fallback={<PageLoader />}>
-            <ProtectedRoute>
-                {children}
-            </ProtectedRoute>
-        </Suspense>
+        <RouteErrorBoundary routeName="protected">
+            <Suspense fallback={<PageLoader />}>
+                <ProtectedRoute>
+                    {children}
+                </ProtectedRoute>
+            </Suspense>
+        </RouteErrorBoundary>
+    );
+}
+
+// Public route wrapper with error boundary
+function PublicRouteWrapper({ children, routeName }) {
+    return (
+        <RouteErrorBoundary routeName={routeName}>
+            {children}
+        </RouteErrorBoundary>
     );
 }
 
@@ -163,29 +177,30 @@ const App = () => {
                     }}
                 >
                     <NavigationStateProvider>
+                    <RouteErrorBoundary routeName="app">
                     <Suspense fallback={<PageLoader />}>
                         <Routes>
                             {/* Public routes */}
-                            <Route path="/" element={<Index />} />
-                            <Route path="/listings" element={<Listings />} />
-                            <Route path="/rent-properties" element={<RentListings />} />
-                            <Route path="/buy-properties" element={<BuyListings />} />
-                            <Route path="/rent/:slug" element={<RentPropertyDetail />} />
-                            <Route path="/buy/:slug" element={<BuyPropertyDetail />} />
-                            <Route path="/properties/:slug" element={<Property />} />
-                            <Route path="/property/:slug" element={<PropertyRedirect />} />
-                            <Route path="/search" element={<SearchResults />} />
-                            <Route path="/login" element={<Login />} />
-                            <Route path="/signup" element={<Signup />} />
-                            <Route path="/about" element={<About />} />
-                            <Route path="/contact" element={<Contact />} />
-                            <Route path="/faqs" element={<FAQs />} />
-                            <Route path="/blog" element={<Blog />} />
-                            <Route path="/blog/:slug" element={<BlogPost />} />
-                            <Route path="/privacy-policy" element={<Privacy />} />
-                            <Route path="/terms" element={<Terms />} />
-                            <Route path="/coming-soon" element={<ComingSoon />} />
-                            <Route path="/maintenance" element={<Maintenance />} />
+                            <Route path="/" element={<PublicRouteWrapper routeName="home"><Index /></PublicRouteWrapper>} />
+                            <Route path="/listings" element={<PublicRouteWrapper routeName="listings"><Listings /></PublicRouteWrapper>} />
+                            <Route path="/rent-properties" element={<PublicRouteWrapper routeName="rent-listings"><RentListings /></PublicRouteWrapper>} />
+                            <Route path="/buy-properties" element={<PublicRouteWrapper routeName="buy-listings"><BuyListings /></PublicRouteWrapper>} />
+                            <Route path="/rent/:slug" element={<PublicRouteWrapper routeName="rent-property-detail"><RentPropertyDetail /></PublicRouteWrapper>} />
+                            <Route path="/buy/:slug" element={<PublicRouteWrapper routeName="buy-property-detail"><BuyPropertyDetail /></PublicRouteWrapper>} />
+                            <Route path="/properties/:slug" element={<PublicRouteWrapper routeName="property"><Property /></PublicRouteWrapper>} />
+                            <Route path="/property/:slug" element={<PublicRouteWrapper routeName="property-redirect"><PropertyRedirect /></PublicRouteWrapper>} />
+                            <Route path="/search" element={<PublicRouteWrapper routeName="search"><SearchResults /></PublicRouteWrapper>} />
+                            <Route path="/login" element={<PublicRouteWrapper routeName="login"><Login /></PublicRouteWrapper>} />
+                            <Route path="/signup" element={<PublicRouteWrapper routeName="signup"><Signup /></PublicRouteWrapper>} />
+                            <Route path="/about" element={<PublicRouteWrapper routeName="about"><About /></PublicRouteWrapper>} />
+                            <Route path="/contact" element={<PublicRouteWrapper routeName="contact"><Contact /></PublicRouteWrapper>} />
+                            <Route path="/faqs" element={<PublicRouteWrapper routeName="faqs"><FAQs /></PublicRouteWrapper>} />
+                            <Route path="/blog" element={<PublicRouteWrapper routeName="blog"><Blog /></PublicRouteWrapper>} />
+                            <Route path="/blog/:slug" element={<PublicRouteWrapper routeName="blog-post"><BlogPost /></PublicRouteWrapper>} />
+                            <Route path="/privacy-policy" element={<PublicRouteWrapper routeName="privacy"><Privacy /></PublicRouteWrapper>} />
+                            <Route path="/terms" element={<PublicRouteWrapper routeName="terms"><Terms /></PublicRouteWrapper>} />
+                            <Route path="/coming-soon" element={<PublicRouteWrapper routeName="coming-soon"><ComingSoon /></PublicRouteWrapper>} />
+                            <Route path="/maintenance" element={<PublicRouteWrapper routeName="maintenance"><Maintenance /></PublicRouteWrapper>} />
 
                             {/* Protected routes - require authentication */}
                             <Route path="/post-property" element={<ProtectedRouteWrapper><PostProperty /></ProtectedRouteWrapper>} />
@@ -214,6 +229,7 @@ const App = () => {
                             <Route path="*" element={<NotFound />} />
                         </Routes>
                     </Suspense>
+                    </RouteErrorBoundary>
                     </NavigationStateProvider>
                 </BrowserRouter>
                 </ThemeLoadingState>

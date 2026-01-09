@@ -129,11 +129,12 @@ export function logAuthenticationError(error, context = '', metadata = {}) {
 
 /**
  * Log authentication success events for debugging
+ * Only logs when VITE_DEBUG_AUTH=true to reduce console spam
  * @param {string} context - Authentication context
  * @param {Object} metadata - Success metadata
  */
 export function logAuthenticationSuccess(context, metadata = {}) {
-    if (!isDevelopment) return;
+    if (!isDevelopment || import.meta.env.VITE_DEBUG_AUTH !== 'true') return;
 
     const successInfo = {
         timestamp: new Date().toISOString(),
@@ -147,10 +148,19 @@ export function logAuthenticationSuccess(context, metadata = {}) {
 
 /**
  * Log token-related events
+ * Only logs errors or important events to reduce console spam
  * @param {string} event - Token event type
  * @param {Object} details - Event details
  */
 export function logTokenEvent(event, details = {}) {
+    // Only log token events in development when there's an issue or explicit debug mode
+    const shouldLog = import.meta.env.VITE_DEBUG_AUTH === 'true';
+
+    // Always log errors regardless of debug mode
+    const isError = event.includes('ERROR') || event.includes('EXPIRED') || event.includes('INVALID');
+
+    if (!isDevelopment || (!shouldLog && !isError)) return;
+
     const { token, ...safeDetails } = details;
     const tokenInfo = {
         timestamp: new Date().toISOString(),
@@ -162,26 +172,24 @@ export function logTokenEvent(event, details = {}) {
     if (token) {
         tokenInfo.hasToken = !!token;
         tokenInfo.tokenLength = token.length;
-
-        // Only include token in development mode
-        if (isDevelopment) {
-            tokenInfo.token = token;
-        }
     }
 
-    if (isDevelopment) {
+    if (isError) {
+        console.warn('🔑 TOKEN ERROR:', tokenInfo);
+    } else {
         console.log('🔑 TOKEN EVENT:', tokenInfo);
     }
 }
 
 /**
  * Log API request authentication details
+ * Only logs when VITE_DEBUG_AUTH=true to reduce console spam
  * @param {string} url - Request URL
  * @param {Object} headers - Request headers
  * @param {string} method - HTTP method
  */
 export function logApiRequestAuth(url, headers, method = 'GET') {
-    if (!isDevelopment) return;
+    if (!isDevelopment || import.meta.env.VITE_DEBUG_AUTH !== 'true') return;
 
     const authInfo = {
         timestamp: new Date().toISOString(),
@@ -244,12 +252,17 @@ export function logHeaderConstructionIssue(headerDetails) {
 
 /**
  * Performance logger for authentication operations
+ * Only logs slow operations or when VITE_DEBUG_AUTH=true
  * @param {string} operation - Operation name
  * @param {number} duration - Duration in milliseconds
  * @param {boolean} success - Whether operation succeeded
  */
 export function logAuthPerformance(operation, duration, success = true) {
     if (!isDevelopment) return;
+
+    // Only log slow operations (>1s) or when debug mode is enabled
+    const shouldLog = duration > 1000 || import.meta.env.VITE_DEBUG_AUTH === 'true';
+    if (!shouldLog) return;
 
     const perfInfo = {
         timestamp: new Date().toISOString(),

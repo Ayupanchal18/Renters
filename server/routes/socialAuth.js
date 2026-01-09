@@ -108,11 +108,17 @@ async function exchangeGoogleCode(code) {
 
         const userInfo = await userInfoResponse.json();
 
+        console.log('Google user info received:', {
+            id: userInfo.id,
+            email: userInfo.email,
+            hasPicture: !!userInfo.picture
+        });
+
         return {
             id: userInfo.id,
             email: userInfo.email,
             name: userInfo.name,
-            picture: userInfo.picture,
+            picture: userInfo.picture || null,
             emailVerified: userInfo.verified_email,
         };
     } catch (error) {
@@ -248,7 +254,7 @@ router.post("/google", async (req, res) => {
                 authProviderData: {
                     picture: googleUser.picture
                 },
-                avatar: googleUser.picture,
+                avatar: googleUser.picture || null,
                 emailVerified: true,
                 emailVerifiedAt: new Date(),
                 userType: 'buyer',
@@ -260,6 +266,7 @@ router.post("/google", async (req, res) => {
                 consentGivenAt: new Date(),
             });
 
+            console.log('New Google user created with avatar:', user.avatar ? 'yes' : 'no');
             await user.save();
 
             if (typeof logAuthEvent === 'function') {
@@ -271,9 +278,12 @@ router.post("/google", async (req, res) => {
         const { accessToken, refreshToken } = generateTokens(user);
         setRefreshTokenCookie(res, refreshToken);
 
+        const userResponse = safeUser(user);
+        console.log('Google auth response - user avatar:', userResponse.avatar ? 'present' : 'missing');
+
         res.json({
             success: true,
-            user: safeUser(user),
+            user: userResponse,
             token: accessToken,
         });
 

@@ -1,13 +1,56 @@
+import "dotenv/config";
 import path from "path";
 import { fileURLToPath } from "url";
 import fs from "fs";
 import express from "express";
 import createServer from "./index.js";
+import { validateEnv, getSafeConfigForLogging, EnvValidationError } from "./src/config/envSchema.js";
+import logger from "./src/services/loggerService.js";
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
-const PORT = process.env.PORT || 8080;
 
 async function startServer() {
+    // ========================
+    // ENVIRONMENT VALIDATION
+    // Fail fast if required environment variables are missing or invalid
+    // Requirements: 6.1, 6.2, 6.6
+    // ========================
+    let envConfig;
+    try {
+        envConfig = validateEnv();
+
+        // Log validated configuration (without secrets)
+        const safeConfig = getSafeConfigForLogging(envConfig);
+        logger.info('Environment validation successful', {
+            config: {
+                NODE_ENV: safeConfig.NODE_ENV,
+                PORT: safeConfig.PORT,
+                DB_NAME: safeConfig.DB_NAME,
+                MONGO_URI: safeConfig.MONGO_URI,
+                hasCloudinary: !!envConfig.CLOUDINARY_CLOUD_NAME,
+                hasSmtp: !!envConfig.SMTP_HOST,
+                hasTwilio: !!envConfig.TWILIO_ACCOUNT_SID,
+                hasGoogleOAuth: !!envConfig.GOOGLE_CLIENT_ID,
+                hasFacebookOAuth: !!envConfig.FACEBOOK_APP_ID
+            }
+        });
+    } catch (error) {
+        if (error instanceof EnvValidationError) {
+            // Log detailed validation error and exit
+            console.error('\n❌ ENVIRONMENT VALIDATION FAILED');
+            console.error('━'.repeat(50));
+            console.error(error.message);
+            console.error('━'.repeat(50));
+            console.error('\nPlease check your .env file and ensure all required variables are set correctly.');
+            console.error('See .env.example for reference.\n');
+            process.exit(1);
+        }
+        // Re-throw unexpected errors
+        throw error;
+    }
+
+    const PORT = envConfig.PORT || 8080;
+
     try {
         const { app, httpServer } = await createServer(false);
 

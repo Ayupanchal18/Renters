@@ -8,7 +8,7 @@ import { cn } from "../../lib/utils";
  */
 const cardVariants = cva(
     // Base styles: soft rounded corners (8px/12px), 1px border, transition for hover effects
-    "rounded-xl border text-card-foreground transition-all duration-200",
+    "rounded-xl border text-card-foreground",
     {
         variants: {
             variant: {
@@ -22,8 +22,10 @@ const cardVariants = cva(
                 elevated: "bg-card border-neutral-200 dark:border-neutral-800 shadow-lg",
             },
             hover: {
-                // Hover lift effect: shadow-md and translateY(-4px) (Req 7.4)
-                true: "hover:shadow-md hover:-translate-y-1",
+                // Hover lift effect with elevated shadow - Requirements 2.3
+                true: "hover-lift-shadow",
+                // Subtle hover lift effect without elevated shadow - Requirements 2.3
+                subtle: "hover-lift",
                 false: "",
             },
         },

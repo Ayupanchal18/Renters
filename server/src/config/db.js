@@ -1,4 +1,5 @@
 import mongoose from "mongoose";
+import { setupQueryProfiling } from "../middleware/queryProfiler.js";
 
 /**
  * Database Configuration
@@ -14,6 +15,7 @@ if (!MONGO_URI) {
 }
 
 let hasLoggedConnection = false;
+let hasSetupProfiling = false;
 
 export async function connectDB() {
     // Validate MONGO_URI is set
@@ -34,6 +36,12 @@ export async function connectDB() {
         if (!hasLoggedConnection) {
             console.log("✅ MongoDB Connected Successfully");
             hasLoggedConnection = true;
+        }
+
+        // Setup query profiling for slow query logging (Requirements: 4.6)
+        if (!hasSetupProfiling) {
+            setupQueryProfiling();
+            hasSetupProfiling = true;
         }
     } catch (error) {
         console.error("❌ MongoDB connection error:", error.message);

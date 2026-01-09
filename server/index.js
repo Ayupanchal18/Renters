@@ -14,6 +14,9 @@ import {
     errorHandler,
     createRateLimiter
 } from "./src/middleware/security.js";
+import { createRequestLogger } from "./src/middleware/requestLogger.js";
+import { createCacheHeadersMiddleware } from "./src/middleware/cacheHeaders.js";
+import { setupSwagger } from "./src/docs/swagger.js";
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -114,6 +117,19 @@ export default async function createServer(devMode = false) {
     app.use(addRequestId);
     app.use(securityHeaders);
 
+    // Request logging middleware (after addRequestId so we have request IDs)
+    app.use(createRequestLogger({
+        logRequestStart: process.env.LOG_REQUEST_START !== 'false',
+        slowRequestThreshold: parseInt(process.env.SLOW_REQUEST_THRESHOLD_MS, 10) || 1000,
+        excludePaths: ['/api/ping', '/health', '/favicon.ico']
+    }));
+
+    // Cache headers middleware for GET endpoints (Requirements: 4.4)
+    app.use(createCacheHeadersMiddleware({
+        enabled: process.env.ENABLE_CACHE_HEADERS !== 'false',
+        excludePaths: ['/api/ping', '/health']
+    }));
+
     // Rate limiting ONLY for auth endpoints (login, register, OTP)
     // This prevents brute force attacks while allowing normal browsing
     const authRateLimiter = createRateLimiter({
@@ -149,6 +165,9 @@ export default async function createServer(devMode = false) {
     app.get("/api/ping", (_req, res) => {
         res.json({ message: process.env.PING_MESSAGE ?? "ping" });
     });
+
+    // Setup Swagger API documentation (Requirements: 5.1, 5.5)
+    setupSwagger(app);
 
     // Public config endpoint for client-side OAuth configuration
     // Only exposes non-sensitive public client IDs

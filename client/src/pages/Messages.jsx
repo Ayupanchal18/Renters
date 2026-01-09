@@ -1,4 +1,4 @@
-import { useState, useMemo, useCallback, useEffect } from "react";
+import { useState, useMemo, useCallback, useEffect, useRef } from "react";
 import { useLocation } from "react-router-dom";
 import { ConversationList } from "../components/chatComponents/ConversationList";
 import { ChatWindow } from "../components/chatComponents/ChatWindow.jsx";
@@ -34,9 +34,15 @@ export default function Messages() {
     } = useMessages({ autoConnect: true });
 
     // Auto-select conversation if passed via navigation state
+    const hasAutoSelectedRef = useRef(false);
+    
     useEffect(() => {
         const conversationId = location.state?.conversationId;
-        if (conversationId && conversations.length > 0 && !selectedConversation) {
+        
+        // Only auto-select once per navigation, and only if we have conversations loaded
+        if (conversationId && conversations.length > 0 && !hasAutoSelectedRef.current) {
+            hasAutoSelectedRef.current = true;
+            
             const targetConversation = conversations.find(
                 conv => (conv._id || conv.id) === conversationId
             );
@@ -48,7 +54,12 @@ export default function Messages() {
                 setShowMobileChat(true);
             }
         }
-    }, [location.state?.conversationId, conversations, selectedConversation]);
+        
+        // Reset the ref when conversationId changes (new navigation)
+        if (!conversationId) {
+            hasAutoSelectedRef.current = false;
+        }
+    }, [location.state?.conversationId, conversations.length, selectConversation]);
 
     // Handle selecting a conversation
     const handleSelectConversation = async (conversation) => {

@@ -46,15 +46,19 @@ class MessageService {
                 a.toString().localeCompare(b.toString())
             );
 
-            // Try to find existing conversation
+            // Try to find existing conversation first
             let conversation = await Conversation.findOne({
                 participants: { $all: sortedParticipants, $size: 2 },
-                property: propertyObjectId,
-                isActive: true
+                property: propertyObjectId
             }).populate('participants', 'name email avatar phone')
                 .populate('property', 'title images');
 
             if (conversation) {
+                // Reactivate if it was soft-deleted
+                if (!conversation.isActive) {
+                    conversation.isActive = true;
+                    await conversation.save();
+                }
                 return {
                     success: true,
                     conversation,
@@ -63,7 +67,7 @@ class MessageService {
             }
 
             // Create new conversation
-            conversation = new Conversation({
+            const newConversation = new Conversation({
                 participants: sortedParticipants,
                 property: propertyObjectId,
                 messages: [],
@@ -75,10 +79,10 @@ class MessageService {
                 isActive: true
             });
 
-            await conversation.save();
+            await newConversation.save();
 
             // Populate the newly created conversation
-            conversation = await Conversation.findById(conversation._id)
+            conversation = await Conversation.findById(newConversation._id)
                 .populate('participants', 'name email avatar phone')
                 .populate('property', 'title images');
 
@@ -89,29 +93,32 @@ class MessageService {
             };
 
         } catch (error) {
-            // Handle duplicate key error (race condition)
+            // Handle duplicate key error (race condition - another request created it first)
             if (error.code === 11000) {
-                // Another request created the conversation, fetch it
-                const userObjectId = new mongoose.Types.ObjectId(userId);
-                const recipientObjectId = new mongoose.Types.ObjectId(recipientId);
-                const propertyObjectId = new mongoose.Types.ObjectId(propertyId);
+                try {
+                    const userObjectId = new mongoose.Types.ObjectId(userId);
+                    const recipientObjectId = new mongoose.Types.ObjectId(recipientId);
+                    const propertyObjectId = new mongoose.Types.ObjectId(propertyId);
 
-                const sortedParticipants = [userObjectId, recipientObjectId].sort((a, b) =>
-                    a.toString().localeCompare(b.toString())
-                );
+                    const sortedParticipants = [userObjectId, recipientObjectId].sort((a, b) =>
+                        a.toString().localeCompare(b.toString())
+                    );
 
-                const conversation = await Conversation.findOne({
-                    participants: { $all: sortedParticipants, $size: 2 },
-                    property: propertyObjectId
-                }).populate('participants', 'name email avatar phone')
-                    .populate('property', 'title images');
+                    const conversation = await Conversation.findOne({
+                        participants: { $all: sortedParticipants, $size: 2 },
+                        property: propertyObjectId
+                    }).populate('participants', 'name email avatar phone')
+                        .populate('property', 'title images');
 
-                if (conversation) {
-                    return {
-                        success: true,
-                        conversation,
-                        isExisting: true
-                    };
+                    if (conversation) {
+                        return {
+                            success: true,
+                            conversation,
+                            isExisting: true
+                        };
+                    }
+                } catch (retryError) {
+                    console.error('Error in getOrCreateConversation retry:', retryError);
                 }
             }
 

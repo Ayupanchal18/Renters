@@ -64,6 +64,8 @@ export function ConversationItem({
                             src={participant.avatar}
                             alt={participant.name || 'User'}
                             className="w-12 h-12 rounded-full object-cover ring-2 ring-border"
+                            referrerPolicy="no-referrer"
+                            crossOrigin="anonymous"
                         />
                     ) : (
                         <div className="w-12 h-12 rounded-full bg-primary/10 ring-2 ring-border flex items-center justify-center">

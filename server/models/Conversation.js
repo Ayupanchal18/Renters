@@ -53,7 +53,9 @@ const ConversationSchema = new Schema(
 // Indexes for query optimization
 ConversationSchema.index({ participants: 1 });
 ConversationSchema.index({ property: 1 });
-ConversationSchema.index({ participants: 1, property: 1 }, { unique: true });
+// Note: Unique constraint on participants + property is enforced at application level
+// because MongoDB array indexes don't work well with unique constraints for this use case
+ConversationSchema.index({ participants: 1, property: 1 });
 ConversationSchema.index({ lastActivityAt: -1 });
 
 export const Conversation =

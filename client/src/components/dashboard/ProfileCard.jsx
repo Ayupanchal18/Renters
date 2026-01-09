@@ -17,7 +17,13 @@ export default function ProfileCard({ user, completion = 0, completionData, onPo
                 <div className="flex items-center gap-4 mb-6">
                     <div className="w-14 h-14 bg-white/20 backdrop-blur-sm rounded-xl flex items-center justify-center ring-2 ring-white/30">
                         {user.avatar ? (
-                            <img src={user.avatar} alt={user.name} className="w-full h-full rounded-xl object-cover" />
+                            <img 
+                                src={user.avatar} 
+                                alt={user.name} 
+                                className="w-full h-full rounded-xl object-cover" 
+                                referrerPolicy="no-referrer"
+                                crossOrigin="anonymous"
+                            />
                         ) : (
                             <User size={28} className="text-white" />
                         )}

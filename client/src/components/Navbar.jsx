@@ -23,14 +23,12 @@ const navbarVariants = cva(
         variants: {
             variant: {
                 default: [
-                    // Glass blur effect with backdrop-filter: blur(10px)
-                    "backdrop-blur-[10px]",
-                    "bg-background/80",
+                    // Glass effect utility class - Requirements 5.1
+                    // Provides backdrop-blur(12px) with semi-transparent background
+                    "glass",
                     // Subtle bottom border
                     "border-b border-border/50",
                     "shadow-sm",
-                    // Support for browsers without backdrop-filter
-                    "supports-[backdrop-filter]:bg-background/70",
                 ].join(" "),
                 gradient: [
                     // Premium gradient from primary to tertiary
@@ -54,6 +52,23 @@ const navbarVariants = cva(
         },
     }
 );
+
+/**
+ * SkipNavLink - Accessibility component for keyboard users
+ * Allows users to skip directly to main content, bypassing navigation
+ * Visible only when focused (for keyboard navigation)
+ */
+function SkipNavLink() {
+    return (
+        <a
+            href="#main-content"
+            className="sr-only focus:not-sr-only focus:absolute focus:top-2 focus:left-2 focus:z-[100] focus:px-4 focus:py-2 focus:bg-primary focus:text-primary-foreground focus:rounded-md focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2 transition-all"
+            aria-label="Skip to main content"
+        >
+            Skip to main content
+        </a>
+    );
+}
 
 export default function Navbar({ variant = "default" }) {
     const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
@@ -186,7 +201,9 @@ export default function Navbar({ variant = "default" }) {
     const isGradientVariant = variant === "gradient";
 
     return (
-        <nav className={cn(navbarVariants({ variant }))}>
+        <nav className={cn(navbarVariants({ variant }))} role="navigation" aria-label="Main navigation">
+            {/* Skip Navigation Link - Accessibility feature for keyboard users */}
+            <SkipNavLink />
             <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
                 {/* Top Row */}
                 <div className="flex justify-between items-center h-16">
@@ -278,6 +295,9 @@ export default function Navbar({ variant = "default" }) {
                                         variant="ghost"
                                         size="icon"
                                         onClick={() => setNotificationDropdownOpen(!notificationDropdownOpen)}
+                                        aria-label={`Notifications${notificationCount > 0 ? `, ${notificationCount} unread` : ''}`}
+                                        aria-expanded={notificationDropdownOpen}
+                                        aria-haspopup="true"
                                         className={cn(
                                             "relative",
                                             isGradientVariant
@@ -288,10 +308,13 @@ export default function Navbar({ variant = "default" }) {
                                         <Bell className={cn(
                                             "h-5 w-5",
                                             isGradientVariant ? "text-white" : "text-foreground"
-                                        )} />
+                                        )} aria-hidden="true" />
                                         {/* Unread notification badge */}
                                         {notificationCount > 0 && (
-                                            <span className="absolute -top-1 -right-1 h-5 w-5 flex items-center justify-center text-xs font-bold bg-destructive text-destructive-foreground rounded-full">
+                                            <span 
+                                                className="absolute -top-1 -right-1 h-5 w-5 flex items-center justify-center text-xs font-bold bg-destructive text-destructive-foreground rounded-full"
+                                                aria-hidden="true"
+                                            >
                                                 {notificationCount > 99 ? '99+' : notificationCount}
                                             </span>
                                         )}
@@ -299,10 +322,14 @@ export default function Navbar({ variant = "default" }) {
 
                                     {/* Notification Dropdown */}
                                     {notificationDropdownOpen && (
-                                        <div className="absolute right-0 mt-2 w-80 bg-popover rounded-xl shadow-lg border border-border py-2 z-50 max-h-96 overflow-hidden">
+                                        <div 
+                                            className="absolute right-0 mt-2 w-80 bg-popover rounded-xl shadow-lg border border-border py-2 z-50 max-h-96 overflow-hidden"
+                                            role="menu"
+                                            aria-label="Notifications menu"
+                                        >
                                             {/* Header */}
                                             <div className="flex items-center justify-between px-4 py-2 border-b border-border">
-                                                <h3 className="font-semibold text-popover-foreground">Notifications</h3>
+                                                <h3 className="font-semibold text-popover-foreground" id="notifications-heading">Notifications</h3>
                                                 {notificationCount > 0 && (
                                                     <button
                                                         onClick={async (e) => {
@@ -310,8 +337,9 @@ export default function Navbar({ variant = "default" }) {
                                                             await markAllAsRead();
                                                         }}
                                                         className="text-xs text-primary hover:text-primary/80 flex items-center gap-1"
+                                                        aria-label="Mark all notifications as read"
                                                     >
-                                                        <Check className="h-3 w-3" />
+                                                        <Check className="h-3 w-3" aria-hidden="true" />
                                                         Mark all read
                                                     </button>
                                                 )}
@@ -386,6 +414,9 @@ export default function Navbar({ variant = "default" }) {
                                 <div className="relative">
                                     <button
                                         onClick={() => setProfileMenuOpen(!profileMenuOpen)}
+                                        aria-label="User menu"
+                                        aria-expanded={profileMenuOpen}
+                                        aria-haspopup="true"
                                         className={cn(
                                             "flex items-center gap-2 px-3 py-2 rounded-lg transition-colors",
                                             isGradientVariant
@@ -401,13 +432,16 @@ export default function Navbar({ variant = "default" }) {
                                                     : "bg-gradient-to-br from-primary to-primary")
                                             )}
                                             style={{ borderRadius: '50%' }}
+                                            aria-hidden="true"
                                         >
                                             {userAvatar ? (
                                                 <img 
                                                     src={userAvatar} 
-                                                    alt={userName || 'Profile'} 
+                                                    alt="" 
                                                     className="h-full w-full object-cover"
                                                     style={{ borderRadius: '50%' }}
+                                                    referrerPolicy="no-referrer"
+                                                    crossOrigin="anonymous"
                                                     onError={(e) => {
                                                         e.target.style.display = 'none';
                                                         e.target.nextSibling.style.display = 'flex';
@@ -427,7 +461,7 @@ export default function Navbar({ variant = "default" }) {
                                                     <User className={cn(
                                                         "h-4 w-4",
                                                         isGradientVariant ? "text-white" : "text-primary-foreground"
-                                                    )} />
+                                                    )} aria-hidden="true" />
                                                 )}
                                             </span>
                                         </div>
@@ -437,35 +471,52 @@ export default function Navbar({ variant = "default" }) {
                                                 isGradientVariant ? "text-white/70" : "text-muted-foreground",
                                                 profileMenuOpen && "rotate-180"
                                             )}
+                                            aria-hidden="true"
                                         />
                                     </button>
 
                                     {/* Profile Dropdown Menu */}
                                     {profileMenuOpen && (
-                                        <div className="absolute right-0 mt-2 w-48 bg-popover rounded-xl shadow-lg border border-border py-2 z-50">
+                                        <div 
+                                            className="absolute right-0 mt-2 w-48 bg-popover rounded-xl shadow-lg border border-border py-2 z-50"
+                                            role="menu"
+                                            aria-label="User menu options"
+                                        >
                                             <Link to="/dashboard">
-                                                <button className="w-full text-left px-4 py-2 text-popover-foreground hover:bg-muted flex items-center gap-2 transition-colors">
-                                                    <User className="h-4 w-4" />
+                                                <button 
+                                                    className="w-full text-left px-4 py-2 text-popover-foreground hover:bg-muted flex items-center gap-2 transition-colors"
+                                                    role="menuitem"
+                                                >
+                                                    <User className="h-4 w-4" aria-hidden="true" />
                                                     <span className="font-medium">My Profile</span>
                                                 </button>
                                             </Link>
                                             <Link to="/notifications">
-                                                <button className="w-full text-left px-4 py-2 text-popover-foreground hover:bg-muted flex items-center gap-2 transition-colors">
-                                                    <Bell className="h-4 w-4" />
+                                                <button 
+                                                    className="w-full text-left px-4 py-2 text-popover-foreground hover:bg-muted flex items-center gap-2 transition-colors"
+                                                    role="menuitem"
+                                                >
+                                                    <Bell className="h-4 w-4" aria-hidden="true" />
                                                     <span className="font-medium">Notifications</span>
                                                 </button>
                                             </Link>
                                             <Link to="/wishlist">
-                                                <button className="w-full text-left px-4 py-2 text-popover-foreground hover:bg-muted flex items-center gap-2 transition-colors">
-                                                    <Heart className="h-4 w-4" />
+                                                <button 
+                                                    className="w-full text-left px-4 py-2 text-popover-foreground hover:bg-muted flex items-center gap-2 transition-colors"
+                                                    role="menuitem"
+                                                >
+                                                    <Heart className="h-4 w-4" aria-hidden="true" />
                                                     <span className="font-medium">Wishlist</span>
                                                 </button>
                                             </Link>
                                             {/* Admin Panel Link - Only visible for admin users */}
                                             {isAdmin && (
                                                 <Link to="/admin">
-                                                    <button className="w-full text-left px-4 py-2 text-primary hover:bg-primary/10 flex items-center gap-2 transition-colors border-t border-border">
-                                                        <Shield className="h-4 w-4" />
+                                                    <button 
+                                                        className="w-full text-left px-4 py-2 text-primary hover:bg-primary/10 flex items-center gap-2 transition-colors border-t border-border"
+                                                        role="menuitem"
+                                                    >
+                                                        <Shield className="h-4 w-4" aria-hidden="true" />
                                                         <span className="font-medium">Admin Panel</span>
                                                     </button>
                                                 </Link>
@@ -476,8 +527,9 @@ export default function Navbar({ variant = "default" }) {
                                                     setProfileMenuOpen(false);
                                                 }}
                                                 className="w-full text-left px-4 py-2 text-destructive hover:bg-destructive/10 flex items-center gap-2 transition-colors border-t border-border mt-2"
+                                                role="menuitem"
                                             >
-                                                <LogOut className="h-4 w-4" />
+                                                <LogOut className="h-4 w-4" aria-hidden="true" />
                                                 <span className="font-medium">Logout</span>
                                             </button>
                                         </div>
@@ -538,11 +590,14 @@ export default function Navbar({ variant = "default" }) {
                                     : "hover:bg-muted"
                             )}
                             onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
+                            aria-label={mobileMenuOpen ? "Close navigation menu" : "Open navigation menu"}
+                            aria-expanded={mobileMenuOpen}
+                            aria-controls="mobile-menu"
                         >
                             {mobileMenuOpen ? (
-                                <X className="h-6 w-6" />
+                                <X className="h-6 w-6" aria-hidden="true" />
                             ) : (
-                                <Menu className="h-6 w-6" />
+                                <Menu className="h-6 w-6" aria-hidden="true" />
                             )}
                         </button>
                     </div>
@@ -550,12 +605,17 @@ export default function Navbar({ variant = "default" }) {
 
                 {/* Mobile Menu */}
                 {mobileMenuOpen && (
-                    <div className={cn(
-                        "md:hidden py-3 animate-in slide-in-from-top-2",
-                        isGradientVariant
-                            ? "border-t border-white/20"
-                            : "border-t border-border"
-                    )}>
+                    <div 
+                        id="mobile-menu"
+                        className={cn(
+                            "md:hidden py-3 animate-in slide-in-from-top-2",
+                            isGradientVariant
+                                ? "border-t border-white/20"
+                                : "border-t border-border"
+                        )}
+                        role="menu"
+                        aria-label="Mobile navigation menu"
+                    >
                         <div className="flex flex-col gap-1 mb-3">
                             {isLoggedIn ? (
                                 userLinks.map((link) => (

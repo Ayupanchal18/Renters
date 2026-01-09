@@ -64,6 +64,14 @@
   --duration-slow: 320ms;
   --duration-slower: 420ms;
 
+  /* FLUID TYPOGRAPHY TOKENS - Requirements 7.1, 7.2, 7.3 */
+  /* Uses clamp() for responsive scaling: clamp(min, preferred, max) */
+  --text-fluid-sm: clamp(0.875rem, 0.8rem + 0.375vw, 1rem);
+  --text-fluid-base: clamp(1rem, 0.9rem + 0.5vw, 1.125rem);
+  --text-fluid-lg: clamp(1.25rem, 1rem + 1.25vw, 1.5rem);
+  --text-fluid-xl: clamp(1.5rem, 1.25rem + 1.25vw, 2rem);
+  --text-fluid-2xl: clamp(2rem, 1.5rem + 2.5vw, 3rem);
+
   /* CHART COLORS (NEW) */
   --chart-1: oklch(0.6 0.18 24.3);
   --chart-2: oklch(0.65 0.12 30);
@@ -270,6 +278,7 @@
   /* Color scheme for native elements */
   html {
     color-scheme: light;
+    scroll-behavior: smooth; /* Requirements 6.1 - Smooth scrolling globally */
   }
 
   html.dark {
@@ -1122,10 +1131,30 @@
   /* ----------------------- GLASS/FROST EFFECT UTILITIES ---------------- */
   /* ====================================================================== */
   
-  /* Glass effect with backdrop blur */
+  /* Glass effect with backdrop blur - Requirements 5.1, 5.2, 5.3, 5.4, 5.5, 5.6 */
   .glass {
-    backdrop-filter: blur(10px);
-    -webkit-backdrop-filter: blur(10px);
+    backdrop-filter: blur(12px);
+    -webkit-backdrop-filter: blur(12px);
+    background-color: rgba(255, 255, 255, 0.8);
+    border: 1px solid rgba(255, 255, 255, 0.1);
+  }
+  
+  .dark .glass {
+    background-color: rgba(15, 23, 42, 0.8);
+    border: 1px solid rgba(255, 255, 255, 0.1);
+  }
+  
+  /* Subtle glass effect with lighter blur - Requirements 5.1, 5.2, 5.3, 5.4, 5.5, 5.6 */
+  .glass-subtle {
+    backdrop-filter: blur(8px);
+    -webkit-backdrop-filter: blur(8px);
+    background-color: rgba(255, 255, 255, 0.6);
+    border: 1px solid rgba(255, 255, 255, 0.08);
+  }
+  
+  .dark .glass-subtle {
+    background-color: rgba(15, 23, 42, 0.6);
+    border: 1px solid rgba(255, 255, 255, 0.08);
   }
   
   .glass-sm {
@@ -1189,6 +1218,7 @@
   /* Fallback for browsers that don't support backdrop-filter */
   @supports not (backdrop-filter: blur(10px)) {
     .glass,
+    .glass-subtle,
     .glass-sm,
     .glass-lg,
     .glass-light,
@@ -1199,6 +1229,7 @@
     }
     
     .dark .glass,
+    .dark .glass-subtle,
     .dark .glass-sm,
     .dark .glass-lg,
     .dark .glass-dark,
@@ -1296,6 +1327,45 @@
     box-shadow: 
       0 4px 6px rgba(0, 0, 0, 0.2),
       0 10px 15px rgba(0, 0, 0, 0.15);
+  }
+  
+  /* Lift effect with elevated shadow (for cards and buttons) - Requirements 2.1, 2.2, 2.3 */
+  .hover-lift-shadow {
+    transition: 
+      transform var(--duration-normal, 180ms) cubic-bezier(0.4, 0, 0.2, 1),
+      box-shadow var(--duration-normal, 180ms) cubic-bezier(0.4, 0, 0.2, 1),
+      border-color var(--duration-normal, 180ms) cubic-bezier(0.4, 0, 0.2, 1);
+  }
+  
+  .hover-lift-shadow:hover {
+    transform: translateY(-2px);
+    box-shadow: 
+      0 10px 15px -3px rgba(0, 0, 0, 0.1),
+      0 4px 6px -4px rgba(0, 0, 0, 0.1);
+  }
+  
+  .dark .hover-lift-shadow:hover {
+    box-shadow: 
+      0 10px 15px -3px rgba(0, 0, 0, 0.25),
+      0 4px 6px -4px rgba(0, 0, 0, 0.2);
+  }
+  
+  /* Active press effect (scale down on click) - Requirements 2.1, 2.2 */
+  .active-press {
+    transition: 
+      transform var(--duration-fast, 120ms) cubic-bezier(0.4, 0, 0.2, 1),
+      box-shadow var(--duration-fast, 120ms) cubic-bezier(0.4, 0, 0.2, 1);
+  }
+  
+  .active-press:active {
+    transform: scale(0.98) translateY(0);
+    box-shadow: 
+      0 1px 2px rgba(0, 0, 0, 0.05);
+  }
+  
+  .dark .active-press:active {
+    box-shadow: 
+      0 1px 2px rgba(0, 0, 0, 0.15);
   }
   
   /* Premium hover effect (lift + glow + saturate) */
@@ -1486,6 +1556,30 @@
   background: linear-gradient(90deg, #f0f0f0 0px, #e0e0e0 40px, #f0f0f0 80px);
   background-size: 200px 100%;
   animation: shimmer 1.5s ease-in-out infinite;
+}
+
+/* Shimmer utility class for skeleton loaders - Requirements 3.6 */
+.shimmer {
+  position: relative;
+  overflow: hidden;
+  background: linear-gradient(
+    90deg,
+    transparent 0%,
+    rgba(255, 255, 255, 0.1) 50%,
+    transparent 100%
+  );
+  background-size: 200% 100%;
+  animation: shimmer 1.5s ease-in-out infinite;
+}
+
+.dark .shimmer {
+  background: linear-gradient(
+    90deg,
+    transparent 0%,
+    rgba(255, 255, 255, 0.05) 50%,
+    transparent 100%
+  );
+  background-size: 200% 100%;
 }
 
 @keyframes slide-up {
@@ -1736,7 +1830,7 @@
   }
 }
 
-/* Reduced motion support - Respect user preferences */
+/* Reduced motion support - Respect user preferences - Requirements 8.1, 8.2 */
 @media (prefers-reduced-motion: reduce) {
   /* Disable all premium animations */
   .animate-fade-slide,
@@ -1750,7 +1844,8 @@
   .animate-bounce-gentle,
   .animate-pulse-gentle,
   .animate-shimmer,
-  .animate-rotate-slow {
+  .animate-rotate-slow,
+  .shimmer {
     animation: none !important;
   }
   

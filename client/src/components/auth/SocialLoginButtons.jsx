@@ -103,6 +103,8 @@ export default function SocialLoginButtons({ onSuccess, onError, disabled = fals
                 throw new Error(data.error || "Google authentication failed");
             }
 
+            console.log('Google login success - user avatar:', data.user?.avatar ? 'present' : 'missing');
+
             // Success - store auth and redirect
             setToken(data.token);
             setUser(data.user);

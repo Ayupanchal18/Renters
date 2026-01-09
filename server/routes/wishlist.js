@@ -1,13 +1,17 @@
 import { Router } from "express";
 import { Wishlist } from "../models/Wishlist.js";
 import { Property } from "../models/Property.js";
+import { authenticateToken } from "../src/middleware/security.js";
+
 const router = Router();
-// Get user's wishlist
-router.get("/", (async (req, res) => {
+
+// Get user's wishlist - requires authentication
+router.get("/", authenticateToken, (async (req, res) => {
     try {
-        const userId = req.headers["x-user-id"];
-        if (!userId)
-            return res.status(401).json({ error: "Unauthorized" });
+        const userId = req.user?._id;
+        if (!userId) {
+            return res.status(401).json({ error: "Unauthorized", message: "Please log in to view your wishlist" });
+        }
         const items = await Wishlist.find({ user: userId }).populate("property").lean();
         res.json(items);
     }
@@ -15,12 +19,14 @@ router.get("/", (async (req, res) => {
         res.status(503).json({ error: "Database connection failed" });
     }
 }));
-// Add to wishlist
-router.post("/:propertyId", (async (req, res) => {
+
+// Add to wishlist - requires authentication
+router.post("/:propertyId", authenticateToken, (async (req, res) => {
     try {
-        const userId = req.headers["x-user-id"];
-        if (!userId)
-            return res.status(401).json({ error: "Unauthorized" });
+        const userId = req.user?._id;
+        if (!userId) {
+            return res.status(401).json({ error: "Unauthorized", message: "Please log in to add to wishlist" });
+        }
         const { propertyId } = req.params;
         const existing = await Wishlist.findOne({ user: userId, property: propertyId });
         if (existing)
@@ -36,7 +42,11 @@ router.post("/:propertyId", (async (req, res) => {
     }
 }));
 // DISABLED: Wishlist deletion is disabled for data safety
-router.delete("/:propertyId", (async (req, res) => {
+router.delete("/:propertyId", authenticateToken, (async (req, res) => {
+    const userId = req.user?._id;
+    if (!userId) {
+        return res.status(401).json({ error: "Unauthorized", message: "Please log in to manage your wishlist" });
+    }
     console.error('❌ Wishlist deletion is DISABLED for data safety');
     res.status(403).json({
         error: "OPERATION_DISABLED",

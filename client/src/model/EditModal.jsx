@@ -147,6 +147,8 @@ export default function EditModal({ isOpen, onClose, user, onSave, isLoading = f
                                         src={photoPreview} 
                                         alt="Profile" 
                                         className="w-full h-full object-cover"
+                                        referrerPolicy="no-referrer"
+                                        crossOrigin="anonymous"
                                     />
                                 ) : (
                                     <User className="w-10 h-10 text-muted-foreground" />

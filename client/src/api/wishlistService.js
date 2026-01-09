@@ -2,16 +2,16 @@
  * Wishlist Service - handles favorite/wishlist operations
  */
 
-import { getUser } from '../utils/auth';
+import { getToken, isAuthenticated } from '../utils/auth';
 
 /**
  * Get auth headers for API requests
  */
 const getAuthHeaders = () => {
-    const user = getUser();
+    const token = getToken();
     return {
         'Content-Type': 'application/json',
-        'x-user-id': user?._id || user?.id || ''
+        'Authorization': token ? `Bearer ${token}` : ''
     };
 };
 
@@ -21,10 +21,17 @@ const wishlistService = {
      * @returns {Promise<Array>} List of wishlist items
      */
     getWishlist: async () => {
+        if (!isAuthenticated()) {
+            throw new Error('Authentication required');
+        }
         try {
             const response = await fetch('/api/wishlist', {
                 headers: getAuthHeaders()
             });
+
+            if (response.status === 401) {
+                throw new Error('Please log in to view your wishlist');
+            }
 
             if (!response.ok) {
                 throw new Error('Failed to fetch wishlist');
@@ -43,11 +50,18 @@ const wishlistService = {
      * @returns {Promise<Object>} Created wishlist item
      */
     addToWishlist: async (propertyId) => {
+        if (!isAuthenticated()) {
+            throw new Error('Authentication required');
+        }
         try {
             const response = await fetch(`/api/wishlist/${propertyId}`, {
                 method: 'POST',
                 headers: getAuthHeaders()
             });
+
+            if (response.status === 401) {
+                throw new Error('Please log in to add to wishlist');
+            }
 
             if (response.status === 409) {
                 // Already in wishlist
@@ -71,11 +85,18 @@ const wishlistService = {
      * @returns {Promise<Object>} Success response
      */
     removeFromWishlist: async (propertyId) => {
+        if (!isAuthenticated()) {
+            throw new Error('Authentication required');
+        }
         try {
             const response = await fetch(`/api/wishlist/${propertyId}`, {
                 method: 'DELETE',
                 headers: getAuthHeaders()
             });
+
+            if (response.status === 401) {
+                throw new Error('Please log in to manage your wishlist');
+            }
 
             if (!response.ok) {
                 throw new Error('Failed to remove from wishlist');
@@ -94,6 +115,9 @@ const wishlistService = {
      * @returns {Promise<boolean>} True if in wishlist
      */
     isInWishlist: async (propertyId) => {
+        if (!isAuthenticated()) {
+            return false;
+        }
         try {
             const wishlist = await wishlistService.getWishlist();
             return wishlist.some(item => item.property?._id === propertyId || item.property === propertyId);
@@ -110,6 +134,9 @@ const wishlistService = {
      * @returns {Promise<Object>} Result with new state
      */
     toggleWishlist: async (propertyId, currentState) => {
+        if (!isAuthenticated()) {
+            throw new Error('Authentication required');
+        }
         try {
             if (currentState) {
                 await wishlistService.removeFromWishlist(propertyId);
