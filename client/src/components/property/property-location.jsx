@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import { MapPin, Navigation, ExternalLink, Loader2 } from 'lucide-react';
+import CommuteCalculator from './commute-calculator';
 
 export default function PropertyLocation({ property }) {
     const [mapLoading, setMapLoading] = useState(true);
@@ -131,6 +132,11 @@ export default function PropertyLocation({ property }) {
                         Get Directions
                         <ExternalLink className="w-3 h-3 opacity-50" />
                     </a>
+                )}
+
+                {/* Commute Calculator */}
+                {hasCoords && (
+                    <CommuteCalculator propertyCoords={coords} />
                 )}
 
                 {/* Location Details Grid */}

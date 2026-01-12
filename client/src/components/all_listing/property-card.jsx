@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react";
-import { Heart, MapPin, Bed, Bath, Home, Phone, MessageCircle, Sparkles, BadgeCheck } from "lucide-react";
+import { Heart, MapPin, Bed, Bath, Home, Phone, MessageCircle, Sparkles, BadgeCheck, Flame, Clock, Calendar } from "lucide-react";
 import { Button } from "../ui/button";
 import { useNavigate } from "react-router-dom";
 import { PropertyImage } from "../ui/lazy-image";
@@ -7,11 +7,19 @@ import { useNavigationStateContext } from "../ui/navigation-state-provider";
 import wishlistService from "../../api/wishlistService";
 import { isAuthenticated } from "../../utils/auth";
 import { useMessages } from "../../hooks/useMessages";
+import { getRelativeTimeString } from "../../utils/relative-time";
 
 export function PropertyCard({ property, viewMode, initialSaved = false, onWishlistChange, priority = false }) {
     const navigate = useNavigate();
     const { navigateWithState } = useNavigationStateContext();
     const { createConversation } = useMessages();
+    
+    // Fix typo in data if present
+    const cleanTitle = property.title?.replace(/emploees/gi, 'employees') || property.title;
+    
+    // Calculate badges
+    const isNew = property.createdAt && (new Date() - new Date(property.createdAt)) < (7 * 24 * 60 * 60 * 1000);
+    const isHot = property.views > 50;
 
     const [isSaved, setIsSaved] = useState(initialSaved);
     const [isLoading, setIsLoading] = useState(false);
@@ -169,6 +177,22 @@ export function PropertyCard({ property, viewMode, initialSaved = false, onWishl
                             )}
                         </div>
                         
+                        {/* New/Hot Badges (Right side) */}
+                        <div className="absolute top-2.5 right-2.5 flex flex-wrap justify-end gap-1.5 pointer-events-none">
+                            {isHot && (
+                                <span className="inline-flex items-center gap-1 px-2 py-0.5 bg-rose-500/90 backdrop-blur-sm text-white text-[10px] font-semibold rounded-full shadow-sm animate-pulse">
+                                    <Flame className="w-3 h-3" />
+                                    Hot
+                                </span>
+                            )}
+                            {isNew && (
+                                <span className="inline-flex items-center gap-1 px-2 py-0.5 bg-violet-500/90 backdrop-blur-sm text-white text-[10px] font-semibold rounded-full shadow-sm">
+                                    <Clock className="w-3 h-3" />
+                                    New
+                                </span>
+                            )}
+                        </div>
+                        
                         {/* Mobile: Price overlay on image */}
                         <div className="sm:hidden absolute bottom-2.5 right-2.5 bg-white/95 dark:bg-card/95 backdrop-blur-sm px-3 py-1.5 rounded-xl shadow-lg">
                             <span className="text-lg font-bold text-primary">{formatPrice(getPrice())}</span>
@@ -183,7 +207,7 @@ export function PropertyCard({ property, viewMode, initialSaved = false, onWishl
                             {/* Title & Price Row */}
                             <div className="flex items-start justify-between gap-3 mb-2">
                                 <h3 className="font-semibold text-base text-foreground line-clamp-1 group-hover:text-primary transition-colors">
-                                    {property.title}
+                                    {cleanTitle}
                                 </h3>
                                 {/* Desktop: Price */}
                                 <div className="hidden sm:flex flex-col items-end flex-shrink-0">
@@ -193,9 +217,15 @@ export function PropertyCard({ property, viewMode, initialSaved = false, onWishl
                             </div>
 
                             {/* Location */}
-                            <div className="flex items-center gap-1.5 text-sm text-muted-foreground mb-3">
+                            <div className="flex items-center gap-1.5 text-sm text-muted-foreground mb-2">
                                 <MapPin className="w-4 h-4 text-primary/60 flex-shrink-0" />
                                 <span className="line-clamp-1">{property.address || `${property.city}, ${property.state}`}</span>
+                            </div>
+
+                            {/* Listed Date */}
+                            <div className="flex items-center gap-1.5 text-xs text-muted-foreground mb-3">
+                                <Calendar className="w-3.5 h-3.5 text-primary/60 flex-shrink-0" />
+                                <span>{getRelativeTimeString(property.createdAt)}</span>
                             </div>
 
                             {/* Stats row */}
@@ -303,6 +333,22 @@ export function PropertyCard({ property, viewMode, initialSaved = false, onWishl
                     )}
                 </div>
 
+                {/* New/Hot Badges (Left below standard badges) */}
+                <div className="absolute top-10 left-3 flex flex-col gap-2 pointer-events-none">
+                     {isHot && (
+                        <span className="inline-flex items-center gap-1 px-2 py-1 bg-rose-500/90 backdrop-blur-sm text-white text-xs font-semibold rounded-full shadow-sm animate-pulse w-fit">
+                            <Flame className="w-3 h-3" />
+                            Hot
+                        </span>
+                    )}
+                    {isNew && (
+                        <span className="inline-flex items-center gap-1 px-2 py-1 bg-violet-500/90 backdrop-blur-sm text-white text-xs font-semibold rounded-full shadow-sm w-fit">
+                            <Clock className="w-3 h-3" />
+                            New
+                        </span>
+                    )}
+                </div>
+
                 {/* Save Button */}
                 <button
                     onClick={handleToggleFavorite}
@@ -327,12 +373,17 @@ export function PropertyCard({ property, viewMode, initialSaved = false, onWishl
             <div className="flex-1 flex flex-col p-4">
                 {/* Title & Location */}
                 <div className="mb-3">
-                    <h3 className="font-semibold text-foreground text-sm leading-snug line-clamp-2 mb-2 group-hover:text-primary transition-colors">
-                        {property.title}
+                    <h3 className="font-semibold text-foreground text-sm leading-snug line-clamp-2 mb-1.5 group-hover:text-primary transition-colors">
+                        {cleanTitle}
                     </h3>
-                    <div className="flex items-center gap-1.5 text-xs text-muted-foreground">
+                    <div className="flex items-center gap-1.5 text-xs text-muted-foreground mb-1">
                         <MapPin className="w-3.5 h-3.5 text-primary/70 flex-shrink-0" />
                         <span className="line-clamp-1">{property.address}</span>
+                    </div>
+                    {/* Listed Date */}
+                    <div className="flex items-center gap-1.5 text-[11px] text-muted-foreground/80">
+                        <Calendar className="w-3 h-3 text-primary/50 flex-shrink-0" />
+                        <span>{getRelativeTimeString(property.createdAt)}</span>
                     </div>
                 </div>
 

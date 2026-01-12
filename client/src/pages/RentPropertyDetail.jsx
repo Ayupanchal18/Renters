@@ -780,6 +780,7 @@ export default function RentPropertyDetail() {
                                         verificationStatus: propertyData.verificationStatus
                                     }}
                                     propertyId={propertyData._id}
+                                    propertyTitle={propertyData.title}
                                 />
 
                                 {/* Nearby Places */}
@@ -803,6 +804,7 @@ export default function RentPropertyDetail() {
                                     verificationStatus: propertyData.verificationStatus
                                 }}
                                 propertyId={propertyData._id}
+                                propertyTitle={propertyData.title}
                             />
 
                             {/* Nearby Places */}

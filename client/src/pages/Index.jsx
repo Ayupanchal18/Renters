@@ -421,7 +421,7 @@ export default function Home() {
                                             Location
                                         </label>
                                         <div className="relative">
-                                            <MapPin className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-muted-foreground" />
+                                            <MapPin className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-muted-foreground z-10" />
                                             <Input
                                                 id="search-location"
                                                 placeholder="City or neighborhood"
@@ -482,7 +482,7 @@ export default function Home() {
                                                 className="w-full h-12 px-4 bg-background border border-border/50 rounded-lg text-left text-foreground hover:border-primary/50 transition-colors flex items-center justify-between focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2"
                                             >
                                                 <span className={searchType ? 'text-foreground' : 'text-muted-foreground'}>
-                                                    {searchType ? typeOptions.find(o => o.value === searchType)?.label : 'Select type'}
+                                                    {searchType ? typeOptions.find(o => o.value === searchType)?.label : 'All Types'}
                                                 </span>
                                                 <ChevronDown className={`w-4 h-4 text-muted-foreground transition-transform ${showTypeDropdown ? 'rotate-180' : ''}`} />
                                             </button>
@@ -512,7 +512,7 @@ export default function Home() {
                                     <div className="md:col-span-3">
                                         <label htmlFor="search-keywords" className="block text-sm font-medium text-foreground mb-2">Keywords</label>
                                         <div className="relative">
-                                            <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-muted-foreground" />
+                                            <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-muted-foreground z-10" />
                                             <Input
                                                 id="search-keywords"
                                                 placeholder="Amenities, features..."

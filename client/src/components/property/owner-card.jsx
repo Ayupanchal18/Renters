@@ -4,9 +4,12 @@ import { useNavigate } from 'react-router-dom';
 import { useMessages } from '../../hooks/useMessages';
 import { isAuthenticated } from '../../utils/auth';
 import { Button } from '../ui/button';
+import ContactChoiceDialog from './ContactChoiceDialog';
 
-export default function OwnerCard({ owner, propertyId }) {
+export default function OwnerCard({ owner, propertyId, propertyTitle }) {
     const [isCreatingConversation, setIsCreatingConversation] = useState(false);
+    const [dialogOpen, setDialogOpen] = useState(false);
+    const [dialogMode, setDialogMode] = useState('message'); // 'call' | 'message'
     const navigate = useNavigate();
     const { createConversation } = useMessages();
     
@@ -78,6 +81,30 @@ export default function OwnerCard({ owner, propertyId }) {
     const ownerTypeInfo = getOwnerTypeLabel();
     const OwnerIcon = ownerTypeInfo.icon;
 
+    // Open dialog for call action
+    const handleCallClick = () => {
+        setDialogMode('call');
+        setDialogOpen(true);
+    };
+
+    // Open dialog for message action
+    const handleMessageClick = () => {
+        setDialogMode('message');
+        setDialogOpen(true);
+    };
+
+    // Handle app's native call action (direct phone call)
+    const handleAppCallAction = () => {
+        if (phone) {
+            window.location.href = `tel:${phone}`;
+        }
+    };
+
+    // Handle app's native message action (in-app messaging)
+    const handleAppMessageAction = () => {
+        handleSendMessage();
+    };
+
     return (
         <div className="bg-card rounded-xl border border-border p-5 sm:p-6">
             <h3 className="text-sm font-semibold text-muted-foreground uppercase tracking-wide mb-4">
@@ -127,7 +154,7 @@ export default function OwnerCard({ owner, propertyId }) {
             <div className="space-y-3">
                 {/* Send Message Button */}
                 <Button
-                    onClick={handleSendMessage}
+                    onClick={handleMessageClick}
                     disabled={isCreatingConversation || !ownerId || !propertyId}
                     className="w-full flex items-center gap-3 p-3 h-auto bg-primary hover:bg-primary/90 text-primary-foreground"
                 >
@@ -143,18 +170,18 @@ export default function OwnerCard({ owner, propertyId }) {
                 </Button>
 
                 {phone && (
-                    <a
-                        href={`tel:${phone}`}
-                        className="flex items-center gap-3 p-3 rounded-lg bg-primary/5 hover:bg-primary/10 transition-colors group no-underline"
+                    <button
+                        onClick={handleCallClick}
+                        className="w-full flex items-center gap-3 p-3 rounded-lg bg-primary/5 hover:bg-primary/10 transition-colors group text-left"
                     >
                         <div className="w-10 h-10 rounded-full bg-primary/10 flex items-center justify-center group-hover:bg-primary/20 transition-colors">
                             <Phone className="w-4 h-4 text-primary" />
                         </div>
                         <div>
                             <p className="text-xs text-muted-foreground">Call</p>
-                            <p className="font-medium text-foreground no-underline">{formatPhone(phone)}</p>
+                            <p className="font-medium text-foreground">{formatPhone(phone)}</p>
                         </div>
-                    </a>
+                    </button>
                 )}
 
                 {email && (
@@ -178,6 +205,16 @@ export default function OwnerCard({ owner, propertyId }) {
                     </div>
                 )}
             </div>
+
+            {/* Contact Choice Dialog */}
+            <ContactChoiceDialog
+                isOpen={dialogOpen}
+                onClose={() => setDialogOpen(false)}
+                mode={dialogMode}
+                phone={phone}
+                propertyTitle={propertyTitle}
+                onAppAction={dialogMode === 'call' ? handleAppCallAction : handleAppMessageAction}
+            />
         </div>
     );
 }

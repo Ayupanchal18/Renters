@@ -73,10 +73,8 @@ export function HeroSection({ onSearch }) {
     
     // Determine initial values: navigation state takes priority, then URL params
     const initialLocation = navSearchData?.location || navSearchData?.city || urlLocation || '';
-    const initialQuery = navSearchData?.query || urlQuery || '';
-    const initialPropertyType = navSearchData?.category 
-        ? getPropertyTypeLabel(navSearchData.category) 
-        : "All Types";
+    const initialQuery = navSearchData?.q || navSearchData?.query || urlQuery || '';
+    const initialPropertyType = navSearchData?.category || "";
 
     // --- State Management ---
     const [activeTab, setActiveTab] = useState(initialTab);
@@ -306,7 +304,7 @@ export function HeroSection({ onSearch }) {
         // Create search parameters in standard format
         const searchParams = {
             location: (locationInput || "").toString().trim(),
-            propertyType: propertyType === "All Types" ? "" : (propertyType || "").toString().trim(),
+            propertyType: (propertyType || "").toString().trim(),
             keywords: (keywordInput || "").toString().trim()
         };
 
@@ -599,7 +597,9 @@ export function HeroSection({ onSearch }) {
                                     <label className="block text-[10px] uppercase font-bold text-slate-400 dark:text-slate-500 tracking-wider mb-[-2px]">
                                         Property Type
                                     </label>
-                                    <div className="text-sm font-semibold text-slate-900 dark:text-slate-100 truncate">{propertyType}</div>
+                                    <div className="text-sm font-semibold text-slate-900 dark:text-slate-100 truncate">
+                                        {propertyType ? getPropertyTypeLabel(propertyType) : "All Types"}
+                                    </div>
                                 </div>
                                 <ChevronDown className={`w-4 h-4 text-slate-400 dark:text-slate-500 transition-transform${openDropdown === 'type' ? ' rotate-180' : ''}`} />
                             </button>
@@ -609,14 +609,14 @@ export function HeroSection({ onSearch }) {
                                 <div className="absolute top-[calc(100%+8px)] left-0 w-full md:w-64 bg-white dark:bg-slate-800 rounded-xl shadow-xl border border-slate-100 dark:border-slate-700 p-2 z-50 animate-in fade-in zoom-in-95 duration-200">
                                     <button
                                         key="all-types"
-                                        onClick={() => { setPropertyType("All Types"); setOpenDropdown(null); setErrors(prev => ({ ...prev, type: "" })); }}
+                                        onClick={() => { setPropertyType(""); setOpenDropdown(null); setErrors(prev => ({ ...prev, type: "" })); }}
                                         className={`
                                             w-full text-left px-3 py-2 rounded-lg text-sm font-medium transition-colors flex items-center justify-between
-                                           ${propertyType === "All Types" ? 'bg-indigo-50 dark:bg-indigo-900/30 text-indigo-700 dark:text-indigo-300' : 'text-slate-600 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-700'}
+                                           ${propertyType === "" ? 'bg-indigo-50 dark:bg-indigo-900/30 text-indigo-700 dark:text-indigo-300' : 'text-slate-600 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-700'}
                                         `}
                                     >
                                         All Types
-                                        {propertyType === "All Types" && <div className="w-2.5 h-2.5 rounded-full bg-indigo-600 dark:bg-indigo-400 flex-shrink-0" />}
+                                        {propertyType === "" && <div className="w-2.5 h-2.5 rounded-full bg-indigo-600 dark:bg-indigo-400 flex-shrink-0" />}
                                     </button>
                                     {FILTER_PROPERTY_TYPE_OPTIONS.map((option) => (
                                         <button

@@ -808,6 +808,7 @@ export default function BuyPropertyDetail() {
                                         verificationStatus: propertyData.verificationStatus
                                     }}
                                     propertyId={propertyData._id}
+                                    propertyTitle={propertyData.title}
                                 />
 
                                 {/* Nearby Places */}
@@ -831,6 +832,7 @@ export default function BuyPropertyDetail() {
                                     verificationStatus: propertyData.verificationStatus
                                 }}
                                 propertyId={propertyData._id}
+                                propertyTitle={propertyData.title}
                             />
 
                             {/* Nearby Places */}

@@ -95,12 +95,12 @@ const EmptyState = memo(({ hasFilters, onClearFilters, customMessage, emptyTitle
             
             {/* Text */}
             <h3 className="text-xl font-semibold text-foreground mb-2">
-                {emptyTitle || (hasFilters ? "No matching properties" : "No properties available")}
+                {emptyTitle || (hasFilters ? "No matching homes found" : "No properties listed yet")}
             </h3>
-            <p className="text-muted-foreground mb-6 leading-relaxed">
+            <p className="text-muted-foreground mb-6 leading-relaxed max-w-sm mx-auto">
                 {customMessage || (hasFilters 
-                    ? "We couldn't find any properties matching your criteria. Try adjusting your filters or search terms."
-                    : "There are currently no properties listed. Please check back later for new listings."
+                    ? "We couldn't find any properties matching your current filters. Try removing some filters to see more options."
+                    : "We haven't listed any properties in this category yet. Please check back soon or try a different search."
                 )}
             </p>
             

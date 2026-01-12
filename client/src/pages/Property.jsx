@@ -707,6 +707,7 @@ export default function PropertyPage() {
                                         verificationStatus: propertyData.verificationStatus
                                     }}
                                     propertyId={propertyData._id}
+                                    propertyTitle={propertyData.title}
                                 />
 
                                 {/* Nearby Places */}
@@ -730,6 +731,7 @@ export default function PropertyPage() {
                                     verificationStatus: propertyData.verificationStatus
                                 }}
                                 propertyId={propertyData._id}
+                                propertyTitle={propertyData.title}
                             />
 
                             {/* Nearby Places */}
