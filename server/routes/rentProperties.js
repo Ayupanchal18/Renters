@@ -7,6 +7,7 @@ import { Router } from "express";
 import { Property } from "../models/Property.js";
 import { User } from "../models/User.js";
 import mongoose from "mongoose";
+import fs from "fs";
 import { validatePropertyByListingType } from "../src/middleware/propertyValidation.js";
 import { propertyUpload, uploadPropertyPhotos } from "../src/middleware/cloudinaryUpload.js";
 import { LISTING_TYPES } from "../../shared/propertyTypes.js";
@@ -166,6 +167,7 @@ router.post("/", propertyUpload.array("photos", 10), validatePropertyByListingTy
  * Get all rent properties with filtering
  */
 router.get("/", async (req, res) => {
+    fs.appendFileSync("d:/portfolio_Projects/Renters/debug.log", `HIT: rentProperties.js GET / at ${new Date().toISOString()}\n`);
     try {
         const page = Math.max(1, Number(req.query.page) || 1);
         const limit = Math.min(100, Number(req.query.limit) || 12);
@@ -180,7 +182,10 @@ router.get("/", async (req, res) => {
             status: "active"
         };
 
-        if (req.query.city) filter.city = String(req.query.city);
+        if (req.query.city) {
+            const cityRegex = new RegExp(escapeRegex(String(req.query.city)), "i");
+            filter.city = cityRegex;
+        }
         if (req.query.category) filter.category = String(req.query.category);
         if (req.query.propertyType) filter.propertyType = String(req.query.propertyType);
         if (req.query.ownerId && mongoose.Types.ObjectId.isValid(req.query.ownerId)) {
@@ -190,9 +195,42 @@ router.get("/", async (req, res) => {
         if (req.query.minRent) filter.monthlyRent = { ...(filter.monthlyRent || {}), $gte: Number(req.query.minRent) };
         if (req.query.maxRent) filter.monthlyRent = { ...(filter.monthlyRent || {}), $lte: Number(req.query.maxRent) };
         if (req.query.preferredTenants) filter.preferredTenants = String(req.query.preferredTenants);
-        if (req.query.furnished) filter.furnishing = String(req.query.furnished);
-        if (req.query.bedrooms) filter.bedrooms = Number(req.query.bedrooms);
-        if (req.query.furnishing) filter.furnishing = String(req.query.furnishing);
+        if (req.query.verified === "true" || req.query.verified === true) {
+            filter.verified = true;
+        }
+
+        // Handle multiple furnishing values
+        if (req.query.furnishing) {
+            const furnishingValues = String(req.query.furnishing).split(',').filter(Boolean);
+            if (furnishingValues.length > 1) {
+                filter.furnishing = { $in: furnishingValues };
+            } else {
+                filter.furnishing = furnishingValues[0];
+            }
+        } else if (req.query.furnished) { // Support legacy 'furnished' param
+            filter.furnishing = String(req.query.furnished);
+        }
+
+        // Handle multiple bedroom values
+        if (req.query.bedrooms) {
+            const bedroomValues = String(req.query.bedrooms).split(',').filter(Boolean);
+            if (bedroomValues.length > 0) {
+                const bedroomConditions = bedroomValues.map(bed => {
+                    if (bed === "5+" || bed === "5") {
+                        return { bedrooms: { $gte: 5 } };
+                    }
+                    return { bedrooms: Number(bed) };
+                });
+
+                if (bedroomConditions.length > 1) {
+                    if (!filter.$and) filter.$and = [];
+                    filter.$and.push({ $or: bedroomConditions });
+                } else if (bedroomConditions.length === 1) {
+                    Object.assign(filter, bedroomConditions[0]);
+                }
+            }
+        }
+
         if (req.query.q) filter.$text = { $search: String(req.query.q) };
 
         const sortParam = String(req.query.sort || "newest");
@@ -397,6 +435,11 @@ router.post("/search", async (req, res) => {
         // Rent-specific: preferred tenants filter
         if (safeFilters.preferredTenants) {
             matchStage.preferredTenants = safeFilters.preferredTenants;
+        }
+
+        // Verified filter
+        if (safeFilters.verified === true || safeFilters.verified === "true") {
+            matchStage.verified = true;
         }
 
         // Bedrooms filter

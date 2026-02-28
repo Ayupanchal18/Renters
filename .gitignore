@@ -1,12 +1,17 @@
 # Dependencies
 node_modules/
 client/node_modules/
+mobile/node_modules/
 
 # Build outputs
 dist/
 dist-ssr/
 client/dist/
 *.local
+mobile/.expo/
+mobile/.expo-shared/
+mobile/android/
+mobile/ios/
 
 # Logs
 logs/

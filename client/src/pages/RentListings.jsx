@@ -170,6 +170,7 @@ export default function RentListings() {
                     furnishing: filters.furnishing,
                     preferredTenants: filters.preferredTenants,
                     amenities: filters.amenities,
+                    verified: filters.verifiedOnly,
                 }
             };
 

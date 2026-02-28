@@ -1,0 +1,98 @@
+import { apiClient } from "../../../api/client";
+import type {
+  AuthResponse,
+  LoginRequest,
+  RegisterRequest,
+  RefreshResponse,
+  ApiResponse,
+  User,
+} from "../../../types/types";
+import { saveTokens, clearTokens, getRefreshToken } from "./tokenStorage";
+
+/**
+ * POST /api/auth/login
+ */
+export async function loginUser(data: LoginRequest): Promise<AuthResponse> {
+  const res = await apiClient.post<AuthResponse>("/api/auth/login", data);
+  const { token, user } = res.data;
+  // Persist tokens to secure storage
+  // Refresh token comes back in httpOnly cookie for web, but mobile
+  // doesn't get cookies, so we also store the access token and rely
+  // on the /refresh endpoint with the stored refresh token.
+  await saveTokens(token);
+  return res.data;
+}
+
+/**
+ * POST /api/auth/register
+ */
+export async function registerUser(
+  data: RegisterRequest
+): Promise<AuthResponse> {
+  const res = await apiClient.post<AuthResponse>("/api/auth/register", data);
+  const { token } = res.data;
+  await saveTokens(token);
+  return res.data;
+}
+
+/**
+ * POST /api/auth/google or /api/auth/facebook
+ */
+export async function socialLoginUser(
+  provider: "google" | "facebook",
+  payload: { code?: string; accessToken?: string; credential?: string }
+): Promise<AuthResponse> {
+  const res = await apiClient.post<AuthResponse>(`/api/auth/${provider}`, payload);
+  const { token } = res.data;
+  await saveTokens(token);
+  return res.data;
+}
+
+/**
+ * POST /api/auth/refresh
+ * Sends the stored refresh token in the request body.
+ */
+export async function refreshAccessToken(): Promise<string | null> {
+  try {
+    const refreshToken = await getRefreshToken();
+    if (!refreshToken) return null;
+
+    const res = await apiClient.post<RefreshResponse>("/api/auth/refresh", {
+      refreshToken,
+    });
+
+    if (res.data.success && res.data.token) {
+      await saveTokens(res.data.token);
+      return res.data.token;
+    }
+    return null;
+  } catch {
+    return null;
+  }
+}
+
+/**
+ * POST /api/auth/logout
+ */
+export async function logoutUser(): Promise<void> {
+  try {
+    await apiClient.post("/api/auth/logout");
+  } catch {
+    // Ignore errors — we clear tokens regardless
+  } finally {
+    await clearTokens();
+  }
+}
+
+/**
+ * GET /api/users/me   (requires Authorization header)
+ * Used to restore session on app relaunch.
+ */
+export async function fetchCurrentUser(): Promise<User | null> {
+  try {
+    const res = await apiClient.get<ApiResponse<User>>("/api/users/me");
+    return res.data.data ?? null;
+  } catch {
+    return null;
+  }
+}

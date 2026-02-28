@@ -204,7 +204,13 @@ const PropertyDetailCard = ({ property, onClose, onViewDetails }) => {
 };
 
 // Main Map View Component with all markers
-export function PropertyMapView({ properties = [], loading = false }) {
+export function PropertyMapView({ 
+    properties = [], 
+    loading = false,
+    hasMore = false, 
+    onLoadMore, 
+    isLoadingMore = false 
+}) {
     const navigate = useNavigate();
     const [selectedProperty, setSelectedProperty] = useState(null);
     const [flyToProperty, setFlyToProperty] = useState(null);
@@ -366,16 +372,40 @@ export function PropertyMapView({ properties = [], loading = false }) {
                 
                 <div className="flex-1 overflow-y-auto p-2 sm:p-3 space-y-2">
                     {propertiesWithCoords.length > 0 ? (
-                        propertiesWithCoords.map((property) => (
-                            <div key={property._id} id={`property-item-${property._id}`}>
-                                <PropertyListItem
-                                    property={property}
-                                    isSelected={selectedProperty === property._id}
-                                    onClick={() => handleSidebarClick(property)}
-                                    onViewDetails={handleViewDetails}
-                                />
-                            </div>
-                        ))
+                        <>
+                            {propertiesWithCoords.map((property) => (
+                                <div key={property._id} id={`property-item-${property._id}`}>
+                                    <PropertyListItem
+                                        property={property}
+                                        isSelected={selectedProperty === property._id}
+                                        onClick={() => handleSidebarClick(property)}
+                                        onViewDetails={handleViewDetails}
+                                    />
+                                </div>
+                            ))}
+                            
+                            {/* Load More Button */}
+                            {hasMore && onLoadMore && (
+                                <div className="pt-2 pb-1 text-center">
+                                    <Button
+                                        onClick={onLoadMore}
+                                        disabled={isLoadingMore}
+                                        variant="ghost"
+                                        size="sm"
+                                        className="w-full text-primary hover:text-primary hover:bg-primary/10"
+                                    >
+                                        {isLoadingMore ? (
+                                            <>
+                                                <Loader2 className="w-3 h-3 mr-2 animate-spin" />
+                                                Loading...
+                                            </>
+                                        ) : (
+                                            "Load More Results"
+                                        )}
+                                    </Button>
+                                </div>
+                            )}
+                        </>
                     ) : (
                         <div className="text-center py-8">
                             <MapIcon className="w-10 h-10 text-muted-foreground mx-auto mb-2" />

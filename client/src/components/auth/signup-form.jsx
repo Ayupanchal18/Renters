@@ -468,12 +468,24 @@ export default function SignupForm() {
                     </Button>
 
                     {/* Footer */}
-                    <p className="text-center text-sm text-muted-foreground">
-                        Already have an account?{" "}
-                        <Link to="/login" className="font-medium text-primary hover:underline">
-                            Sign in here
+                    <div className="space-y-3">
+                        <p className="text-center text-sm text-muted-foreground">
+                            Already have an account?{" "}
+                            <Link to="/login" className="font-medium text-primary hover:underline">
+                                Sign in here
+                            </Link>
+                        </p>
+                        
+                        <Link to="/" className="block text-center mt-2">
+                            <Button
+                                variant="ghost"
+                                className="w-full text-base font-medium"
+                                type="button"
+                            >
+                                Continue as Guest
+                            </Button>
                         </Link>
-                    </p>
+                    </div>
                 </form>
             </div>
 

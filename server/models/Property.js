@@ -119,6 +119,7 @@ const propertySchema = new mongoose.Schema(
         views: { type: Number, default: 0 },
         favoritesCount: { type: Number, default: 0 },
         featured: { type: Boolean, default: false },
+        verified: { type: Boolean, default: false },
 
         // geo
         location: GeoSchema,

@@ -177,7 +177,10 @@ router.get("/", async (req, res) => {
             status: "active"
         };
 
-        if (req.query.city) filter.city = String(req.query.city);
+        if (req.query.city) {
+            const cityRegex = new RegExp(escapeRegex(String(req.query.city)), "i");
+            filter.city = cityRegex;
+        }
         if (req.query.category) filter.category = String(req.query.category);
         if (req.query.propertyType) filter.propertyType = String(req.query.propertyType);
         if (req.query.ownerId && mongoose.Types.ObjectId.isValid(req.query.ownerId)) {
@@ -187,9 +190,45 @@ router.get("/", async (req, res) => {
         if (req.query.minPrice) filter.sellingPrice = { ...(filter.sellingPrice || {}), $gte: Number(req.query.minPrice) };
         if (req.query.maxPrice) filter.sellingPrice = { ...(filter.sellingPrice || {}), $lte: Number(req.query.maxPrice) };
         if (req.query.possessionStatus) filter.possessionStatus = String(req.query.possessionStatus);
-        if (req.query.loanAvailable !== undefined) filter.loanAvailable = req.query.loanAvailable === "true";
-        if (req.query.bedrooms) filter.bedrooms = Number(req.query.bedrooms);
-        if (req.query.furnishing) filter.furnishing = String(req.query.furnishing);
+        if (req.query.verified === "true" || req.query.verified === true) {
+            filter.verified = true;
+        }
+
+        // Handle loanAvailable correctly
+        if (req.query.loanAvailable !== undefined && req.query.loanAvailable !== null && req.query.loanAvailable !== "") {
+            filter.loanAvailable = String(req.query.loanAvailable) === "true";
+        }
+
+        // Handle multiple furnishing values
+        if (req.query.furnishing) {
+            const furnishingValues = String(req.query.furnishing).split(',').filter(Boolean);
+            if (furnishingValues.length > 1) {
+                filter.furnishing = { $in: furnishingValues };
+            } else {
+                filter.furnishing = furnishingValues[0];
+            }
+        }
+
+        // Handle multiple bedroom values
+        if (req.query.bedrooms) {
+            const bedroomValues = String(req.query.bedrooms).split(',').filter(Boolean);
+            if (bedroomValues.length > 0) {
+                const bedroomConditions = bedroomValues.map(bed => {
+                    if (bed === "5+" || bed === "5") {
+                        return { bedrooms: { $gte: 5 } };
+                    }
+                    return { bedrooms: Number(bed) };
+                });
+
+                if (bedroomConditions.length > 1) {
+                    if (!filter.$and) filter.$and = [];
+                    filter.$and.push({ $or: bedroomConditions });
+                } else if (bedroomConditions.length === 1) {
+                    Object.assign(filter, bedroomConditions[0]);
+                }
+            }
+        }
+
         if (req.query.q) filter.$text = { $search: String(req.query.q) };
 
         const sortParam = String(req.query.sort || "newest");
@@ -390,6 +429,11 @@ router.post("/search", async (req, res) => {
         // Buy-specific: loan available filter
         if (safeFilters.loanAvailable !== undefined && safeFilters.loanAvailable !== null) {
             matchStage.loanAvailable = safeFilters.loanAvailable;
+        }
+
+        // Verified filter
+        if (safeFilters.verified === true || safeFilters.verified === "true") {
+            matchStage.verified = true;
         }
 
         // Bedrooms filter

@@ -140,7 +140,13 @@ export function ListingsGrid({
         return (
             <div className="relative pb-4">
                 <Suspense fallback={<MapLoadingFallback />}>
-                    <PropertyMapView properties={properties} loading={loading} />
+                    <PropertyMapView 
+                        properties={properties} 
+                        loading={loading}
+                        hasMore={hasMore}
+                        onLoadMore={onLoadMore}
+                        isLoadingMore={isLoadingMore}
+                    />
                 </Suspense>
             </div>
         );

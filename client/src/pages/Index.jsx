@@ -16,6 +16,7 @@ import Footer from '../components/Footer';
 import SEOHead from '../components/seo/SEOHead';
 import JsonLd from '../components/seo/JsonLd';
 import { generateOrganization, generateWebsiteSchema } from '../utils/structuredData';
+import heroBg from '../assets/images/hero_bg.png';
 import { useNavigate } from 'react-router-dom';
 import { getAllProperties } from '../redux/slices/propertySlice';
 import { useDispatch } from 'react-redux';
@@ -320,15 +321,18 @@ export default function Home() {
             <MainContent className="min-h-screen bg-background">
                 {/* Hero Section */}
                 <section id="search_box" className="relative overflow-hidden">
-                    {/* Background Pattern */}
-                    <div className="absolute inset-0 bg-gradient-to-br from-primary/5 via-background to-secondary/5" />
-                    <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_top_right,_var(--tw-gradient-stops))] from-primary/10 via-transparent to-transparent" />
+                    {/* Background Image with Overlay */}
+                    <div className="absolute inset-0 z-0">
+                        <img 
+                            src={heroBg} 
+                            alt="Modern living room" 
+                            className="w-full h-full object-cover"
+                        />
+                        <div className="absolute inset-0 bg-background/60 backdrop-blur-[1px]" />
+                        <div className="absolute inset-0 bg-gradient-to-b from-background/40 via-background/20 to-background" />
+                    </div>
                     
-                    {/* Floating Elements */}
-                    <div className="absolute top-20 left-10 w-72 h-72 bg-primary/10 rounded-full blur-3xl animate-pulse" />
-                    <div className="absolute bottom-20 right-10 w-96 h-96 bg-secondary/10 rounded-full blur-3xl animate-pulse delay-1000" />
-                    
-                    <div className="relative max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pt-4 sm:pt-8 pb-8 sm:pb-12">
+                    <div className="relative max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pt-4 sm:pt-8 pb-8 sm:pb-12 z-10">
                         <div className="text-center max-w-4xl mx-auto mb-4 sm:mb-6">
                             {/* Trust Badge */}
                             <div className="inline-flex items-center gap-2 px-3 py-1.5 rounded-full bg-primary/10 border border-primary/20 mb-3 sm:mb-4">
@@ -336,56 +340,46 @@ export default function Home() {
                                 <span className="text-xs font-medium text-primary">Trusted by 100,000+ renters</span>
                             </div>
                             
-                            <h1 className="text-2xl sm:text-4xl lg:text-5xl font-bold text-foreground mb-2 sm:mb-3 leading-tight tracking-tight">
+                            <h1 className="text-2xl sm:text-4xl lg:text-5xl font-bold text-foreground mb-4 sm:mb-6 leading-tight tracking-tight drop-shadow-sm">
                                 Find Your Perfect
-                                <span className="block mt-1 bg-gradient-to-r from-primary via-primary to-secondary bg-clip-text text-transparent">
+                                <span className="block mt-1 text-primary">
                                     Place to Call Home
                                 </span>
                             </h1>
                             
-                            <p className="text-sm sm:text-base text-muted-foreground max-w-2xl mx-auto leading-relaxed mb-4">
+                            <p className="text-sm sm:text-base text-muted-foreground font-medium max-w-2xl mx-auto leading-relaxed mb-6 sm:mb-10 lg:text-lg">
                                 Discover thousands of verified rooms, apartments, and shared spaces. 
                                 Your next home is just a search away.
                             </p>
 
-                            {/* Rent/Buy Toggle */}
-                            <div className="flex justify-center mb-4">
-                                <div className="relative inline-flex bg-card border border-border rounded-lg p-0.5 shadow-sm">
-                                    {/* Sliding Background */}
-                                    <div 
-                                        className={`
-                                            absolute top-0.5 bottom-0.5 w-[calc(50%-2px)] rounded-md
-                                            bg-primary shadow-lg shadow-primary/30
-                                            transition-all duration-300 ease-out
-                                            ${listingTypeContext === LISTING_TYPES.BUY ? 'translate-x-[calc(100%+2px)]' : 'translate-x-0'}
-                                        `}
-                                    />
-                                    
-                                    {/* Rent Button */}
+
+                        </div>
+
+                        {/* Search Card */}
+                        <div className="max-w-5xl mx-auto relative z-30">
+                            <div className="bg-card/95 backdrop-blur-xl rounded-2xl shadow-[0_2px_10px_rgba(0,0,0,0.08),0_20px_40px_rgba(0,0,0,0.04)] border border-white/20 p-4 sm:p-6 lg:p-8">
+                                {/* Rent/Buy Tabs */}
+                                <div className="flex items-center gap-6 mb-6 px-1">
                                     <button
                                         onClick={() => handleListingTypeChange(LISTING_TYPES.RENT)}
                                         className={`
-                                            relative z-10 flex items-center gap-1.5 px-4 py-2 rounded-md font-semibold text-sm sm:text-base
-                                            transition-colors duration-300
+                                            pb-2 text-base font-bold border-b-2 transition-all duration-200 flex items-center gap-2
                                             ${listingTypeContext === LISTING_TYPES.RENT
-                                                ? 'text-primary-foreground'
-                                                : 'text-muted-foreground hover:text-foreground'
+                                                ? 'border-primary text-primary'
+                                                : 'border-transparent text-muted-foreground hover:text-foreground'
                                             }
                                         `}
                                     >
                                         <Key className="w-4 h-4" />
                                         Rent
                                     </button>
-                                    
-                                    {/* Buy Button */}
                                     <button
                                         onClick={() => handleListingTypeChange(LISTING_TYPES.BUY)}
                                         className={`
-                                            relative z-10 flex items-center gap-1.5 px-4 py-2 rounded-md font-semibold text-sm sm:text-base
-                                            transition-colors duration-300
+                                            pb-2 text-base font-bold border-b-2 transition-all duration-200 flex items-center gap-2
                                             ${listingTypeContext === LISTING_TYPES.BUY
-                                                ? 'text-primary-foreground'
-                                                : 'text-muted-foreground hover:text-foreground'
+                                                ? 'border-primary text-primary'
+                                                : 'border-transparent text-muted-foreground hover:text-foreground'
                                             }
                                         `}
                                     >
@@ -393,31 +387,12 @@ export default function Home() {
                                         Buy
                                     </button>
                                 </div>
-                            </div>
-                        </div>
-
-                        {/* Search Card */}
-                        <div className="max-w-5xl mx-auto relative z-30">
-                            <div className="bg-card/80 backdrop-blur-xl rounded-2xl shadow-2xl border border-border/50 p-3 sm:p-6">
-                                {/* Listing Type Context Indicator */}
-                                <div className="flex items-center justify-center gap-2 mb-3 pb-3 border-b border-border/50">
-                                    <span className="text-xs text-muted-foreground">Searching for properties</span>
-                                    <span className={`
-                                        px-2 py-0.5 rounded-full text-xs font-semibold
-                                        ${listingTypeContext === LISTING_TYPES.RENT 
-                                            ? 'bg-primary/10 text-primary' 
-                                            : 'bg-secondary/10 text-secondary'
-                                        }
-                                    `}>
-                                        {LISTING_TYPE_LABELS[listingTypeContext]}
-                                    </span>
-                                </div>
                                 
                                 {/* Main Search Row */}
                                 <div className="grid grid-cols-1 md:grid-cols-12 gap-4 items-end">
                                     {/* Location */}
                                     <div className="md:col-span-4">
-                                        <label htmlFor="search-location" className="block text-sm font-medium text-foreground mb-2">
+                                        <label htmlFor="search-location" className="block text-sm font-semibold text-foreground mb-2">
                                             Location
                                         </label>
                                         <div className="relative">
@@ -474,7 +449,7 @@ export default function Home() {
 
                                     {/* Property Type */}
                                     <div className={`md:col-span-3 ${showTypeDropdown ? 'relative z-50' : 'relative z-20'}`}>
-                                        <label htmlFor="search-type" className="block text-sm font-medium text-foreground mb-2">Property Type</label>
+                                        <label htmlFor="search-type" className="block text-sm font-semibold text-foreground mb-2">Property Type</label>
                                         <div className="relative">
                                             <button
                                                 id="search-type"
@@ -510,7 +485,7 @@ export default function Home() {
 
                                     {/* Keywords */}
                                     <div className="md:col-span-3">
-                                        <label htmlFor="search-keywords" className="block text-sm font-medium text-foreground mb-2">Keywords</label>
+                                        <label htmlFor="search-keywords" className="block text-sm font-semibold text-foreground mb-2">Keywords</label>
                                         <div className="relative">
                                             <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-muted-foreground z-10" />
                                             <Input
@@ -529,9 +504,9 @@ export default function Home() {
                                         <Button
                                             onClick={handleSearch}
                                             disabled={isSearchDisabled}
-                                            className="w-full h-12 bg-gradient-to-r from-primary to-primary/90 hover:from-primary/90 hover:to-primary text-primary-foreground font-semibold rounded-lg shadow-lg shadow-primary/25 hover:shadow-xl hover:shadow-primary/30 transition-all disabled:opacity-50 disabled:shadow-none"
+                                            className="w-full h-12 bg-primary hover:bg-primary/90 text-primary-foreground font-bold rounded-lg shadow-lg shadow-primary/20 hover:shadow-xl hover:shadow-primary/30 transition-all disabled:opacity-50 disabled:shadow-none text-base"
                                         >
-                                            <Search className="w-5 h-5 mr-2" />
+                                            <Search className="w-5 h-5 mr-2 stroke-[3]" />
                                             Search
                                         </Button>
                                     </div>
@@ -544,10 +519,10 @@ export default function Home() {
                         {/* Stats */}
                         <div className="grid grid-cols-2 md:grid-cols-4 gap-2 sm:gap-4 mt-6 max-w-4xl mx-auto">
                             {stats.map((stat, idx) => (
-                                <div key={idx} className="text-center p-2 sm:p-3 rounded-xl bg-card/50 backdrop-blur border border-border/50">
-                                    <stat.icon className="w-5 h-5 text-primary mx-auto mb-1" />
-                                    <div className="text-xl sm:text-2xl font-bold text-foreground">{stat.value}</div>
-                                    <div className="text-xs text-muted-foreground">{stat.label}</div>
+                                <div key={idx} className="text-center p-3 sm:p-4 rounded-xl bg-card/60 backdrop-blur-md border border-white/20 shadow-sm transition-all hover:-translate-y-1">
+                                    <stat.icon className="w-6 h-6 text-primary mx-auto mb-2 stroke-[2.5]" />
+                                    <div className="text-xl sm:text-2xl font-extrabold text-foreground">{stat.value}</div>
+                                    <div className="text-xs sm:text-sm font-medium text-muted-foreground">{stat.label}</div>
                                 </div>
                             ))}
                         </div>

@@ -249,7 +249,7 @@ export default async function createServer(devMode = false) {
         app.use("/api/nearby", (await safeImport("routes/nearby.js")).default);
         app.use("/api/geocode", (await safeImport("routes/geocode.js")).default);
         app.use("/api/price-trends", (await safeImport("routes/priceTrendsRoutes.js")).default);
-        app.use("/api/properties", propertiesRouter);
+        // app.use("/api/properties", propertiesRouter); // Removed redundant registration
 
         // SEO Routes - sitemap.xml for search engine crawlers
         app.use("/sitemap.xml", (await safeImport("routes/sitemap.js")).default);

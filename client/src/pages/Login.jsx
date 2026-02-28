@@ -187,6 +187,18 @@ export default function Login() {
                                 Create an Account
                             </Button>
                         </Link>
+
+                        {/* Guest Link */}
+                        <div className="mt-4">
+                            <Link to="/" className="block">
+                                <Button
+                                    variant="ghost"
+                                    className="w-full h-12 rounded-xl font-medium transition-all"
+                                >
+                                    Continue as Guest
+                                </Button>
+                            </Link>
+                        </div>
                     </div>
 
                     {/* Trust Badges */}

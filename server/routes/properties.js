@@ -2,6 +2,7 @@ import { Router } from "express";
 import { Property } from "../models/Property.js";
 import { User } from "../models/User.js";
 import mongoose from "mongoose";
+import fs from "fs";
 import { connectDB } from "../src/config/db.js";
 import { authenticateToken } from "../src/middleware/security.js";
 import { propertyUpload, uploadPropertyPhotos } from "../src/middleware/cloudinaryUpload.js";
@@ -65,119 +66,17 @@ function addUrlPathToProperty(property) {
     };
 }
 
-// Create rent property
-router.post("/rent", propertyUpload.array("photos", 10), async (req, res) => {
-    try {
-        const userId = req.headers["x-user-id"];
-        if (!userId) return res.status(401).json({ error: "Unauthorized - provide x-user-id header (dev)" });
+/* 
+// Redundant routes moved to rentProperties.js and buyProperties.js
+router.post("/rent", ...);
+router.post("/buy", ...);
+router.post("/", ...);
+*/
 
-        const user = await User.findById(userId).lean();
-        if (!user) return res.status(401).json({ error: "Invalid user id in x-user-id header" });
-
-        const body = req.body || {};
-
-        // Force listingType to "rent"
-        body.listingType = LISTING_TYPES.RENT;
-
-        const required = ["category", "title", "propertyType", "furnishing", "availableFrom", "city", "address", "monthlyRent"];
-        for (const r of required) {
-            if (body[r] === undefined || body[r] === null || body[r] === "") {
-                return res.status(400).json({ error: `Missing required field:${r}` });
-            }
-        }
-
-        const ownerName = body.ownerName || user.name;
-        const ownerPhone = body.ownerPhone || user.phone;
-        if (!ownerPhone) return res.status(400).json({ error: "ownerPhone missing and user has no phone" });
-
-        const baseSlug = slugify(`${body.title}-${body.city || ""}`.slice(0, 120));
-        const slug = await makeUniqueSlug(baseSlug);
-        const listingNumber = makeListingNumber();
-
-        const photoPaths = await uploadPropertyPhotos(req.files);
-
-        const doc = new Property({
-            ...body,
-            listingType: LISTING_TYPES.RENT,
-            photos: photoPaths,
-            ownerId: user._id,
-            ownerName,
-            ownerPhone,
-            ownerEmail: body.ownerEmail || user.email || "",
-            slug,
-            listingNumber,
-            location: body.location || (body.lat && body.lng ? { type: "Point", coordinates: [body.lng, body.lat] } : undefined),
-            expiresAt: listingLifecycleService.calculateExpirationDate(), // Auto-expire in 30 days
-        });
-
-        await doc.save();
-        res.status(201).json(doc);
-    } catch (err) {
-        if (err.name === "ValidationError") {
-            const messages = Object.values(err.errors).map(e => e.message);
-            return res.status(400).json({ error: "Property validation failed", details: messages });
-        }
-        console.error(err);
-        res.status(500).json({ error: "Server error", message: err.message });
-    }
-});
-
-// Create buy property
-router.post("/buy", propertyUpload.array("photos", 10), async (req, res) => {
-    try {
-        const userId = req.headers["x-user-id"];
-        if (!userId) return res.status(401).json({ error: "Unauthorized - provide x-user-id header (dev)" });
-
-        const user = await User.findById(userId).lean();
-        if (!user) return res.status(401).json({ error: "Invalid user id in x-user-id header" });
-
-        const body = req.body || {};
-
-        // Force listingType to "buy"
-        body.listingType = LISTING_TYPES.BUY;
-
-        const required = ["category", "title", "propertyType", "furnishing", "availableFrom", "city", "address", "sellingPrice"];
-        for (const r of required) {
-            if (body[r] === undefined || body[r] === null || body[r] === "") {
-                return res.status(400).json({ error: `Missing required field:${r}` });
-            }
-        }
-
-        const ownerName = body.ownerName || user.name;
-        const ownerPhone = body.ownerPhone || user.phone;
-        if (!ownerPhone) return res.status(400).json({ error: "ownerPhone missing and user has no phone" });
-
-        const baseSlug = slugify(`${body.title}-${body.city || ""}`.slice(0, 120));
-        const slug = await makeUniqueSlug(baseSlug);
-        const listingNumber = makeListingNumber();
-
-        const photoPaths = await uploadPropertyPhotos(req.files);
-
-        const doc = new Property({
-            ...body,
-            listingType: LISTING_TYPES.BUY,
-            photos: photoPaths,
-            ownerId: user._id,
-            ownerName,
-            ownerPhone,
-            ownerEmail: body.ownerEmail || user.email || "",
-            slug,
-            listingNumber,
-            location: body.location || (body.lat && body.lng ? { type: "Point", coordinates: [body.lng, body.lat] } : undefined),
-            expiresAt: listingLifecycleService.calculateExpirationDate(), // Auto-expire in 30 days
-        });
-
-        await doc.save();
-        res.status(201).json(doc);
-    } catch (err) {
-        if (err.name === "ValidationError") {
-            const messages = Object.values(err.errors).map(e => e.message);
-            return res.status(400).json({ error: "Property validation failed", details: messages });
-        }
-        console.error(err);
-        res.status(500).json({ error: "Server error", message: err.message });
-    }
-});
+/*
+// Redundant POST /buy moved to buyProperties.js
+router.post("/buy", ...);
+*/
 
 // Create property (backward compatible - defaults to rent)
 router.post("/", propertyUpload.array("photos", 10), async (req, res) => {
@@ -238,81 +137,10 @@ router.post("/", propertyUpload.array("photos", 10), async (req, res) => {
         res.status(500).json({ error: "Server error", message: err.message });
     }
 });
-// ==================== RENT PROPERTY ROUTES ====================
-
-// GET all rent properties with filtering
-router.get("/rent", async (req, res) => {
-    try {
-        await connectDB();
-
-        const page = Math.max(1, Number(req.query.page) || 1);
-        const limit = Math.min(100, Number(req.query.limit) || 12);
-        const skip = (page - 1) * limit;
-
-        // Include properties with listingType="rent" OR properties without listingType (backward compatibility)
-        const filter = {
-            isDeleted: false,
-            status: "active",
-            $or: [
-                { listingType: "rent" },
-                { listingType: { $exists: false } },
-                { listingType: null }
-            ]
-        };
-
-        if (req.query.city) filter.city = String(req.query.city);
-        if (req.query.category) filter.category = String(req.query.category);
-        if (req.query.propertyType) filter.propertyType = String(req.query.propertyType);
-        if (req.query.ownerId && mongoose.Types.ObjectId.isValid(req.query.ownerId)) {
-            filter.ownerId = req.query.ownerId;
-        }
-
-        if (req.query.minRent) filter.monthlyRent = { ...(filter.monthlyRent || {}), $gte: Number(req.query.minRent) };
-        if (req.query.maxRent) filter.monthlyRent = { ...(filter.monthlyRent || {}), $lte: Number(req.query.maxRent) };
-
-        if (req.query.bedrooms) filter.bedrooms = Number(req.query.bedrooms);
-        if (req.query.furnishing) filter.furnishing = String(req.query.furnishing);
-        if (req.query.preferredTenants) filter.preferredTenants = String(req.query.preferredTenants);
-
-        if (req.query.q) {
-            filter.$text = { $search: String(req.query.q) };
-        }
-
-        const sortParam = String(req.query.sort || "newest");
-        let mongoSort = { createdAt: -1 };
-        if (sortParam === "rent_low_to_high") mongoSort = { monthlyRent: 1, createdAt: -1 };
-        else if (sortParam === "rent_high_to_low") mongoSort = { monthlyRent: -1, createdAt: -1 };
-        else if (sortParam === "oldest") mongoSort = { createdAt: 1 };
-        else if (sortParam === "featured") mongoSort = { featured: -1, createdAt: -1 };
-
-        let query = Property.find(filter).sort(mongoSort).skip(skip).limit(limit).lean();
-
-        if (filter.$text) {
-            query = Property.find(filter, { score: { $meta: "textScore" } })
-                .sort({ score: { $meta: "textScore" }, ...mongoSort })
-                .skip(skip)
-                .limit(limit)
-                .lean();
-        }
-
-        const [items, total] = await Promise.all([query.exec(), Property.countDocuments(filter)]);
-
-        res.json({
-            success: true,
-            data: {
-                items,
-                total,
-                page,
-                pageSize: limit,
-                hasMore: page < Math.ceil(total / limit)
-            }
-        });
-
-    } catch (err) {
-        console.error("GET /properties/rent error:", err);
-        res.status(500).json({ success: false, error: "Server error", message: err.message });
-    }
-});
+/*
+// Redundant GET /rent moved to rentProperties.js
+router.get("/rent", ...);
+*/
 
 // POST search rent properties
 router.post("/rent/search", async (req, res) => {
@@ -573,71 +401,10 @@ router.get("/rent/:slug", async (req, res) => {
 
 // ==================== BUY PROPERTY ROUTES ====================
 
-// GET all buy properties with filtering
-router.get("/buy", async (req, res) => {
-    try {
-        await connectDB();
-
-        const page = Math.max(1, Number(req.query.page) || 1);
-        const limit = Math.min(100, Number(req.query.limit) || 12);
-        const skip = (page - 1) * limit;
-
-        const filter = { isDeleted: false, status: "active", listingType: "buy" };
-
-        if (req.query.city) filter.city = String(req.query.city);
-        if (req.query.category) filter.category = String(req.query.category);
-        if (req.query.propertyType) filter.propertyType = String(req.query.propertyType);
-        if (req.query.ownerId && mongoose.Types.ObjectId.isValid(req.query.ownerId)) {
-            filter.ownerId = req.query.ownerId;
-        }
-
-        if (req.query.minPrice) filter.sellingPrice = { ...(filter.sellingPrice || {}), $gte: Number(req.query.minPrice) };
-        if (req.query.maxPrice) filter.sellingPrice = { ...(filter.sellingPrice || {}), $lte: Number(req.query.maxPrice) };
-
-        if (req.query.bedrooms) filter.bedrooms = Number(req.query.bedrooms);
-        if (req.query.furnishing) filter.furnishing = String(req.query.furnishing);
-        if (req.query.possessionStatus) filter.possessionStatus = String(req.query.possessionStatus);
-        if (req.query.loanAvailable !== undefined) filter.loanAvailable = req.query.loanAvailable === 'true';
-
-        if (req.query.q) {
-            filter.$text = { $search: String(req.query.q) };
-        }
-
-        const sortParam = String(req.query.sort || "newest");
-        let mongoSort = { createdAt: -1 };
-        if (sortParam === "price_low_to_high") mongoSort = { sellingPrice: 1, createdAt: -1 };
-        else if (sortParam === "price_high_to_low") mongoSort = { sellingPrice: -1, createdAt: -1 };
-        else if (sortParam === "oldest") mongoSort = { createdAt: 1 };
-        else if (sortParam === "featured") mongoSort = { featured: -1, createdAt: -1 };
-
-        let query = Property.find(filter).sort(mongoSort).skip(skip).limit(limit).lean();
-
-        if (filter.$text) {
-            query = Property.find(filter, { score: { $meta: "textScore" } })
-                .sort({ score: { $meta: "textScore" }, ...mongoSort })
-                .skip(skip)
-                .limit(limit)
-                .lean();
-        }
-
-        const [items, total] = await Promise.all([query.exec(), Property.countDocuments(filter)]);
-
-        res.json({
-            success: true,
-            data: {
-                items,
-                total,
-                page,
-                pageSize: limit,
-                hasMore: page < Math.ceil(total / limit)
-            }
-        });
-
-    } catch (err) {
-        console.error("GET /properties/buy error:", err);
-        res.status(500).json({ success: false, error: "Server error", message: err.message });
-    }
-});
+/*
+// Redundant GET /buy moved to buyProperties.js
+router.get("/buy", ...);
+*/
 
 // POST search buy properties
 router.post("/buy/search", async (req, res) => {
@@ -890,6 +657,7 @@ router.get("/buy/:slug", async (req, res) => {
 
 // GET all properties with basic filtering
 router.get("/", async (req, res) => {
+    fs.appendFileSync("d:/portfolio_Projects/Renters/debug.log", `HIT: properties.js GET / with ${req.originalUrl} at ${new Date().toISOString()}\n`);
     try {
         await connectDB();
 
@@ -909,8 +677,39 @@ router.get("/", async (req, res) => {
         if (req.query.minRent) filter.monthlyRent = { ...(filter.monthlyRent || {}), $gte: Number(req.query.minRent) };
         if (req.query.maxRent) filter.monthlyRent = { ...(filter.monthlyRent || {}), $lte: Number(req.query.maxRent) };
 
-        if (req.query.bedrooms) filter.bedrooms = Number(req.query.bedrooms);
-        if (req.query.furnishing) filter.furnishing = String(req.query.furnishing);
+        if (req.query.verified === "true" || req.query.verified === true) {
+            filter.verified = true;
+        }
+
+        // Handle multiple furnace values
+        if (req.query.furnishing) {
+            const furnishingValues = String(req.query.furnishing).split(',').filter(Boolean);
+            if (furnishingValues.length > 1) {
+                filter.furnishing = { $in: furnishingValues };
+            } else if (furnishingValues.length === 1) {
+                filter.furnishing = furnishingValues[0];
+            }
+        }
+
+        // Handle multiple bedroom values
+        if (req.query.bedrooms) {
+            const bedroomValues = String(req.query.bedrooms).split(',').filter(Boolean);
+            if (bedroomValues.length > 0) {
+                const bedroomConditions = bedroomValues.map(bed => {
+                    if (bed === "5+" || bed === "5") {
+                        return { bedrooms: { $gte: 5 } };
+                    }
+                    return { bedrooms: Number(bed) };
+                });
+
+                if (bedroomConditions.length > 1) {
+                    if (!filter.$and) filter.$and = [];
+                    filter.$and.push({ $or: bedroomConditions });
+                } else if (bedroomConditions.length === 1) {
+                    Object.assign(filter, bedroomConditions[0]);
+                }
+            }
+        }
 
         if (req.query.q) {
             filter.$text = { $search: String(req.query.q) };

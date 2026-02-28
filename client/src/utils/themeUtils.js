@@ -92,7 +92,7 @@ export function applyTheme(theme) {
  */
 export function validateTheme(theme) {
     const validThemes = ['light', 'dark', 'system'];
-    return validThemes.includes(theme) ? theme : 'system';
+    return validThemes.includes(theme) ? theme : 'light';
 }
 
 /**
@@ -113,9 +113,9 @@ export function initializeTheme() {
         // Try to get stored theme first
         let theme = getStoredTheme();
 
-        // If no stored theme, use system preference
+        // If no stored theme, default to light
         if (!theme) {
-            theme = 'system';
+            theme = 'light';
         }
 
         // Validate and apply theme
@@ -272,12 +272,11 @@ export function emergencyThemeRecovery() {
 
     try {
         // Don't clear localStorage - just provide fallback context
-        // Apply safe default theme
-        const systemTheme = getSystemTheme();
-        applyTheme(systemTheme);
+        // Apply safe default light theme
+        applyTheme('light');
 
         // Set up minimal theme context
-        return createFallbackThemeContext(systemTheme);
+        return createFallbackThemeContext('light');
     } catch (error) {
         if (import.meta.env.DEV) {
             console.error('Emergency theme recovery failed:', error);

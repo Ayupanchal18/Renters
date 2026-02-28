@@ -171,6 +171,7 @@ export default function BuyListings() {
                     possessionStatus: filters.possessionStatus,
                     loanAvailable: filters.loanAvailable,
                     amenities: filters.amenities,
+                    verified: filters.verifiedOnly,
                 }
             };
 

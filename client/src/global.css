@@ -32,7 +32,7 @@
   --tertiary-foreground: 222 47% 11%; /* Dark text on tertiary #0F172A */
 
   --muted: 210 40% 96%; /* Light muted background #F1F5F9 */
-  --muted-foreground: 215 16% 47%; /* Muted text #64748B */
+  --muted-foreground: 215 16% 40%; /* Muted text #64748B -> Darker for better contrast */
 
   --accent: 41 100% 67%; /* Gold Amber accent #FFC857 */
   --accent-foreground: 222 47% 11%; /* Dark text on accent #0F172A */
