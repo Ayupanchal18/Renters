@@ -7,6 +7,16 @@ import { ThemeToggle } from '../ui/theme-toggle';
 import AdminSidebar from './AdminSidebar';
 import { logout, getUser } from '../../utils/auth';
 import { useNavigate } from 'react-router-dom';
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from '../ui/alert-dialog';
 
 /**
  * Admin Layout Component
@@ -19,12 +29,18 @@ import { useNavigate } from 'react-router-dom';
 const AdminLayout = ({ children }) => {
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [profileMenuOpen, setProfileMenuOpen] = useState(false);
+  const [showLogoutDialog, setShowLogoutDialog] = useState(false);
   const navigate = useNavigate();
   const user = getUser();
 
-  const handleLogout = () => {
-    logout(navigate);
+  const handleLogoutClick = () => {
+    setShowLogoutDialog(true);
     setProfileMenuOpen(false);
+  };
+
+  const handleLogoutConfirm = () => {
+    logout(navigate);
+    setShowLogoutDialog(false);
   };
 
   return (
@@ -105,7 +121,7 @@ const AdminLayout = ({ children }) => {
                     <p className="text-xs text-muted-foreground">{user?.email || 'admin@example.com'}</p>
                   </div>
                   <button
-                    onClick={handleLogout}
+                    onClick={handleLogoutClick}
                     className="w-full text-left px-4 py-2 text-destructive hover:bg-destructive/10 flex items-center gap-2 transition-colors"
                   >
                     <LogOut className="h-4 w-4" />
@@ -122,6 +138,27 @@ const AdminLayout = ({ children }) => {
           {children || <Outlet />}
         </main>
       </div>
+
+      {/* Logout Confirmation Dialog */}
+      <AlertDialog open={showLogoutDialog} onOpenChange={setShowLogoutDialog}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Sign Out</AlertDialogTitle>
+            <AlertDialogDescription>
+              Are you sure you want to sign out from the admin panel? You'll need to log in again to access the dashboard.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancel</AlertDialogCancel>
+            <AlertDialogAction
+              onClick={handleLogoutConfirm}
+              className="bg-destructive hover:bg-destructive/90 text-destructive-foreground"
+            >
+              Sign Out
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 };

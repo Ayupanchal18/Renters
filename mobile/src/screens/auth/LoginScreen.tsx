@@ -12,7 +12,7 @@ import {
   Pressable,
   Image,
 } from "react-native";
-import { Mail, Lock, ArrowRight, Shield, Sparkles } from "lucide-react-native";
+import { Mail, Lock, ArrowRight, Shield, Sparkles, Eye, EyeOff } from "lucide-react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import AppButton from "../../components/ui/AppButton";
 import SocialLoginButtons from "../../components/auth/SocialLoginButtons";
@@ -30,6 +30,7 @@ export default function LoginScreen({ navigation }: Props) {
   const [password, setPassword] = useState("");
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
+  const [showPassword, setShowPassword] = useState(false);
 
   const handleLogin = async () => {
     if (!email.trim() || !password.trim()) {
@@ -41,11 +42,13 @@ export default function LoginScreen({ navigation }: Props) {
     try {
       await login({ email: email.trim().toLowerCase(), password });
     } catch (err: any) {
+      console.error("Login detail err:", err);
       const msg =
         err?.response?.data?.error ??
         err?.response?.data?.message ??
+        err?.message ??
         "Login failed. Please try again.";
-      setError(msg);
+      setError(`${msg} (Debug: ${err?.name})`);
     } finally {
       setLoading(false);
     }
@@ -103,20 +106,33 @@ export default function LoginScreen({ navigation }: Props) {
               <View style={styles.inputGroup}>
                 <View style={styles.labelRow}>
                   <Text style={styles.label}>Password</Text>
-                  <Text style={styles.forgotPassword}>Forgot Password?</Text>
+                  <Pressable onPress={() => navigation.navigate("ForgotPassword")}>
+                    <Text style={styles.forgotPassword}>Forgot Password?</Text>
+                  </Pressable>
                 </View>
                 <View style={styles.inputWrapper}>
                   <Lock size={20} color={colors.textSecondary} style={styles.inputIcon} />
                   <TextInput
                     placeholder="Enter your password"
                     placeholderTextColor={colors.textSecondary}
-                    secureTextEntry
+                    secureTextEntry={!showPassword}
                     value={password}
                     onChangeText={setPassword}
                     style={styles.input}
                     editable={!loading}
                     autoComplete="password"
                   />
+                  <Pressable
+                    onPress={() => setShowPassword(!showPassword)}
+                    style={styles.eyeButton}
+                    hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
+                  >
+                    {showPassword ? (
+                      <EyeOff size={20} color={colors.textSecondary} />
+                    ) : (
+                      <Eye size={20} color={colors.textSecondary} />
+                    )}
+                  </Pressable>
                 </View>
               </View>
 
@@ -188,67 +204,79 @@ export default function LoginScreen({ navigation }: Props) {
 const getStyles = (colors: any, isDark: boolean) => StyleSheet.create({
   safeArea: { flex: 1, backgroundColor: colors.background },
   flex: { flex: 1 },
-  scrollContent: { flexGrow: 1, justifyContent: "center", padding: 20 },
-  header: { alignItems: "center", marginBottom: 32 },
+  scrollContent: { flexGrow: 1, justifyContent: "center", padding: 16 },
+  header: { alignItems: "center", marginBottom: 20 },
   logo: {
-    width: 80,
-    height: 80,
-    marginBottom: 16,
+    width: 60,
+    height: 60,
+    marginBottom: 12,
   },
-  title: { fontSize: 24, fontWeight: "700", color: colors.textPrimary, marginBottom: 8 },
-  subtitle: { fontSize: 14, color: colors.textSecondary, textAlign: "center" },
+  title: { fontSize: 22, fontWeight: "700", color: colors.textPrimary, marginBottom: 6 },
+  subtitle: { fontSize: 13, color: colors.textSecondary, textAlign: "center" },
   card: {
     backgroundColor: colors.surface,
-    borderRadius: 20,
-    padding: 24,
+    borderRadius: 16,
+    padding: 20,
     shadowColor: "#000",
-    shadowOffset: { width: 0, height: 8 },
-    shadowOpacity: isDark ? 0.3 : 0.05,
-    shadowRadius: 24,
-    elevation: 5,
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: isDark ? 0.2 : 0.03,
+    shadowRadius: 12,
+    elevation: 3,
     borderWidth: 1,
     borderColor: colors.border,
   },
-  form: { gap: 20 },
+  form: { gap: 16 },
   errorContainer: {
     flexDirection: "row",
     alignItems: "center",
     backgroundColor: isDark ? 'rgba(180, 35, 24, 0.1)' : "#fef3f2",
-    padding: 12,
-    borderRadius: 12,
-    marginBottom: 20,
+    padding: 10,
+    borderRadius: 10,
+    marginBottom: 16,
     borderWidth: 1,
     borderColor: isDark ? colors.error : "#fee4e2",
-    gap: 8,
+    gap: 6,
   },
-  errorText: { color: colors.error, fontSize: 13, flex: 1 },
-  inputGroup: { gap: 8 },
+  errorText: { color: colors.error, fontSize: 12, flex: 1 },
+  inputGroup: { gap: 6 },
   labelRow: { flexDirection: "row", justifyContent: "space-between", alignItems: "center" },
-  label: { fontSize: 14, fontWeight: "500", color: colors.textPrimary },
-  forgotPassword: { fontSize: 12, fontWeight: "500", color: colors.primary },
+  label: { fontSize: 13, fontWeight: "500", color: colors.textPrimary },
+  forgotPassword: { fontSize: 11, fontWeight: "500", color: colors.primary },
   inputWrapper: {
     flexDirection: "row",
     alignItems: "center",
     borderWidth: 1,
     borderColor: colors.border,
-    borderRadius: 12,
+    borderRadius: 10,
     backgroundColor: colors.input,
-    height: 48,
+    height: 44,
+    paddingHorizontal: 12,
   },
-  inputIcon: { paddingHorizontal: 12 },
-  input: { flex: 1, height: "100%", fontSize: 15, color: colors.textPrimary, paddingRight: 12 },
-  signInButton: { height: 48, borderRadius: 12 },
+  inputIcon: { 
+    marginRight: 8,
+  },
+  input: { 
+    flex: 1, 
+    height: "100%", 
+    fontSize: 14, 
+    color: colors.textPrimary,
+  },
+  eyeButton: {
+    padding: 4,
+    marginLeft: 8,
+  },
+  signInButton: { height: 44, borderRadius: 10 },
   signInButtonContent: { flexDirection: "row", alignItems: "center", justifyContent: "center" },
-  signInButtonText: { color: "#ffffff", fontSize: 16, fontWeight: "600" },
-  dividerContainer: { marginVertical: 24, alignItems: "center", justifyContent: "center" },
+  signInButtonText: { color: "#ffffff", fontSize: 15, fontWeight: "600" },
+  dividerContainer: { marginVertical: 16, alignItems: "center", justifyContent: "center" },
   dividerLine: { position: "absolute", width: "100%", height: 1, backgroundColor: colors.border },
-  dividerTextContainer: { backgroundColor: colors.surface, paddingHorizontal: 12 },
-  dividerText: { fontSize: 12, color: colors.textSecondary },
-  actionButtonGroup: { gap: 12 },
-  actionButtonOutline: { backgroundColor: "transparent", borderWidth: 1, borderColor: colors.border, height: 48, borderRadius: 12 },
-  ghostButton: { height: 48, borderRadius: 12, justifyContent: "center", alignItems: "center" },
-  ghostButtonText: { color: colors.primary, fontSize: 15, fontWeight: "500" },
-  trustBadges: { flexDirection: "row", justifyContent: "center", gap: 24, marginTop: 32 },
-  badgeItem: { flexDirection: "row", alignItems: "center", gap: 6 },
-  badgeText: { fontSize: 12, color: colors.textSecondary },
+  dividerTextContainer: { backgroundColor: colors.surface, paddingHorizontal: 10 },
+  dividerText: { fontSize: 11, color: colors.textSecondary },
+  actionButtonGroup: { gap: 10 },
+  actionButtonOutline: { backgroundColor: "transparent", borderWidth: 1, borderColor: colors.border, height: 44, borderRadius: 10 },
+  ghostButton: { height: 40, borderRadius: 10, justifyContent: "center", alignItems: "center" },
+  ghostButtonText: { color: colors.primary, fontSize: 14, fontWeight: "500" },
+  trustBadges: { flexDirection: "row", justifyContent: "center", gap: 20, marginTop: 20 },
+  badgeItem: { flexDirection: "row", alignItems: "center", gap: 4 },
+  badgeText: { fontSize: 11, color: colors.textSecondary },
 });

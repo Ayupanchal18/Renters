@@ -1,13 +1,27 @@
 import React, { useState, useCallback, useMemo } from "react";
-import { Lock, Phone, Trash2, Shield, ChevronRight, Calendar, CheckCircle, XCircle } from "lucide-react";
+import { Lock, Phone, Trash2, Shield, ChevronRight, Calendar, CheckCircle, XCircle, LogOut } from "lucide-react";
 import SecurityModal from "./SecurityModal";
 import DiagnosticTools from "./DiagnosticTools";
 import { SecuritySectionSkeleton } from "../ui/skeleton-loaders";
 import { InlineLoading } from "../ui/loading-states";
+import { logout } from "../../utils/auth";
+import { useNavigate } from "react-router-dom";
+import {
+    AlertDialog,
+    AlertDialogAction,
+    AlertDialogCancel,
+    AlertDialogContent,
+    AlertDialogDescription,
+    AlertDialogFooter,
+    AlertDialogHeader,
+    AlertDialogTitle,
+} from "../ui/alert-dialog";
 
 const SecuritySection = React.memo(function SecuritySection({ isLoading = false, error = null, user = null }) {
     const [activeModal, setActiveModal] = useState(null);
     const [showDiagnostics, setShowDiagnostics] = useState(false);
+    const [showLogoutDialog, setShowLogoutDialog] = useState(false);
+    const navigate = useNavigate();
     
     const loading = isLoading;
 
@@ -15,6 +29,15 @@ const SecuritySection = React.memo(function SecuritySection({ isLoading = false,
         console.log(`Security operation completed: ${type}`);
         setActiveModal(null);
     }, []);
+
+    const handleLogoutClick = useCallback(() => {
+        setShowLogoutDialog(true);
+    }, []);
+
+    const handleLogoutConfirm = useCallback(() => {
+        logout(navigate);
+        setShowLogoutDialog(false);
+    }, [navigate]);
 
     const securityActions = useMemo(() => [
         {
@@ -34,6 +57,15 @@ const SecuritySection = React.memo(function SecuritySection({ isLoading = false,
             cardBg: "bg-gradient-to-br from-teal-50 to-teal-100/50 dark:from-teal-950/40 dark:to-teal-900/20",
             borderColor: "border-teal-200/60 dark:border-teal-800/40",
             description: "Update phone number"
+        },
+        {
+            icon: LogOut,
+            label: "Sign Out",
+            action: "signout",
+            iconBg: "bg-orange-500",
+            cardBg: "bg-gradient-to-br from-orange-50 to-orange-100/50 dark:from-orange-950/40 dark:to-orange-900/20",
+            borderColor: "border-orange-200/60 dark:border-orange-800/40",
+            description: "Sign out of your account"
         },
         {
             icon: Trash2,
@@ -85,6 +117,8 @@ const SecuritySection = React.memo(function SecuritySection({ isLoading = false,
                                     onClick={() => {
                                         if (action.action === 'diagnostics') {
                                             setShowDiagnostics(true);
+                                        } else if (action.action === 'signout') {
+                                            handleLogoutClick();
                                         } else {
                                             setActiveModal(action.action);
                                         }
@@ -155,6 +189,27 @@ const SecuritySection = React.memo(function SecuritySection({ isLoading = false,
                     onClose={() => setShowDiagnostics(false)}
                 />
             )}
+
+            {/* Logout Confirmation Dialog */}
+            <AlertDialog open={showLogoutDialog} onOpenChange={setShowLogoutDialog}>
+                <AlertDialogContent>
+                    <AlertDialogHeader>
+                        <AlertDialogTitle>Sign Out</AlertDialogTitle>
+                        <AlertDialogDescription>
+                            Are you sure you want to sign out? You'll need to log in again to access your account.
+                        </AlertDialogDescription>
+                    </AlertDialogHeader>
+                    <AlertDialogFooter>
+                        <AlertDialogCancel>Cancel</AlertDialogCancel>
+                        <AlertDialogAction
+                            onClick={handleLogoutConfirm}
+                            className="bg-destructive hover:bg-destructive/90 text-destructive-foreground"
+                        >
+                            Sign Out
+                        </AlertDialogAction>
+                    </AlertDialogFooter>
+                </AlertDialogContent>
+            </AlertDialog>
         </>
     );
 });

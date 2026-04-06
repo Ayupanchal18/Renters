@@ -1,12 +1,8 @@
-import React from 'react';
-import { StyleSheet, View, Text, ScrollView, Pressable } from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
-import { useNavigation } from '@react-navigation/native';
-import { ArrowLeft } from 'lucide-react-native';
-import { colors } from '../../theme/tokens';
-import CollapsibleSection from '../../components/ui/CollapsibleSection';
-import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
-import type { RootStackParamList } from '../../navigation/types';
+import React, { useMemo } from "react";
+import { StyleSheet, View, Text, ScrollView } from "react-native";
+import AppScreen from "../../components/layout/AppScreen";
+import CollapsibleSection from "../../components/ui/CollapsibleSection";
+import { useTheme } from "../../theme/useTheme";
 
 const FAQ_DATA = [
   {
@@ -37,21 +33,16 @@ const FAQ_DATA = [
 ];
 
 export default function FAQScreen() {
-  const navigation = useNavigation<NativeStackNavigationProp<RootStackParamList>>();
+  const { colors, isDark } = useTheme();
+  const styles = useMemo(() => getStyles(colors, isDark), [colors, isDark]);
 
   return (
-    <SafeAreaView style={styles.safeArea}>
-      <View style={styles.header}>
-        <Pressable onPress={() => navigation.goBack()} style={styles.backBtn}>
-          <ArrowLeft size={24} color={colors.textPrimary} />
-        </Pressable>
-        <Text style={styles.headerTitle}>FAQs</Text>
-        <View style={{ width: 40 }} />
-      </View>
-
-      <ScrollView style={styles.container} contentContainerStyle={styles.content}>
-        <Text style={styles.heroText}>Frequently Asked Questions</Text>
-        <Text style={styles.subHeroText}>Everything you need to know about how Renters works.</Text>
+    <AppScreen title="FAQs" subtitle="Quick answers to common questions" showBack>
+      <ScrollView style={styles.container} contentContainerStyle={styles.content} showsVerticalScrollIndicator={false}>
+        <View style={styles.heroCard}>
+          <Text style={styles.heroText}>Frequently Asked Questions</Text>
+          <Text style={styles.subHeroText}>Everything you need to know about how Renters works.</Text>
+        </View>
 
         <View style={styles.faqList}>
           {FAQ_DATA.map((faq) => (
@@ -60,25 +51,25 @@ export default function FAQScreen() {
             </CollapsibleSection>
           ))}
         </View>
-
       </ScrollView>
-    </SafeAreaView>
+    </AppScreen>
   );
 }
 
-const styles = StyleSheet.create({
-  safeArea: { flex: 1, backgroundColor: colors.background },
-  header: {
-    flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between',
-    paddingHorizontal: 16, paddingVertical: 12, backgroundColor: colors.surface,
-    borderBottomWidth: 1, borderBottomColor: colors.border,
-  },
-  backBtn: { padding: 8, marginLeft: -8, width: 40, alignItems: 'center' },
-  headerTitle: { fontSize: 18, fontWeight: '700', color: colors.textPrimary },
-  container: { flex: 1 },
-  content: { padding: 20, paddingBottom: 40 },
-  heroText: { fontSize: 24, fontWeight: '800', color: colors.textPrimary, marginBottom: 8 },
-  subHeroText: { fontSize: 16, color: colors.textSecondary, marginBottom: 24, lineHeight: 22 },
-  faqList: { gap: 12 },
-  answer: { fontSize: 15, color: colors.textSecondary, lineHeight: 22, paddingTop: 4 },
-});
+const getStyles = (colors: any, _isDark: boolean) =>
+  StyleSheet.create({
+    container: { flex: 1 },
+    content: { paddingHorizontal: 4, paddingBottom: 40 },
+    heroCard: {
+      backgroundColor: colors.surface,
+      borderWidth: 1,
+      borderColor: colors.border,
+      borderRadius: 18,
+      padding: 16,
+      marginBottom: 14,
+    },
+    heroText: { fontSize: 22, fontWeight: "900", color: colors.textPrimary, marginBottom: 6, letterSpacing: -0.4 },
+    subHeroText: { fontSize: 14, color: colors.textSecondary, lineHeight: 20 },
+    faqList: { gap: 12 },
+    answer: { fontSize: 14, color: colors.textSecondary, lineHeight: 21, paddingTop: 4 },
+  });

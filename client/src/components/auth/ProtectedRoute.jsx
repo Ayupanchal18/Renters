@@ -1,7 +1,8 @@
 import { useEffect, useState } from 'react';
 import { Navigate, useLocation } from 'react-router-dom';
 import { isAuthenticated } from '../../utils/auth';
-import { Loader2 } from 'lucide-react';
+import { Loader2, Lock, AlertTriangle } from 'lucide-react';
+import { showWarningToast } from '../../utils/toastNotifications';
 
 /**
  * Protected Route Component
@@ -40,6 +41,16 @@ const ProtectedRoute = ({ children }) => {
 
   // Redirect to login if not authenticated, preserving intended destination
   if (!isAuth) {
+    // Show warning toast for better UX
+    showWarningToast(
+      'Please log in to access this page',
+      'authentication',
+      {
+        title: 'Authentication Required',
+        description: 'You need to be logged in to view this content'
+      }
+    );
+    
     return <Navigate to="/login" state={{ from: location }} replace />;
   }
 

@@ -3,10 +3,12 @@
     "name": "Renters",
     "slug": "renters-mobile",
     "version": "0.1.0",
+    "icon": "./assets/images/logo.png",
     "orientation": "portrait",
     "scheme": "renters",
     "userInterfaceStyle": "automatic",
     "splash": {
+      "image": "./assets/images/logo.png",
       "resizeMode": "contain",
       "backgroundColor": "#ffffff"
     },
@@ -20,11 +22,14 @@
       "package": "com.renters.app",
       "versionCode": 1,
       "adaptiveIcon": {
+        "foregroundImage": "./assets/images/logo.png",
         "backgroundColor": "#10b981"
       },
       "permissions": [
         "android.permission.ACCESS_COARSE_LOCATION",
-        "android.permission.ACCESS_FINE_LOCATION"
+        "android.permission.ACCESS_FINE_LOCATION",
+        "android.permission.RECORD_AUDIO",
+        "android.permission.INTERNET"
       ]
     },
     "extra": {
@@ -40,12 +45,24 @@
         {
           "locationAlwaysPermission": "Allow Renters to use your location."
         }
-      ]
+      ],
+      [
+        "expo-build-properties",
+        {
+          "android": {
+            "usesCleartextTraffic": true
+          }
+        }
+      ],
+      "expo-speech-recognition"
     ],
     "ios": {
       "bundleIdentifier": "com.renters.app",
       "infoPlist": {
-        "ITSAppUsesNonExemptEncryption": false
+        "ITSAppUsesNonExemptEncryption": false,
+        "NSAppTransportSecurity": {
+          "NSAllowsArbitraryLoads": true
+        }
       }
     }
   }

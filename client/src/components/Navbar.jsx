@@ -9,6 +9,16 @@ import { cn } from "../lib/utils";
 import { useUnreadCounts } from "../hooks/useUnreadCounts";
 import { useNotifications } from "../hooks/useNotifications";
 import { LISTING_TYPES, LISTING_TYPE_LABELS } from '@shared/propertyTypes';
+import {
+    AlertDialog,
+    AlertDialogAction,
+    AlertDialogCancel,
+    AlertDialogContent,
+    AlertDialogDescription,
+    AlertDialogFooter,
+    AlertDialogHeader,
+    AlertDialogTitle,
+} from "./ui/alert-dialog";
 
 /**
  * Navbar variant styles using CVA
@@ -76,6 +86,7 @@ export default function Navbar({ variant = "default" }) {
     const [isAdmin, setIsAdmin] = useState(false);
     const [profileMenuOpen, setProfileMenuOpen] = useState(false);
     const [notificationDropdownOpen, setNotificationDropdownOpen] = useState(false);
+    const [showLogoutDialog, setShowLogoutDialog] = useState(false);
     // Listing type context for rent vs buy
     const [listingTypeContext, setListingTypeContext] = useState(LISTING_TYPES.RENT);
     const location = useLocation();
@@ -142,12 +153,18 @@ export default function Navbar({ variant = "default" }) {
 
     const isActive = (path) => location.pathname === path;
 
-    const handleLogout = () => {
+    const handleLogoutClick = () => {
+        setShowLogoutDialog(true);
+        setProfileMenuOpen(false);
+    };
+
+    const handleLogoutConfirm = () => {
         logout(navigate);
         setIsLoggedIn(false);
         setProfileMenuOpen(false);
         setMobileMenuOpen(false);
         setNotificationDropdownOpen(false);
+        setShowLogoutDialog(false);
     };
 
     // Handle notification click - mark as read and navigate
@@ -522,10 +539,7 @@ export default function Navbar({ variant = "default" }) {
                                                 </Link>
                                             )}
                                             <button
-                                                onClick={() => {
-                                                    handleLogout();
-                                                    setProfileMenuOpen(false);
-                                                }}
+                                                onClick={handleLogoutClick}
                                                 className="w-full text-left px-4 py-2 text-destructive hover:bg-destructive/10 flex items-center gap-2 transition-colors border-t border-border mt-2"
                                                 role="menuitem"
                                             >
@@ -773,10 +787,7 @@ export default function Navbar({ variant = "default" }) {
                                         </Button>
                                     </Link>
                                     <button
-                                        onClick={() => {
-                                            handleLogout();
-                                            setMobileMenuOpen(false);
-                                        }}
+                                        onClick={handleLogoutClick}
                                         className="w-full"
                                     >
                                         <Button
@@ -816,6 +827,27 @@ export default function Navbar({ variant = "default" }) {
                     </div>
                 )}
             </div>
+
+            {/* Logout Confirmation Dialog */}
+            <AlertDialog open={showLogoutDialog} onOpenChange={setShowLogoutDialog}>
+                <AlertDialogContent>
+                    <AlertDialogHeader>
+                        <AlertDialogTitle>Sign Out</AlertDialogTitle>
+                        <AlertDialogDescription>
+                            Are you sure you want to sign out? You'll need to log in again to access your account.
+                        </AlertDialogDescription>
+                    </AlertDialogHeader>
+                    <AlertDialogFooter>
+                        <AlertDialogCancel>Cancel</AlertDialogCancel>
+                        <AlertDialogAction
+                            onClick={handleLogoutConfirm}
+                            className="bg-destructive hover:bg-destructive/90 text-destructive-foreground"
+                        >
+                            Sign Out
+                        </AlertDialogAction>
+                    </AlertDialogFooter>
+                </AlertDialogContent>
+            </AlertDialog>
         </nav>
     );
 }

@@ -72,12 +72,14 @@ export interface AuthResponse {
   success: boolean;
   user: User;
   token: string;
+  refreshToken?: string;
   mustChangePassword?: boolean;
 }
 
 export interface RefreshResponse {
   success: boolean;
   token: string;
+  refreshToken?: string;
 }
 
 /* ─── Property ────────────────────────────────────────────── */

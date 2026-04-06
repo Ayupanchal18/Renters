@@ -3,7 +3,7 @@ import Footer from "../components/Footer";
 import Navbar from "../components/Navbar";
 import { Button } from "../components/ui/button";
 import { Input } from "../components/ui/input";
-import { Link, useNavigate } from "react-router-dom";
+import { Link, useNavigate, useLocation } from "react-router-dom";
 import { authAPI } from "../lib/api";
 import { setToken, setUser } from "../utils/auth";
 import { useSocket } from "../contexts/SocketContext";
@@ -17,7 +17,12 @@ export default function Login() {
     const [error, setError] = useState("");
 
     const navigate = useNavigate();
+    const location = useLocation();
     const { initializeSocket } = useSocket();
+
+    // Get the intended destination from location state
+    const from = location.state?.from?.pathname || "/dashboard";
+    const isRedirectedFromProtectedRoute = location.state?.from;
 
     const handleSubmit = async (e) => {
         e.preventDefault();
@@ -40,7 +45,8 @@ export default function Login() {
                 // Initialize socket connection after successful login (Requirement 4.2)
                 initializeSocket();
                 
-                navigate("/dashboard");
+                // Redirect to intended destination or dashboard
+                navigate(from, { replace: true });
             }
         } catch (err) {
             console.error('Login error:', err);
@@ -73,9 +79,22 @@ export default function Login() {
                             />
                             <h1 className="text-2xl font-bold text-foreground mb-2">Welcome Back</h1>
                             <p className="text-muted-foreground text-sm">
-                                Sign in to manage your listings and messages
+                                {isRedirectedFromProtectedRoute 
+                                    ? "Please sign in to continue to your requested page"
+                                    : "Sign in to manage your listings and messages"
+                                }
                             </p>
                         </div>
+
+                        {/* Redirect Notice */}
+                        {isRedirectedFromProtectedRoute && (
+                            <div className="mb-6 p-3 bg-blue-50 dark:bg-blue-900/20 text-blue-800 dark:text-blue-200 rounded-xl border border-blue-200 dark:border-blue-800 text-sm flex items-center gap-2">
+                                <Lock className="w-4 h-4 flex-shrink-0" />
+                                <span>
+                                    Authentication required to access <strong>{from}</strong>
+                                </span>
+                            </div>
+                        )}
 
                         {/* Error Message */}
                         {error && (
@@ -95,7 +114,9 @@ export default function Login() {
                                     <Mail className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-muted-foreground" />
                                     <Input
                                         id="login-email"
+                                        name="email"
                                         type="email"
+                                        autoComplete="username email"
                                         placeholder="you@example.com"
                                         value={email}
                                         onChange={(e) => setEmail(e.target.value)}
@@ -122,7 +143,9 @@ export default function Login() {
                                     <Lock className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-muted-foreground" />
                                     <Input
                                         id="login-password"
+                                        name="password"
                                         type="password"
+                                        autoComplete="current-password"
                                         placeholder="Enter your password"
                                         value={password}
                                         onChange={(e) => setPassword(e.target.value)}

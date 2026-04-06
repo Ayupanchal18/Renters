@@ -171,7 +171,7 @@ router.post("/register", (async (req, res) => {
             await logAuthEvent(user._id, 'register', true, { userType: data.userType }, req);
         }
 
-        // Set refresh token as httpOnly cookie
+        // Set refresh token as httpOnly cookie for web clients
         res.cookie('refreshToken', refreshToken, {
             httpOnly: true,
             secure: process.env.NODE_ENV === 'production',
@@ -183,6 +183,8 @@ router.post("/register", (async (req, res) => {
             success: true,
             user: safeUser(user),
             token: accessToken,
+            // Include refresh token in response for mobile clients
+            refreshToken: refreshToken,
         });
     }
     catch (err) {
@@ -317,7 +319,7 @@ router.post("/login", (async (req, res) => {
             await logAuthEvent(user._id, 'login_success', true, {}, req);
         }
 
-        // Set refresh token as httpOnly cookie
+        // Set refresh token as httpOnly cookie for web clients
         res.cookie('refreshToken', refreshToken, {
             httpOnly: true,
             secure: process.env.NODE_ENV === 'production',
@@ -329,6 +331,8 @@ router.post("/login", (async (req, res) => {
             success: true,
             user: safeUser(user),
             token: accessToken,
+            // Include refresh token in response for mobile clients
+            refreshToken: refreshToken,
             // Include flag if password change is required
             mustChangePassword: user.mustChangePassword || false,
         });
@@ -390,7 +394,7 @@ router.post("/refresh", (async (req, res) => {
         // Generate new tokens
         const tokens = generateTokens(user);
 
-        // Set new refresh token
+        // Set new refresh token for web clients
         res.cookie('refreshToken', tokens.refreshToken, {
             httpOnly: true,
             secure: process.env.NODE_ENV === 'production',
@@ -400,7 +404,9 @@ router.post("/refresh", (async (req, res) => {
 
         res.json({
             success: true,
-            token: tokens.accessToken
+            token: tokens.accessToken,
+            // Include refresh token in response for mobile clients
+            refreshToken: tokens.refreshToken
         });
     }
     catch (err) {

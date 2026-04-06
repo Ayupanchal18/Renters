@@ -38,7 +38,7 @@ export default defineConfig({
     sourcemap: false,
   },
   server: {
-    host: "::",
+    host: true,
     port: 8080,
     // Disable HMR to fix React context issues - use full page reload instead
     hmr: false,

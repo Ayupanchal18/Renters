@@ -2,13 +2,15 @@ export type RootStackParamList = {
   // Auth screens
   Login: undefined;
   Register: undefined;
+  ForgotPassword: undefined;
 
   // Tab shell (contains bottom tabs)
   MainTabs: undefined;
 
   // Tab screens (used as targets for navigate from within tabs)
   HomeTab: undefined;
-  Listings: { type?: "rent" | "buy"; initialFilters?: any };
+  RentTab: { initialFilters?: any; searchData?: any };
+  BuyTab: { initialFilters?: any; searchData?: any };
   WishlistTab: undefined;
   ProfileTab: undefined;
 

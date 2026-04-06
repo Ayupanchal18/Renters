@@ -1,12 +1,14 @@
 import React from "react";
 import { StyleSheet, Text, View, TouchableOpacity, Linking, Alert } from "react-native";
 import { Info, HelpCircle, FileText, PhoneCall, ChevronRight } from "lucide-react-native";
-import { colors } from "../../../theme/tokens";
+import { useTheme } from "../../../theme/useTheme";
 import { useNavigation } from "@react-navigation/native";
 import type { NativeStackNavigationProp } from "@react-navigation/native-stack";
 import type { RootStackParamList } from "../../../navigation/types";
 
 export default function HelpInfoSection() {
+  const { colors } = useTheme();
+  const styles = React.useMemo(() => getStyles(colors), [colors]);
   const navigation = useNavigation<NativeStackNavigationProp<RootStackParamList>>();
 
   const handleSupportEmail = async () => {
@@ -36,28 +38,36 @@ export default function HelpInfoSection() {
           label="About Renters" 
           sublabel="Learn more about us"
           icon={<Info color={colors.secondary} size={22} />} 
-          onPress={() => navigation.navigate("About")} 
+          onPress={() => navigation.navigate("About")}
+          colors={colors}
+          styles={styles}
         />
         <View style={styles.divider} />
         <PressableRow 
           label="FAQs & Help Center" 
           sublabel="Find answers quickly"
           icon={<HelpCircle color={colors.secondary} size={22} />} 
-          onPress={() => navigation.navigate("FAQ")} 
+          onPress={() => navigation.navigate("FAQ")}
+          colors={colors}
+          styles={styles}
         />
         <View style={styles.divider} />
         <PressableRow 
           label="Contact Support" 
           sublabel="Reach out to our team"
           icon={<PhoneCall color={colors.secondary} size={22} />} 
-          onPress={handleSupportEmail} 
+          onPress={handleSupportEmail}
+          colors={colors}
+          styles={styles}
         />
         <View style={styles.divider} />
         <PressableRow 
           label="Legal & Privacy Policy" 
           sublabel="Terms and conditions"
           icon={<FileText color={colors.secondary} size={22} />} 
-          onPress={() => navigation.navigate("Legal")} 
+          onPress={() => navigation.navigate("Legal")}
+          colors={colors}
+          styles={styles}
         />
       </View>
     </View>
@@ -68,12 +78,16 @@ function PressableRow({
   label, 
   sublabel, 
   icon, 
-  onPress 
+  onPress,
+  colors,
+  styles
 }: { 
   label: string; 
   sublabel?: string; 
   icon?: React.ReactNode; 
-  onPress: () => void 
+  onPress: () => void;
+  colors: any;
+  styles: any;
 }) {
   return (
     <TouchableOpacity style={styles.pressableRow} onPress={onPress}>
@@ -91,9 +105,9 @@ function PressableRow({
   );
 }
 
-const styles = StyleSheet.create({
+const getStyles = (colors: any) => StyleSheet.create({
   card: {
-    backgroundColor: "#ffffff",
+    backgroundColor: colors.surface,
     borderRadius: 16,
     borderWidth: 1,
     borderColor: colors.border,

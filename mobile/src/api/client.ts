@@ -1,7 +1,63 @@
 import axios from "axios";
 import { env } from "../config/env";
-import { getAccessToken, getRefreshToken, saveTokens, clearTokens } from "../features/auth/services/tokenStorage";
-import * as SecureStore from 'expo-secure-store';
+import { getAccessToken, getRefreshToken, saveTokens, clearTokens, getUserId } from "../features/auth/services/tokenStorage";
+
+/* ─── Token Utilities ─────────────────────────────────────── */
+
+/**
+ * Check if a JWT token is expired or will expire soon
+ */
+function isTokenExpired(token: string, bufferMinutes: number = 2): boolean {
+  try {
+    const payload = JSON.parse(atob(token.split('.')[1]));
+    const expirationTime = payload.exp * 1000; // Convert to milliseconds
+    const currentTime = Date.now();
+    const bufferTime = bufferMinutes * 60 * 1000; // Convert buffer to milliseconds
+    
+    return currentTime >= (expirationTime - bufferTime);
+  } catch {
+    return true; // If we can't parse the token, consider it expired
+  }
+}
+
+/**
+ * Proactively refresh token if it's about to expire
+ */
+async function ensureValidToken(): Promise<string | null> {
+  const currentToken = await getAccessToken();
+  
+  if (!currentToken) {
+    return null;
+  }
+  
+  // If token is not expired, return it
+  if (!isTokenExpired(currentToken)) {
+    return currentToken;
+  }
+  
+  // Token is expired or about to expire, try to refresh
+  try {
+    const refreshToken = await getRefreshToken();
+    if (!refreshToken) {
+      return null;
+    }
+
+    const res = await axios.post(`${env.apiBaseUrl}/api/auth/refresh`, {
+      refreshToken,
+    });
+
+    if (res.data.success && res.data.token) {
+      await saveTokens(res.data.token, res.data.refreshToken);
+      return res.data.token;
+    }
+    
+    return null;
+  } catch {
+    // Refresh failed, clear tokens
+    await clearTokens();
+    return null;
+  }
+}
 
 export const apiClient = axios.create({
   baseURL: env.apiBaseUrl,
@@ -15,27 +71,20 @@ export const apiClient = axios.create({
 
 apiClient.interceptors.request.use(
   async (config) => {
-    const token = await getAccessToken();
+    // Proactively ensure we have a valid token before making the request
+    const token = await ensureValidToken();
     if (token) {
       config.headers.Authorization = `Bearer ${token}`;
     }
     
-    // Web app logic: Attach x-user-id for certain endpoints
+    // Attach x-user-id header
     try {
-      const rawUserId = await SecureStore.getItemAsync("userId");
-      if (rawUserId) {
-        if (rawUserId.startsWith('{')) {
-          const userObj = JSON.parse(rawUserId);
-          if (userObj.id) {
-            config.headers["x-user-id"] = userObj.id;
-          }
-        } else {
-          const cleanId = rawUserId.replace(/^"|"$/g, '');
-          config.headers["x-user-id"] = cleanId;
-        }
+      const userId = await getUserId();
+      if (userId) {
+        config.headers["x-user-id"] = userId;
       }
     } catch (e) {
-      console.warn("Failed to parse user ID:", e);
+      console.warn("Failed to get user ID:", e);
     }
     
     return config;
@@ -85,6 +134,8 @@ apiClient.interceptors.response.use(
       }).then((token) => {
         originalRequest.headers.Authorization = `Bearer ${token}`;
         return apiClient(originalRequest);
+      }).catch((err) => {
+        return Promise.reject(err);
       });
     }
 
@@ -102,7 +153,8 @@ apiClient.interceptors.response.use(
       });
 
       const newToken: string = res.data.token;
-      await saveTokens(newToken, refreshToken);
+      const newRefreshToken: string = res.data.refreshToken;
+      await saveTokens(newToken, newRefreshToken);
 
       // Update header for the retried request
       originalRequest.headers.Authorization = `Bearer ${newToken}`;
@@ -113,6 +165,15 @@ apiClient.interceptors.response.use(
       processQueue(refreshError, null);
       // Refresh failed – clear tokens so auth context redirects to login
       await clearTokens();
+      
+      // If this is a token expiration error, provide a more user-friendly message
+      const isTokenExpiredError = refreshError instanceof Error && 
+        (refreshError.message.includes("expired") || refreshError.message.includes("invalid"));
+      
+      if (isTokenExpiredError) {
+        console.log("Session expired, user needs to login again");
+      }
+      
       return Promise.reject(refreshError);
     } finally {
       isRefreshing = false;

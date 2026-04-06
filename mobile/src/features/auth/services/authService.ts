@@ -14,12 +14,9 @@ import { saveTokens, clearTokens, getRefreshToken } from "./tokenStorage";
  */
 export async function loginUser(data: LoginRequest): Promise<AuthResponse> {
   const res = await apiClient.post<AuthResponse>("/api/auth/login", data);
-  const { token, user } = res.data;
-  // Persist tokens to secure storage
-  // Refresh token comes back in httpOnly cookie for web, but mobile
-  // doesn't get cookies, so we also store the access token and rely
-  // on the /refresh endpoint with the stored refresh token.
-  await saveTokens(token);
+  const { token, refreshToken, user } = res.data;
+  // Persist both access and refresh tokens to secure storage
+  await saveTokens(token, refreshToken, user.id);
   return res.data;
 }
 
@@ -30,8 +27,8 @@ export async function registerUser(
   data: RegisterRequest
 ): Promise<AuthResponse> {
   const res = await apiClient.post<AuthResponse>("/api/auth/register", data);
-  const { token } = res.data;
-  await saveTokens(token);
+  const { token, refreshToken, user } = res.data;
+  await saveTokens(token, refreshToken, user.id);
   return res.data;
 }
 
@@ -43,8 +40,8 @@ export async function socialLoginUser(
   payload: { code?: string; accessToken?: string; credential?: string }
 ): Promise<AuthResponse> {
   const res = await apiClient.post<AuthResponse>(`/api/auth/${provider}`, payload);
-  const { token } = res.data;
-  await saveTokens(token);
+  const { token, refreshToken, user } = res.data;
+  await saveTokens(token, refreshToken, user.id);
   return res.data;
 }
 
@@ -62,7 +59,8 @@ export async function refreshAccessToken(): Promise<string | null> {
     });
 
     if (res.data.success && res.data.token) {
-      await saveTokens(res.data.token);
+      // Save both new access token and refresh token (if provided)
+      await saveTokens(res.data.token, res.data.refreshToken);
       return res.data.token;
     }
     return null;

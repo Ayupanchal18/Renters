@@ -3,6 +3,7 @@ import { createNativeStackNavigator } from "@react-navigation/native-stack";
 import { ActivityIndicator, View, StyleSheet } from "react-native";
 import LoginScreen from "../screens/auth/LoginScreen";
 import RegisterScreen from "../screens/auth/RegisterScreen";
+import ForgotPasswordScreen from "../screens/auth/ForgotPasswordScreen";
 import MainTabs from "./MainTabs";
 import PropertyDetailScreen from "../screens/properties/PropertyDetailScreen";
 import AboutScreen from "../screens/info/AboutScreen";
@@ -59,6 +60,11 @@ export default function RootNavigator() {
             component={RegisterScreen}
             options={{ headerShown: false }}
           />
+          <Stack.Screen
+            name="ForgotPassword"
+            component={ForgotPasswordScreen}
+            options={{ headerShown: false }}
+          />
         </>
       ) : (
         // Authenticated or Guest stack
@@ -71,7 +77,7 @@ export default function RootNavigator() {
           <Stack.Screen
             name="PropertyDetail"
             component={PropertyDetailScreen}
-            options={{ title: "Property" }}
+            options={{ headerShown: false }}
           />
           <Stack.Screen name="About" component={AboutScreen} options={{ headerShown: false }} />
           <Stack.Screen name="FAQ" component={FAQScreen} options={{ headerShown: false }} />

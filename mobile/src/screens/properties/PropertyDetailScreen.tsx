@@ -1,4 +1,4 @@
-import React, { useState, useCallback } from "react";
+import React, { useMemo, useState } from "react";
 import type { NativeStackScreenProps } from "@react-navigation/native-stack";
 import {
   StyleSheet,
@@ -8,18 +8,19 @@ import {
   ActivityIndicator,
   Share,
   Pressable,
-  FlatList,
   Alert,
   Linking,
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
+import { LinearGradient } from "expo-linear-gradient";
+import { BlurView } from "expo-blur";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { ArrowLeft, Share2, Heart, MapPin, IndianRupee, Shield, CheckCircle, Clock } from "lucide-react-native";
+import { ArrowLeft, Share2, Heart, MapPin, IndianRupee, Shield, CheckCircle, Clock, Bed, Bath, Sofa, Phone, MessageCircle, Wifi, Car, Dumbbell, Trees, Shield as Security, Camera, Gamepad2, Flame, Home, Users, Zap, Waves, Wind, Sparkles } from "lucide-react-native";
 import { fetchPropertyDetail, fetchRentListings, fetchBuyListings } from "../../features/properties/services/propertyService";
-import { addToWishlist } from "../../features/wishlist/services/wishlistService";
-import { colors } from "../../theme/tokens";
+import { addToWishlist, removeFromWishlist } from "../../features/wishlist/services/wishlistService";
 import { useAuth } from "../../features/auth/AuthContext";
 import messageService from "../../features/messages/services/messageService";
+import { useTheme } from "../../theme/useTheme";
 import type { RootStackParamList } from "../../navigation/types";
 import type { Property } from "../../types/types";
 
@@ -39,15 +40,90 @@ import CommuteCalculator from "./components/CommuteCalculator";
 type Props = NativeStackScreenProps<RootStackParamList, "PropertyDetail">;
 
 export default function PropertyDetailScreen({ route, navigation }: Props) {
+  const { colors, isDark } = useTheme();
+  const styles = useMemo(() => getStyles(colors, isDark), [colors, isDark]);
   const { identifier, type } = route.params;
   const queryClient = useQueryClient();
-  const { user } = useAuth();
+  const { user, logout, isGuest } = useAuth();
   const [isCreatingConversation, setIsCreatingConversation] = useState(false);
+
+  // Function to get appropriate icon for amenity
+  const getAmenityIcon = (amenity: string) => {
+    const amenityLower = amenity.toLowerCase();
+    const iconProps = { size: 16, color: colors.primary, strokeWidth: 2 };
+
+    if (amenityLower.includes('wifi') || amenityLower.includes('internet')) {
+      return <Wifi {...iconProps} />;
+    }
+    if (amenityLower.includes('parking') || amenityLower.includes('car')) {
+      return <Car {...iconProps} />;
+    }
+    if (amenityLower.includes('gym') || amenityLower.includes('fitness') || amenityLower.includes('exercise')) {
+      return <Dumbbell {...iconProps} />;
+    }
+    if (amenityLower.includes('garden') || amenityLower.includes('park') || amenityLower.includes('green')) {
+      return <Trees {...iconProps} />;
+    }
+    if (amenityLower.includes('security') || amenityLower.includes('guard')) {
+      return <Security {...iconProps} />;
+    }
+    if (amenityLower.includes('cctv') || amenityLower.includes('camera') || amenityLower.includes('surveillance')) {
+      return <Camera {...iconProps} />;
+    }
+    if (amenityLower.includes('play') || amenityLower.includes('game') || amenityLower.includes('recreation')) {
+      return <Gamepad2 {...iconProps} />;
+    }
+    if (amenityLower.includes('fire') || amenityLower.includes('safety') || amenityLower.includes('emergency')) {
+      return <Flame {...iconProps} />;
+    }
+    if (amenityLower.includes('club') || amenityLower.includes('community') || amenityLower.includes('hall')) {
+      return <Home {...iconProps} />;
+    }
+    if (amenityLower.includes('intercom') || amenityLower.includes('communication')) {
+      return <Phone {...iconProps} />;
+    }
+    if (amenityLower.includes('servant') || amenityLower.includes('maid') || amenityLower.includes('staff')) {
+      return <Users {...iconProps} />;
+    }
+    if (amenityLower.includes('power') || amenityLower.includes('backup') || amenityLower.includes('generator')) {
+      return <Zap {...iconProps} />;
+    }
+    if (amenityLower.includes('pool') || amenityLower.includes('swimming')) {
+      return <Waves {...iconProps} />;
+    }
+    if (amenityLower.includes('ac') || amenityLower.includes('air') || amenityLower.includes('conditioning')) {
+      return <Wind {...iconProps} />;
+    }
+    if (amenityLower.includes('meditation') || amenityLower.includes('yoga')) {
+      return <Users {...iconProps} />;
+    }
+    if (amenityLower.includes('tennis') || amenityLower.includes('court') || amenityLower.includes('sport')) {
+      return <Gamepad2 {...iconProps} />;
+    }
+    if (amenityLower.includes('jogging') || amenityLower.includes('track') || amenityLower.includes('running')) {
+      return <Dumbbell {...iconProps} />;
+    }
+    
+    // Default icon for unmatched amenities
+    return <Shield {...iconProps} />;
+  };
 
   const { data: property, isPending, isError } = useQuery({
     queryKey: ["property-detail", identifier, type],
     queryFn: () => fetchPropertyDetail(identifier, type),
   });
+
+  // Fetch wishlist to check if this property is wishlisted
+  const { data: wishlistData } = useQuery({
+    queryKey: ["wishlist"],
+    queryFn: () => import("../../features/wishlist/services/wishlistService").then(m => m.fetchWishlist()),
+    enabled: !!user && !isGuest, // Only fetch if user is authenticated
+  });
+
+  // Check if current property is in wishlist
+  const isWishlisted = wishlistData?.some((item: any) => 
+    item.property?._id === property?._id || item.property?.id === property?._id
+  ) || false;
 
   // Fetch related/similar properties
   const { data: relatedData } = useQuery({
@@ -60,9 +136,21 @@ export default function PropertyDetailScreen({ route, navigation }: Props) {
   });
 
   const wishlistMutation = useMutation({
-    mutationFn: () => addToWishlist(property!._id),
+    mutationFn: (action: 'add' | 'remove') => {
+      if (action === 'add') {
+        return addToWishlist(property!._id);
+      } else {
+        return removeFromWishlist(property!._id);
+      }
+    },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["wishlist"] });
+    },
+    onError: (error: any) => {
+      Alert.alert(
+        "Error", 
+        error.response?.data?.message || "Failed to update wishlist. Please try again."
+      );
     },
   });
 
@@ -86,7 +174,7 @@ export default function PropertyDetailScreen({ route, navigation }: Props) {
   }
 
   const isRent = property.listingType === "rent";
-  const themeColor = isRent ? colors.primary : '#10b981';
+  const themeColor = isRent ? colors.primary : colors.success;
   const price = isRent ? property.monthlyRent : property.sellingPrice;
   
   const formatValue = (num: number) => {
@@ -96,7 +184,19 @@ export default function PropertyDetailScreen({ route, navigation }: Props) {
   };
 
   const formattedPrice = price ? `₹${formatValue(price)}${isRent ? '/mo' : ''}` : "Contact for price";
-  const isWishlisted = false; // TODO: Connect to explicit local state
+
+  const handleWishlistToggle = () => {
+    if (!user || isGuest) {
+      Alert.alert("Login Required", "You need to log in to save properties to your wishlist.", [
+        { text: "Cancel", style: "cancel" },
+        { text: "Login", onPress: async () => await logout() }
+      ]);
+      return;
+    }
+
+    const action = isWishlisted ? 'remove' : 'add';
+    wishlistMutation.mutate(action);
+  };
 
   const handleShare = async () => {
     try {
@@ -120,7 +220,7 @@ export default function PropertyDetailScreen({ route, navigation }: Props) {
     if (!user) {
       Alert.alert("Login Required", "You need to log in to message the owner.", [
         { text: "Cancel", style: "cancel" },
-        { text: "Login", onPress: () => navigation.navigate("Login" as any) }
+        { text: "Login", onPress: async () => await logout() }
       ]);
       return;
     }
@@ -149,13 +249,6 @@ export default function PropertyDetailScreen({ route, navigation }: Props) {
     }
   };
 
-  const verificationStatusText = property.verificationStatus?.toLowerCase();
-  const getVerificationIcon = () => {
-    if (verificationStatusText === 'verified') return <CheckCircle size={14} color={colors.success} />;
-    if (verificationStatusText === 'pending') return <Clock size={14} color={colors.warning} />;
-    return <Shield size={14} color={colors.textSecondary} />;
-  };
-
   const parseCoordsFromProp = () => {
     if (property.mapLocation) {
       const parts = property.mapLocation.split(',').map(p => parseFloat(p.trim()));
@@ -170,121 +263,143 @@ export default function PropertyDetailScreen({ route, navigation }: Props) {
   const relatedItems = relatedData?.items.filter(i => i._id !== property._id).slice(0, 4) || [];
 
   return (
-    <SafeAreaView style={styles.safeArea}>
+    <SafeAreaView style={styles.safeArea} edges={['top', 'bottom']}>
       <ScrollView
         style={styles.screen}
         contentContainerStyle={styles.content}
         showsVerticalScrollIndicator={false}
       >
-        {/* Fixed Header Overlay on top of Gallery */}
-        <View style={styles.headerActions}>
-          <Pressable onPress={() => navigation.goBack()} style={styles.iconBtn}>
-            <ArrowLeft size={20} color={colors.textPrimary} />
-          </Pressable>
-          <View style={styles.headerRightActions}>
-            <Pressable onPress={handleShare} style={styles.iconBtn}>
-              <Share2 size={20} color={colors.textPrimary} />
+        {/* Hero Image Section with Overlay */}
+        <View style={styles.heroSection}>
+          {/* Fixed Header Overlay on top of Image */}
+          <View style={styles.headerActions}>
+            <Pressable onPress={() => navigation.goBack()} style={styles.iconBubble}>
+              <ArrowLeft size={22} color="#FFFFFF" />
             </Pressable>
-            <Pressable onPress={() => wishlistMutation.mutate()} style={styles.iconBtn}>
-              <Heart 
-                size={20} 
-                color={isWishlisted ? colors.error : colors.textPrimary} 
-                fill={isWishlisted ? colors.error : "transparent"} 
-              />
-            </Pressable>
+            <View style={styles.headerRightActions}>
+              <Pressable onPress={handleShare} style={styles.iconBubble}>
+                <Share2 size={22} color="#FFFFFF" />
+              </Pressable>
+              <Pressable 
+                onPress={handleWishlistToggle} 
+                style={styles.iconBubble}
+                disabled={wishlistMutation.isPending}
+              >
+                <Heart 
+                  size={22} 
+                  color="#FFFFFF" 
+                  fill={isWishlisted ? "#FFFFFF" : "transparent"} 
+                />
+              </Pressable>
+            </View>
           </View>
-        </View>
 
-        {/* Gallery Carousel */}
-        <ImageGallery images={property.photos || []} title={property.title} />
+          {/* Hero Image */}
+          <View style={styles.imageWrapper}>
+            <ImageGallery images={property.photos || []} title={property.title} />
+          </View>
 
-        {/* Main Info Section */}
-        <View style={styles.section}>
-          <View style={styles.contentPadded}>
-            <View style={styles.topBadgesRow}>
-              <View style={styles.badgeOutline}>
-                <Text style={styles.badgeText}>For {isRent ? 'Rent' : 'Sale'}</Text>
+          {/* Overlay Content on Image */}
+          <LinearGradient
+            colors={['transparent', 'rgba(0,0,0,0.4)', 'rgba(0,0,0,0.8)']}
+            locations={[0, 0.5, 1]}
+            style={styles.heroOverlay}
+            pointerEvents="none"
+          >
+            {/* Badges */}
+            <View style={styles.heroBadgesRow} pointerEvents="auto">
+              <View style={styles.heroBadge}>
+                <Text style={styles.heroBadgeText}>For {isRent ? 'Rent' : 'Sale'}</Text>
               </View>
-              {property.verificationStatus?.toLowerCase() === 'verified' && (
-                <View style={styles.badgePrimary}>
-                  <Text style={styles.badgeTextWhite}>Verified</Text>
-                </View>
-              )}
               {property.category && (
-                <View style={styles.badgeSuccess}>
-                  <Text style={styles.badgeTextSuccess}>{property.category}</Text>
+                <View style={[styles.heroBadge, styles.heroBadgeCategory]}>
+                  <Text style={styles.heroBadgeText}>{property.category}</Text>
                 </View>
               )}
             </View>
 
-            <Text style={styles.title}>{property.title}</Text>
+            {/* Title */}
+            <Text style={styles.heroTitle}>{property.title}</Text>
             
-            <View style={styles.locationRow}>
-              <MapPin size={16} color="#4F46E5" />
-              <Text style={styles.locationText}>{property.address ? `${property.address}, ` : ""}{property.city}</Text>
+            {/* Location */}
+            <View style={styles.heroLocationRow}>
+              <MapPin size={16} color="#FFFFFF" />
+              <Text style={styles.heroLocationText}>
+                {property.address ? `${property.address}, ` : ""}{property.city}
+              </Text>
+            </View>
+          </LinearGradient>
+        </View>
+
+        {/* Price and Specs Row */}
+        <View style={styles.priceSpecsSection}>
+          <View style={styles.priceSpecsRow}>
+            {/* Price */}
+            <View style={styles.priceBox}>
+              <View style={styles.priceRow}>
+                <IndianRupee size={18} color={colors.textPrimary} strokeWidth={2.5} />
+                <Text style={styles.priceValue}>{formattedPrice.replace('₹', '').replace('/mo', '')}</Text>
+                {isRent && <Text style={styles.priceSuffix}>/mo</Text>}
+              </View>
             </View>
 
-            {/* Quick Specs Row */}
-            <View style={styles.quickSpecsRow}>
-              <View style={styles.specBox}>
-                <Text style={styles.specVal}>{property.bedrooms ?? '-'}</Text>
-                <Text style={styles.specLabel}>BEDS</Text>
+            {/* Specs */}
+            <View style={styles.specItem}>
+              <View style={styles.specIconBox}>
+                <Bed size={18} color={colors.textPrimary} strokeWidth={2.5} />
               </View>
-              <View style={styles.specBox}>
-                <Text style={styles.specVal}>{property.bathrooms ?? '-'}</Text>
-                <Text style={styles.specLabel}>BATHS</Text>
+              <Text style={styles.specValue}>{property.bedrooms ?? '-'}</Text>
+              <Text style={styles.specLabelSmall}>Beds</Text>
+            </View>
+
+            <View style={styles.specItem}>
+              <View style={styles.specIconBox}>
+                <Bath size={18} color={colors.textPrimary} strokeWidth={2.5} />
               </View>
-              <View style={styles.specBox}>
-                <Text style={styles.specVal} numberOfLines={1}>
-                  {property.furnishing === 'fully' ? 'Fully' : property.furnishing === 'semi' ? 'Semi' : 'Unfurnished'}
-                </Text>
-                <Text style={styles.specLabel}>FURNISHING</Text>
+              <Text style={styles.specValue}>{property.bathrooms ?? '-'}</Text>
+              <Text style={styles.specLabelSmall}>Baths</Text>
+            </View>
+
+            <View style={styles.specItem}>
+              <View style={styles.specIconBox}>
+                <Sofa size={18} color={colors.textPrimary} strokeWidth={2.5} />
               </View>
+              <Text style={styles.specValue} numberOfLines={1}>
+                {property.furnishing === 'fully' ? 'Full' : property.furnishing === 'semi' ? 'Semi' : 'None'}
+              </Text>
+              <Text style={styles.specLabelSmall}>Furnish</Text>
             </View>
           </View>
         </View>
 
-        {/* Price Breakdown Card */}
-        <View style={styles.section}>
-          <View style={styles.priceCard}>
-            <View style={styles.priceHeader}>
-              <Text style={styles.priceLabel}>{isRent ? 'Monthly Rent' : 'Selling Price'}</Text>
-              {(property.rentNegotiable || property.negotiable) && (
-                <View style={styles.negotiableBadge}>
-                  <Text style={styles.negotiableText}>Negotiable</Text>
-                </View>
-              )}
-            </View>
-            <View style={styles.priceValueRow}>
-              <IndianRupee size={22} color="#0066FF" />
-              <Text style={styles.priceValue}>{formattedPrice.replace('₹', '').replace('/mo', '')}</Text>
-              {isRent && <Text style={styles.priceSuffix}>/mo</Text>}
-            </View>
+        {/* About this property */}
+        {property.description && (
+          <View style={styles.aboutSection}>
+            <Text style={styles.aboutHeading}>About this property</Text>
+            <Text style={styles.aboutText} numberOfLines={3}>
+              {property.description}
+            </Text>
+          </View>
+        )}
 
-            {isRent && (property.securityDeposit || property.maintenanceCharge) && (
-              <View style={styles.extraCosts}>
+        {/* Additional Details - Collapsible */}
+        {isRent && (property.securityDeposit || property.maintenanceCharge) && (
+          <View style={styles.paddedSection}>
+            <CollapsibleSection title="Additional Costs">
+              <View style={styles.additionalCostsGrid}>
                 {(property.securityDeposit ?? 0) > 0 && (
-                  <View style={styles.costItem}>
+                  <View style={styles.costItemCard}>
                     <Text style={styles.costLabel}>Security Deposit</Text>
                     <Text style={styles.costVal}>₹{(property.securityDeposit ?? 0).toLocaleString("en-IN")}</Text>
                   </View>
                 )}
                 {(property.maintenanceCharge ?? 0) > 0 && (
-                  <View style={styles.costItem}>
+                  <View style={styles.costItemCard}>
                     <Text style={styles.costLabel}>Maintenance</Text>
                     <Text style={styles.costVal}>₹{(property.maintenanceCharge ?? 0).toLocaleString("en-IN")}/mo</Text>
                   </View>
                 )}
               </View>
-            )}
-          </View>
-        </View>
-
-        {/* Description Accordion */}
-        {property.description && (
-          <View style={styles.paddedSection}>
-            <CollapsibleSection title="About this property">
-              <Text style={styles.descriptionText}>{property.description}</Text>
             </CollapsibleSection>
           </View>
         )}
@@ -293,13 +408,25 @@ export default function PropertyDetailScreen({ route, navigation }: Props) {
         <View style={styles.paddedSection}>
           <CollapsibleSection title="Property Details">
             <View style={styles.detailsGrid}>
-              <DetailItem label="Floor" value={property.floorNumber != null ? `${property.floorNumber} ${property.totalFloors ? `of ${property.totalFloors}` : ""}` : null} />
-              <DetailItem label="Facing" value={property.facingDirection} />
-              <DetailItem label="Property Age" value={property.propertyAge} />
-              <DetailItem label="Parking" value={property.parking} />
-              <DetailItem label="Balconies" value={String(property.balconies || 0)} />
-              <DetailItem label="Preferred Tenants" value={property.preferredTenants} />
-              <DetailItem label="Available From" value={property.availableFrom ? new Date(property.availableFrom).toLocaleDateString() : null} />
+              <DetailItem
+                label="Floor"
+                value={
+                  property.floorNumber != null
+                    ? `${property.floorNumber} ${property.totalFloors ? `of ${property.totalFloors}` : ""}`
+                    : null
+                }
+                s={styles}
+              />
+              <DetailItem label="Facing" value={property.facingDirection} s={styles} />
+              <DetailItem label="Property Age" value={property.propertyAge} s={styles} />
+              <DetailItem label="Parking" value={property.parking} s={styles} />
+              <DetailItem label="Balconies" value={String(property.balconies || 0)} s={styles} />
+              <DetailItem label="Preferred Tenants" value={property.preferredTenants} s={styles} />
+              <DetailItem
+                label="Available From"
+                value={property.availableFrom ? new Date(property.availableFrom).toLocaleDateString() : null}
+                s={styles}
+              />
             </View>
           </CollapsibleSection>
         </View>
@@ -307,11 +434,16 @@ export default function PropertyDetailScreen({ route, navigation }: Props) {
         {/* Amenities Array */}
         {property.amenities && property.amenities.length > 0 && (
           <View style={styles.paddedSection}>
-            <CollapsibleSection title="Amenities" count={property.amenities.length}>
+            <CollapsibleSection 
+              title="Amenities" 
+              icon={<Sparkles size={16} color={colors.primary} strokeWidth={2} />}
+            >
               <View style={styles.amenitiesWrap}>
                 {property.amenities.map((amenity, idx) => (
                   <View key={idx} style={styles.amenityBox}>
-                    <Text style={styles.amenityIcon}>✨</Text>
+                    <View style={styles.amenityIconContainer}>
+                      {getAmenityIcon(amenity)}
+                    </View>
                     <Text style={styles.amenityText}>{amenity}</Text>
                   </View>
                 ))}
@@ -387,119 +519,352 @@ export default function PropertyDetailScreen({ route, navigation }: Props) {
 }
 
 // Mini Detail Grid Item
-function DetailItem({ label, value }: { label: string; value?: string | null }) {
+function DetailItem({
+  label,
+  value,
+  s,
+}: {
+  label: string;
+  value?: string | null;
+  s: ReturnType<typeof getStyles>;
+}) {
   if (!value) return null;
   return (
-    <View style={styles.detailItem}>
-      <Text style={styles.detailLabel}>{label}</Text>
-      <Text style={styles.detailValue} numberOfLines={1}>{value}</Text>
+    <View style={s.detailItem}>
+      <Text style={s.detailLabel}>{label}</Text>
+      <Text style={s.detailValue} numberOfLines={1}>
+        {value}
+      </Text>
     </View>
   );
 }
 
-const styles = StyleSheet.create({
-  safeArea: { flex: 1, backgroundColor: colors.background },
-  screen: { flex: 1 },
-  content: {},
-  center: {
-    flex: 1, justifyContent: "center", alignItems: "center", padding: 24,
-  },
-  errorText: { color: colors.error, fontSize: 16, fontWeight: '600' },
-  headerActions: {
-    position: 'absolute',
-    top: 40, left: 16, right: 16,
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    zIndex: 10,
-  },
-  iconBtn: {
-    width: 40, height: 40, borderRadius: 20,
-    backgroundColor: 'rgba(255,255,255,0.9)',
-    alignItems: 'center', justifyContent: 'center',
-    shadowColor: '#000', shadowOffset: {width: 0, height: 2}, shadowOpacity: 0.1, shadowRadius: 4, elevation: 3,
-  },
-  headerRightActions: { flexDirection: 'row', gap: 12 },
-  section: { paddingHorizontal: 20, paddingTop: 20 },
-  paddedSection: { paddingHorizontal: 16, marginTop: 16 },
-  badgesRow: { flexDirection: 'row', flexWrap: 'wrap', gap: 8, marginBottom: 12 },
-  contentPadded: { paddingTop: 20 },
-  topBadgesRow: { flexDirection: 'row', gap: 10, marginBottom: 16 },
-  badgeOutline: {
-    borderWidth: 1, borderColor: '#0066FF', borderRadius: 20,
-    paddingHorizontal: 12, paddingVertical: 4,
-  },
-  badgeText: { color: '#0066FF', fontSize: 12, fontWeight: '600' },
-  badgePrimary: {
-    backgroundColor: '#0066FF', borderRadius: 20,
-    paddingHorizontal: 12, paddingVertical: 4,
-  },
-  badgeTextWhite: { color: '#FFFFFF', fontSize: 12, fontWeight: '600' },
-  badgeSuccess: {
-    backgroundColor: '#ECFDF5', borderRadius: 20,
-    paddingHorizontal: 12, paddingVertical: 4,
-  },
-  badgeTextSuccess: { color: '#10B981', fontSize: 12, fontWeight: '600', textTransform: 'capitalize' },
-  title: { fontSize: 26, fontWeight: '900', color: '#111827', letterSpacing: -0.5 },
-  locationRow: { flexDirection: 'row', alignItems: 'center', gap: 6, marginTop: 12 },
-  locationText: { fontSize: 15, color: '#6B7280', fontWeight: '500' },
-  quickSpecsRow: { flexDirection: 'row', justifyContent: 'space-between', marginTop: 24, gap: 12 },
-  specBox: {
-    flex: 1,
-    backgroundColor: '#FFFFFF', paddingVertical: 14,
-    borderRadius: 14, borderWidth: 1, borderColor: '#E5E7EB',
-    alignItems: 'center', justifyContent: 'center',
-  },
-  specVal: { fontSize: 16, fontWeight: '800', color: '#0066FF' },
-  specLabel: { fontSize: 11, color: '#6B7280', marginTop: 6, fontWeight: '700' },
-  priceCard: {
-    backgroundColor: '#FFFFFF', borderRadius: 20, padding: 20,
-    borderWidth: 1, borderColor: '#E5E7EB',
-  },
-  priceHeader: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 12 },
-  priceLabel: { fontSize: 13, color: '#4B5563', fontWeight: '600' },
-  negotiableBadge: {
-    borderWidth: 1, borderColor: '#D1D5DB', borderRadius: 16,
-    paddingHorizontal: 12, paddingVertical: 4, backgroundColor: '#F9FAFB'
-  },
-  negotiableText: { color: '#374151', fontSize: 11, fontWeight: '700' },
-  priceValueRow: { flexDirection: 'row', alignItems: 'center', gap: 2 },
-  priceValue: { fontSize: 32, fontWeight: '900', color: '#0066FF' },
-  priceSuffix: { fontSize: 13, color: '#0066FF', marginLeft: 4, fontWeight: '600' },
-  extraCosts: {
-    flexDirection: 'row', flexWrap: 'wrap', gap: 24,
-    marginTop: 20, paddingTop: 20, borderTopWidth: 1, borderTopColor: '#E5E7EB',
-  },
-  costItem: {},
-  costLabel: { fontSize: 12, color: '#6B7280', marginBottom: 2, fontWeight: '500' },
-  costVal: { fontSize: 15, fontWeight: '800', color: '#111827' },
-  descriptionText: { fontSize: 15, color: colors.textSecondary, lineHeight: 24 },
-  detailsGrid: { flexDirection: 'row', flexWrap: 'wrap', gap: 12 },
-  detailItem: {
-    width: '48%', backgroundColor: colors.background,
-    padding: 12, borderRadius: 10, borderWidth: 1, borderColor: colors.border,
-  },
-  detailLabel: { fontSize: 12, color: colors.textSecondary, marginBottom: 4 },
-  detailValue: { fontSize: 14, fontWeight: '600', color: colors.textPrimary, textTransform: 'capitalize' },
-  amenitiesWrap: { flexDirection: 'row', flexWrap: 'wrap', gap: 10 },
-  amenityBox: {
-    flexDirection: 'row', alignItems: 'center', gap: 6,
-    backgroundColor: colors.background, paddingHorizontal: 12, paddingVertical: 8,
-    borderRadius: 9999, borderWidth: 1, borderColor: colors.border,
-  },
-  amenityIcon: { fontSize: 14 },
-  amenityText: { fontSize: 13, fontWeight: '500', color: colors.textPrimary },
-  subHeading: { fontSize: 18, fontWeight: '700', color: colors.textPrimary, marginBottom: 12 },
-  ownerCard: {
-    flexDirection: 'row', alignItems: 'center', gap: 12,
-    backgroundColor: colors.surface, padding: 16, borderRadius: 16,
-    borderWidth: 1, borderColor: colors.border,
-  },
-  ownerAvatar: {
-    width: 48, height: 48, borderRadius: 24, backgroundColor: colors.primary,
-    alignItems: 'center', justifyContent: 'center',
-  },
-  ownerAvatarText: { color: 'white', fontSize: 18, fontWeight: '700' },
-  ownerInfo: { flex: 1 },
-  ownerName: { fontSize: 16, fontWeight: '700', color: colors.textPrimary },
-  ownerType: { fontSize: 13, color: colors.textSecondary, textTransform: 'capitalize', marginTop: 2 },
-});
+const getStyles = (colors: any, isDark: boolean) =>
+  StyleSheet.create({
+    safeArea: { flex: 1, backgroundColor: colors.background },
+    screen: { flex: 1 },
+    content: {},
+    center: {
+      flex: 1,
+      justifyContent: "center",
+      alignItems: "center",
+      padding: 24,
+      backgroundColor: colors.background,
+    },
+    errorText: { color: colors.error, fontSize: 16, fontWeight: "600" },
+    
+    // Hero Section
+    heroSection: {
+      position: 'relative',
+      height: 420,
+    },
+    imageWrapper: {
+      width: '100%',
+      height: '100%',
+    },
+    headerActions: {
+      position: "absolute",
+      top: 14,
+      left: 16,
+      right: 16,
+      zIndex: 10,
+      flexDirection: "row",
+      alignItems: "center",
+      justifyContent: "space-between",
+    },
+    iconBubble: {
+      width: 44,
+      height: 44,
+      borderRadius: 22,
+      alignItems: "center",
+      justifyContent: "center",
+      backgroundColor: "rgba(0, 0, 0, 0.4)",
+      borderWidth: 1,
+      borderColor: "rgba(255, 255, 255, 0.2)",
+      shadowColor: '#000',
+      shadowOffset: { width: 0, height: 2 },
+      shadowOpacity: 0.3,
+      shadowRadius: 8,
+      elevation: 6,
+    },
+    headerRightActions: { 
+      flexDirection: "row", 
+      gap: 12 
+    },
+    heroOverlay: {
+      position: 'absolute',
+      bottom: 0,
+      left: 0,
+      right: 0,
+      padding: 20,
+      paddingBottom: 24,
+    },
+    heroBadgesRow: {
+      flexDirection: 'row',
+      gap: 8,
+      marginBottom: 12,
+    },
+    heroBadge: {
+      backgroundColor: 'rgba(255, 255, 255, 0.25)',
+      paddingHorizontal: 12,
+      paddingVertical: 6,
+      borderRadius: 6,
+    },
+    heroBadgeCategory: {
+      backgroundColor: 'rgba(34, 197, 94, 0.3)',
+    },
+    heroBadgeText: {
+      color: '#FFFFFF',
+      fontSize: 13,
+      fontWeight: '700',
+      textTransform: 'capitalize',
+    },
+    heroTitle: {
+      fontSize: 24,
+      fontWeight: '900',
+      color: '#FFFFFF',
+      letterSpacing: -0.5,
+      marginBottom: 8,
+      textShadowColor: 'rgba(0, 0, 0, 0.5)',
+      textShadowOffset: { width: 0, height: 1 },
+      textShadowRadius: 4,
+    },
+    heroLocationRow: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      gap: 6,
+    },
+    heroLocationText: {
+      fontSize: 14,
+      color: '#FFFFFF',
+      fontWeight: '600',
+      textShadowColor: 'rgba(0, 0, 0, 0.5)',
+      textShadowOffset: { width: 0, height: 1 },
+      textShadowRadius: 4,
+    },
+
+    // Price and Specs Section
+    priceSpecsSection: {
+      backgroundColor: colors.surface,
+      paddingHorizontal: 20,
+      paddingVertical: 12,
+      borderBottomWidth: 1,
+      borderBottomColor: colors.border,
+    },
+    priceSpecsRow: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      justifyContent: 'space-between',
+      gap: 8,
+    },
+    priceBox: {
+      flex: 0,
+      minWidth: 100,
+    },
+    priceRow: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      gap: 2,
+    },
+    priceValue: {
+      fontSize: 24,
+      fontWeight: '900',
+      color: colors.textPrimary,
+      lineHeight: 26,
+      letterSpacing: -0.5,
+    },
+    priceSuffix: {
+      fontSize: 12,
+      color: colors.textSecondary,
+      fontWeight: '600',
+      lineHeight: 26,
+      marginLeft: 2,
+    },
+    specItem: {
+      alignItems: 'center',
+      gap: 2,
+      minWidth: 55,
+    },
+    specIconBox: {
+      width: 36,
+      height: 36,
+      borderRadius: 8,
+      backgroundColor: isDark ? 'rgba(255,255,255,0.08)' : '#F3F4F6',
+      alignItems: 'center',
+      justifyContent: 'center',
+    },
+    specValue: {
+      fontSize: 16,
+      fontWeight: '800',
+      color: colors.textPrimary,
+      textAlign: 'center',
+      lineHeight: 18,
+    },
+    specLabelSmall: {
+      fontSize: 10,
+      color: colors.textSecondary,
+      fontWeight: '600',
+      textAlign: 'center',
+    },
+
+    // About Section
+    aboutSection: {
+      paddingHorizontal: 20,
+      paddingVertical: 20,
+      borderBottomWidth: 1,
+      borderBottomColor: colors.border,
+    },
+    aboutHeading: {
+      fontSize: 18,
+      fontWeight: '900',
+      color: colors.textPrimary,
+      marginBottom: 12,
+      letterSpacing: -0.3,
+    },
+    aboutText: {
+      fontSize: 15,
+      color: colors.textSecondary,
+      lineHeight: 24,
+    },
+
+    section: { paddingHorizontal: 20, paddingTop: 18 },
+    paddedSection: { paddingHorizontal: 16, marginTop: 14 },
+    badgesRow: { flexDirection: "row", flexWrap: "wrap", gap: 8, marginBottom: 12 },
+    contentPadded: { paddingTop: 16 },
+    topBadgesRow: { flexDirection: "row", flexWrap: "wrap", gap: 8, marginBottom: 14 },
+    badgeOutline: {
+      borderWidth: 1.5,
+      borderRadius: 6,
+      paddingHorizontal: 14,
+      paddingVertical: 6,
+      backgroundColor: isDark ? "rgba(255,255,255,0.03)" : colors.surface,
+    },
+    badgeText: { fontSize: 13, fontWeight: "700" },
+    badgePrimary: {
+      borderRadius: 6,
+      paddingHorizontal: 14,
+      paddingVertical: 6,
+    },
+    badgeTextWhite: { color: "#FFFFFF", fontSize: 13, fontWeight: "700", textTransform: "capitalize" },
+    badgeSoft: {
+      borderRadius: 6,
+      paddingHorizontal: 14,
+      paddingVertical: 6,
+      borderWidth: 1,
+    },
+    badgeSoftText: { fontSize: 13, fontWeight: "700" },
+    title: { fontSize: 24, fontWeight: "900", color: colors.textPrimary, letterSpacing: -0.6 },
+    locationRow: { flexDirection: "row", alignItems: "center", gap: 6, marginTop: 10 },
+    locationText: { fontSize: 14, color: colors.textSecondary, fontWeight: "600" },
+    quickSpecsRow: { flexDirection: "row", justifyContent: "space-between", marginTop: 16, gap: 10 },
+    specBox: {
+      flex: 1,
+      backgroundColor: colors.surface,
+      paddingVertical: 12,
+      borderRadius: 12,
+      borderWidth: 1,
+      borderColor: colors.border,
+      alignItems: "center",
+      justifyContent: "center",
+    },
+    specVal: { fontSize: 18, fontWeight: "900" },
+    specLabel: { fontSize: 10, color: colors.textSecondary, marginTop: 4, fontWeight: "800", letterSpacing: 0.5, textTransform: "uppercase" },
+    priceCard: {
+      backgroundColor: colors.surface,
+      borderRadius: 20,
+      padding: 18,
+      borderWidth: 1,
+      borderColor: colors.border,
+    },
+    priceHeader: { flexDirection: "row", justifyContent: "space-between", alignItems: "center", marginBottom: 12 },
+    priceLabel: { fontSize: 13, color: colors.textSecondary, fontWeight: "700" },
+    negotiableBadge: {
+      borderWidth: 1,
+      borderColor: colors.border,
+      borderRadius: 9999,
+      paddingHorizontal: 10,
+      paddingVertical: 4,
+      backgroundColor: isDark ? "rgba(255,255,255,0.04)" : colors.input,
+    },
+    negotiableText: { color: colors.textPrimary, fontSize: 11, fontWeight: "800" },
+    additionalCostsGrid: {
+      flexDirection: 'row',
+      gap: 16,
+      marginTop: 8,
+    },
+    costItemCard: {
+      flex: 1,
+      backgroundColor: isDark ? 'rgba(255,255,255,0.03)' : colors.background,
+      padding: 16,
+      borderRadius: 12,
+      borderWidth: 1,
+      borderColor: colors.border,
+    },
+    extraCosts: {
+      flexDirection: "row",
+      flexWrap: "wrap",
+      gap: 24,
+      marginTop: 16,
+      paddingTop: 16,
+      borderTopWidth: 1,
+      borderTopColor: colors.border,
+    },
+    costItem: {},
+    costLabel: { fontSize: 13, color: colors.textSecondary, marginBottom: 6, fontWeight: "600" },
+    costVal: { fontSize: 18, fontWeight: "900", color: colors.textPrimary },
+    descriptionText: { fontSize: 15, color: colors.textSecondary, lineHeight: 24 },
+    detailsGrid: { flexDirection: "row", flexWrap: "wrap", gap: 12 },
+    detailItem: {
+      width: "48%",
+      backgroundColor: isDark ? "rgba(255,255,255,0.02)" : colors.background,
+      padding: 12,
+      borderRadius: 12,
+      borderWidth: 1,
+      borderColor: colors.border,
+    },
+    detailLabel: { fontSize: 12, color: colors.textSecondary, marginBottom: 4, fontWeight: "600" },
+    detailValue: { fontSize: 14, fontWeight: "800", color: colors.textPrimary, textTransform: "capitalize" },
+    amenitiesWrap: { flexDirection: "row", flexWrap: "wrap", gap: 10 },
+    amenityBox: {
+      flexDirection: "row",
+      alignItems: "center",
+      gap: 6,
+      backgroundColor: isDark ? "rgba(255,255,255,0.02)" : colors.background,
+      paddingHorizontal: 12,
+      paddingVertical: 8,
+      borderRadius: 9999,
+      borderWidth: 1,
+      borderColor: colors.border,
+    },
+    amenityIconContainer: { 
+      width: 20, 
+      height: 20, 
+      alignItems: 'center', 
+      justifyContent: 'center',
+      marginRight: 2,
+    },
+    amenityText: { fontSize: 13, fontWeight: "600", color: colors.textPrimary },
+    subHeading: { fontSize: 18, fontWeight: "900", color: colors.textPrimary, marginBottom: 12, letterSpacing: -0.2 },
+    ownerCard: {
+      flexDirection: "row",
+      alignItems: "center",
+      gap: 12,
+      backgroundColor: colors.surface,
+      padding: 16,
+      borderRadius: 18,
+      borderWidth: 1,
+      borderColor: colors.border,
+    },
+    ownerAvatar: {
+      width: 48,
+      height: 48,
+      borderRadius: 24,
+      backgroundColor: colors.primary,
+      alignItems: "center",
+      justifyContent: "center",
+    },
+    ownerAvatarText: { color: "white", fontSize: 18, fontWeight: "800" },
+    ownerInfo: { flex: 1 },
+    ownerName: { fontSize: 16, fontWeight: "800", color: colors.textPrimary },
+    ownerType: { fontSize: 13, color: colors.textSecondary, textTransform: "capitalize", marginTop: 2, fontWeight: "600" },
+  });

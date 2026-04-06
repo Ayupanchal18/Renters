@@ -168,11 +168,11 @@ export default function SocialLoginButtons({ disabled }: Props) {
 
 const getStyles = (colors: any, isDark: boolean) => StyleSheet.create({
   container: {
-    gap: 12,
+    gap: 8,
   },
   button: {
-    height: 48,
-    borderRadius: 12,
+    height: 42,
+    borderRadius: 10,
     borderWidth: 1,
     backgroundColor: colors.surface,
     borderColor: colors.border,
@@ -188,10 +188,10 @@ const getStyles = (colors: any, isDark: boolean) => StyleSheet.create({
   buttonContent: {
     flexDirection: "row",
     alignItems: "center",
-    gap: 12,
+    gap: 10,
   },
   buttonText: {
-    fontSize: 15,
+    fontSize: 14,
     fontWeight: "500",
     color: colors.textPrimary,
   },

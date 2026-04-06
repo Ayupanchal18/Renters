@@ -238,6 +238,7 @@ export default function SignupForm() {
                                     id="signup-email"
                                     type="email"
                                     name="email"
+                                    autoComplete="username email"
                                     value={formData.email}
                                     onChange={handleChange}
                                     placeholder="rahul.sharma@gmail.com"
@@ -325,6 +326,7 @@ export default function SignupForm() {
                                     id="signup-password"
                                     type="password"
                                     name="password"
+                                    autoComplete="new-password"
                                     value={formData.password}
                                     onChange={handleChange}
                                     placeholder="••••••••"
@@ -361,6 +363,7 @@ export default function SignupForm() {
                                     id="signup-confirmPassword"
                                     type="password"
                                     name="confirmPassword"
+                                    autoComplete="new-password"
                                     value={formData.confirmPassword}
                                     onChange={handleChange}
                                     placeholder="••••••••"

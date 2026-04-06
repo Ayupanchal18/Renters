@@ -6,6 +6,7 @@ import {
   logoutUser,
   fetchCurrentUser,
   socialLoginUser,
+  refreshAccessToken,
 } from "./services/authService";
 import { getAccessToken, clearTokens } from "./services/tokenStorage";
 
@@ -51,7 +52,8 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
             setToken(null);
           }
         }
-      } catch {
+      } catch (error) {
+        console.warn("Session restoration failed:", error);
         await clearTokens();
         setToken(null);
       } finally {
@@ -60,32 +62,72 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     })();
   }, []);
 
+  // Background token refresh - check every 5 minutes
+  useEffect(() => {
+    if (!user || !token) return;
+
+    const interval = setInterval(async () => {
+      try {
+        const newToken = await refreshAccessToken();
+        if (newToken && newToken !== token) {
+          setToken(newToken);
+        }
+      } catch (error) {
+        console.warn("Background token refresh failed:", error);
+        // Don't logout on background refresh failure - let the API interceptor handle it
+      }
+    }, 5 * 60 * 1000); // 5 minutes
+
+    return () => clearInterval(interval);
+  }, [user, token]);
+
   const login = useCallback(async (data: LoginRequest) => {
-    const response = await loginUser(data);
-    setUser(response.user);
-    setToken(response.token);
-    setIsGuest(false);
+    try {
+      const response = await loginUser(data);
+      setUser(response.user);
+      setToken(response.token);
+      setIsGuest(false);
+    } catch (error) {
+      console.error("Login failed:", error);
+      throw error;
+    }
   }, []);
 
   const register = useCallback(async (data: RegisterRequest) => {
-    const response = await registerUser(data);
-    setUser(response.user);
-    setToken(response.token);
-    setIsGuest(false);
+    try {
+      const response = await registerUser(data);
+      setUser(response.user);
+      setToken(response.token);
+      setIsGuest(false);
+    } catch (error) {
+      console.error("Registration failed:", error);
+      throw error;
+    }
   }, []);
 
   const socialLogin = useCallback(async (provider: "google" | "facebook", payload: { code?: string; accessToken?: string; credential?: string }) => {
-    const response = await socialLoginUser(provider, payload);
-    setUser(response.user);
-    setToken(response.token);
-    setIsGuest(false);
+    try {
+      const response = await socialLoginUser(provider, payload);
+      setUser(response.user);
+      setToken(response.token);
+      setIsGuest(false);
+    } catch (error) {
+      console.error("Social login failed:", error);
+      throw error;
+    }
   }, []);
 
   const logout = useCallback(async () => {
-    await logoutUser();
-    setUser(null);
-    setToken(null);
-    setIsGuest(false);
+    try {
+      await logoutUser();
+    } catch (error) {
+      console.warn("Logout API call failed:", error);
+      // Continue with local cleanup even if API call fails
+    } finally {
+      setUser(null);
+      setToken(null);
+      setIsGuest(false);
+    }
   }, []);
   
   const continueAsGuest = useCallback(() => {

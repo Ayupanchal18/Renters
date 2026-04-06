@@ -13,7 +13,7 @@ import {
   FileText,
   ChevronRight
 } from "lucide-react-native";
-import { colors } from "../../../theme/tokens";
+import { useTheme } from "../../../theme/useTheme";
 import { useNavigation } from "@react-navigation/native";
 import type { NativeStackNavigationProp } from "@react-navigation/native-stack";
 import type { RootStackParamList } from "../../../navigation/types";
@@ -26,6 +26,9 @@ if (Platform.OS === 'android' && UIManager.setLayoutAnimationEnabledExperimental
 export default function ImportantPagesSection({ isDark }: { isDark: boolean }) {
   const navigation = useNavigation<NativeStackNavigationProp<RootStackParamList>>();
   const [isExpanded, setIsExpanded] = useState(false);
+  const { colors } = useTheme();
+  
+  const styles = React.useMemo(() => getStyles(colors), [colors]);
 
   const toggleExpand = () => {
     LayoutAnimation.configureNext(LayoutAnimation.Presets.easeInEaseOut);
@@ -33,23 +36,23 @@ export default function ImportantPagesSection({ isDark }: { isDark: boolean }) {
   };
 
   const appPages = [
-    { label: "Browse All Listings", icon: <Building2 color={colors.primary} size={20} />, bg: `${colors.primary}15`, onPress: () => navigation.navigate("RentTab" as any) },
-    { label: "My Wishlist", icon: <Heart color={colors.error} size={20} />, bg: `${colors.error}15`, onPress: () => navigation.navigate("WishlistTab" as any) },
+    { label: "Browse All Listings", icon: <Building2 color="#ffffff" size={20} />, bg: `${colors.primary}`, onPress: () => navigation.navigate("RentTab" as any) },
+    { label: "My Wishlist", icon: <Heart color="#ffffff" size={20} />, bg: `${colors.error}`, onPress: () => navigation.navigate("WishlistTab" as any) },
   ];
 
   const infoPages = [
-    { label: "About Us", icon: <Info color={colors.secondary} size={20} />, onPress: () => navigation.navigate("About") },
-    { label: "Contact", icon: <PhoneCall color={colors.secondary} size={20} />, onPress: () => navigation.navigate("Contact") },
-    { label: "FAQs", icon: <HelpCircle color={colors.secondary} size={20} />, onPress: () => navigation.navigate("FAQ") },
-    { label: "Privacy Policy", icon: <Shield color={colors.secondary} size={20} />, onPress: () => navigation.navigate("Legal") },
-    { label: "Terms of Service", icon: <FileText color={colors.secondary} size={20} />, onPress: () => navigation.navigate("Legal") },
+    { label: "About Us", icon: <Info color="#ffffff" size={20} />, bg: `${colors.secondary}`, onPress: () => navigation.navigate("About") },
+    { label: "Contact", icon: <PhoneCall color="#ffffff" size={20} />, bg: `${colors.secondary}`, onPress: () => navigation.navigate("Contact") },
+    { label: "FAQs", icon: <HelpCircle color="#ffffff" size={20} />, bg: `${colors.secondary}`, onPress: () => navigation.navigate("FAQ") },
+    { label: "Privacy Policy", icon: <Shield color="#ffffff" size={20} />, bg: `${colors.secondary}`, onPress: () => navigation.navigate("Legal") },
+    { label: "Terms of Service", icon: <FileText color="#ffffff" size={20} />, bg: `${colors.secondary}`, onPress: () => navigation.navigate("Legal") },
   ];
 
   return (
     <View style={styles.container}>
 
       {/* Extracted App Pages (Not collapsed) */}
-      <View style={[styles.card, { backgroundColor: isDark ? colors.surface : "#fff", borderColor: colors.border }]}>
+      <View style={[styles.card, { backgroundColor: isDark ? colors.surface : colors.surface, borderColor: colors.border }]}>
         {appPages.map((p, index) => (
           <React.Fragment key={p.label}>
             <TouchableOpacity style={styles.pageItem} onPress={p.onPress}>
@@ -71,7 +74,7 @@ export default function ImportantPagesSection({ isDark }: { isDark: boolean }) {
       {/* Info Pages (Collapsible) */}
       <View style={{ marginTop: 16 }}>
         <TouchableOpacity 
-          style={[styles.header, { backgroundColor: isDark ? colors.surface : "#fff", borderColor: colors.border }]} 
+          style={[styles.header, { backgroundColor: isDark ? colors.surface : colors.surface, borderColor: colors.border }]} 
           onPress={toggleExpand}
           activeOpacity={0.7}
         >
@@ -81,18 +84,18 @@ export default function ImportantPagesSection({ isDark }: { isDark: boolean }) {
               {isExpanded ? "Collapse info pages" : "About, Contact, FAQs, Privacy..."}
             </Text>
           </View>
-          <View style={[styles.iconWrap, { backgroundColor: `${colors.secondary}15` }]}>
-            {isExpanded ? <ChevronUp color={colors.secondary} size={24} /> : <ChevronDown color={colors.secondary} size={24} />}
+          <View style={[styles.iconWrap, { backgroundColor: `${colors.secondary}` }]}>
+            {isExpanded ? <ChevronUp color="#ffffff" size={24} /> : <ChevronDown color="#ffffff" size={24} />}
           </View>
         </TouchableOpacity>
 
         {isExpanded && (
-          <View style={[styles.card, { marginTop: 8, backgroundColor: isDark ? colors.surface : "#fff", borderColor: colors.border }]}>
+          <View style={[styles.card, { marginTop: 8, backgroundColor: isDark ? colors.surface : colors.surface, borderColor: colors.border }]}>
             {infoPages.map((p, index) => (
               <React.Fragment key={p.label}>
                 <TouchableOpacity style={styles.pageItem} onPress={p.onPress}>
                   <View style={styles.pageItemLeft}>
-                    <View style={styles.pageIconContainer}>
+                    <View style={[styles.pageIconContainer, { backgroundColor: p.bg }]}>
                       {p.icon}
                     </View>
                     <Text style={[styles.pageLabel, { color: colors.textPrimary }]}>{p.label}</Text>
@@ -112,7 +115,7 @@ export default function ImportantPagesSection({ isDark }: { isDark: boolean }) {
   );
 }
 
-const styles = StyleSheet.create({
+const getStyles = (colors: any) => StyleSheet.create({
   container: {
     marginTop: 20,
     marginBottom: 8,
@@ -164,7 +167,6 @@ const styles = StyleSheet.create({
     width: 38,
     height: 38,
     borderRadius: 19,
-    backgroundColor: `${colors.secondary}10`, // Default for info items
     alignItems: "center",
     justifyContent: "center",
   },

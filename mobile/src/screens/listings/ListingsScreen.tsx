@@ -11,21 +11,20 @@ import {
   Modal,
   Alert,
 } from "react-native";
+import { SafeAreaView } from "react-native-safe-area-context";
+import { BlurView } from "expo-blur";
 import * as Location from 'expo-location';
 import { useNavigation, useRoute } from "@react-navigation/native";
 import type { NativeStackNavigationProp } from "@react-navigation/native-stack";
 import { useInfiniteQuery } from "@tanstack/react-query";
-import { 
-  SlidersHorizontal, 
-  ArrowUpDown, 
-  LayoutGrid, 
-  List, 
-  MapPin, 
-  Search, 
-  ChevronDown, 
+import {
+  SlidersHorizontal,
+  LayoutGrid,
+  Search,
+  ChevronDown,
   Crosshair,
   Map as MapIcon,
-  Filter
+  Filter,
 } from "lucide-react-native";
 import { fetchRentListings, fetchBuyListings } from "../../features/properties/services/propertyService";
 import PropertyCard from "../../components/ui/PropertyCard";
@@ -49,10 +48,29 @@ export default function ListingsScreen() {
   const navigation = useNavigation<NavProp>();
   const route = useRoute<any>();
   
-  const listingType = route.name.includes("Buy") ? "buy" : "rent";
+  const listingType = route.params?.type || (route.name.includes("Buy") ? "buy" : "rent");
+  const accent = listingType === "buy" ? colors.success : colors.primary;
   
   const [filterVisible, setFilterVisible] = useState(false);
-  const [filters, setFilters] = useState(route.params?.initialFilters || {});
+  
+  // Initialize filters from route params, prioritizing searchData over initialFilters
+  const initializeFilters = () => {
+    const { searchData, initialFilters } = route.params || {};
+    
+    if (searchData) {
+      // Convert searchData to filter format
+      return {
+        city: searchData.city || searchData.location || '',
+        category: searchData.category || searchData.propertyType || '',
+        q: searchData.q || searchData.keywords || '',
+        ...initialFilters // Allow initialFilters to override if present
+      };
+    }
+    
+    return initialFilters || {};
+  };
+  
+  const [filters, setFilters] = useState(initializeFilters());
   const [sortBy, setSortBy] = useState('newest');
   const [sortVisible, setSortVisible] = useState(false);
   const [viewMode, setViewMode] = useState<'grid' | 'list' | 'map'>('grid');
@@ -63,6 +81,15 @@ export default function ListingsScreen() {
   const [heroCategory, setHeroCategory] = useState(filters.category || '');
   const [heroQ, setHeroQ] = useState(filters.q || '');
   const [catPickerVisible, setCatPickerVisible] = useState(false);
+
+  // Update filters when route params change (e.g., new search from home)
+  useEffect(() => {
+    const newFilters = initializeFilters();
+    setFilters(newFilters);
+    setHeroCity(newFilters.city || '');
+    setHeroCategory(newFilters.category || '');
+    setHeroQ(newFilters.q || '');
+  }, [route.params]);
 
   const {
     data,
@@ -163,7 +190,7 @@ export default function ListingsScreen() {
   );
 
   return (
-    <View style={styles.container}>
+    <SafeAreaView style={styles.container} edges={['top', 'left', 'right']}>
       <View style={{ flex: 1 }}>
         {viewMode === 'map' ? (
           <View style={{ flex: 1 }}>
@@ -177,7 +204,7 @@ export default function ListingsScreen() {
             />
             <View style={styles.floatingToggles}>
                <Pressable 
-                 style={[styles.floatingModeBtn, { backgroundColor: listingType === 'buy' ? colors.success : colors.primary }]}
+                 style={[styles.floatingModeBtn, { backgroundColor: accent }]}
                  onPress={() => setViewMode('grid')}
                >
                  <LayoutGrid size={20} color="#fff" strokeWidth={2.5} />
@@ -196,10 +223,7 @@ export default function ListingsScreen() {
             showsVerticalScrollIndicator={false}
             ListHeaderComponent={
               <>
-                <View style={[
-                  styles.heroContainer, 
-                  listingType === 'buy' ? styles.heroBuy : styles.heroRent
-                ]}>
+                <View style={styles.heroContainer}>
                   <View style={styles.pageTitleRow}>
                     <Text style={styles.pageTitle}>
                       {listingType === 'buy' ? 'Buy Properties' : 'Rent Properties'}
@@ -210,9 +234,17 @@ export default function ListingsScreen() {
                       </View>
                     </View>
                   </View>
+                  <Text style={styles.heroSubtitle}>
+                    Search by city, property type, and keywords. Save your favorites and compare quickly.
+                  </Text>
 
-                  <View style={styles.heroCard}>
-                    <View style={styles.inputGroup}>
+                  <BlurView
+                    intensity={95}
+                    tint={isDark ? "dark" : "light"}
+                    style={styles.heroCardBlur}
+                  >
+                    <View style={styles.heroCard}>
+                      <View style={styles.inputGroup}>
                       <Text style={styles.inputLabel}>LOCATION</Text>
                       <View style={styles.inputWrapper}>
                         <Search size={18} color={colors.textSecondary} />
@@ -225,48 +257,49 @@ export default function ListingsScreen() {
                         />
                         <Pressable onPress={handleGetLocation} disabled={isLocating}>
                           {isLocating ? (
-                            <ActivityIndicator size="small" color={listingType === 'buy' ? colors.success : colors.primary} />
+                            <ActivityIndicator size="small" color={accent} />
                           ) : (
-                            <Crosshair size={18} color={listingType === 'buy' ? colors.success : colors.primary} />
+                            <Crosshair size={18} color={accent} />
                           )}
                         </Pressable>
                       </View>
-                    </View>
-
-                    <Pressable 
-                      style={styles.inputGroup} 
-                      onPress={() => setCatPickerVisible(true)}
-                    >
-                      <Text style={styles.inputLabel}>PROPERTY TYPE</Text>
-                      <View style={styles.inputWrapper}>
-                        <Text style={[styles.valueText, !heroCategory && { color: colors.textSecondary }]}>
-                          {heroCategory ? heroCategory.charAt(0).toUpperCase() + heroCategory.slice(1) : 'All Types'}
-                        </Text>
-                        <ChevronDown size={18} color={colors.textSecondary} />
                       </View>
-                    </Pressable>
 
-                    <View style={styles.inputGroup}>
-                      <Text style={styles.inputLabel}>KEYWORDS</Text>
-                      <View style={styles.inputWrapper}>
-                        <TextInput 
-                          style={styles.heroInput}
-                          placeholder="3 BHK, furnished, parking..."
-                          placeholderTextColor={colors.textSecondary}
-                          value={heroQ}
-                          onChangeText={setHeroQ}
-                        />
+                      <Pressable 
+                        style={styles.inputGroup} 
+                        onPress={() => setCatPickerVisible(true)}
+                      >
+                        <Text style={styles.inputLabel}>PROPERTY TYPE</Text>
+                        <View style={styles.inputWrapper}>
+                          <Text style={[styles.valueText, !heroCategory && { color: colors.textSecondary }]}>
+                            {heroCategory ? heroCategory.charAt(0).toUpperCase() + heroCategory.slice(1) : 'All Types'}
+                          </Text>
+                          <ChevronDown size={18} color={colors.textSecondary} />
+                        </View>
+                      </Pressable>
+
+                      <View style={styles.inputGroup}>
+                        <Text style={styles.inputLabel}>KEYWORDS</Text>
+                        <View style={styles.inputWrapper}>
+                          <TextInput 
+                            style={styles.heroInput}
+                            placeholder="3 BHK, furnished, parking..."
+                            placeholderTextColor={colors.textSecondary}
+                            value={heroQ}
+                            onChangeText={setHeroQ}
+                          />
+                        </View>
                       </View>
-                    </View>
 
-                    <Pressable 
-                      style={[styles.searchBtn, { backgroundColor: listingType === 'buy' ? colors.success : colors.primary }]}
-                      onPress={handleApplyHeroSearch}
-                    >
-                      <Search size={20} color="#fff" strokeWidth={2.5} />
-                      <Text style={styles.searchBtnText}>Search</Text>
-                    </Pressable>
-                  </View>
+                      <Pressable 
+                        style={[styles.searchBtn, { backgroundColor: accent }]}
+                        onPress={handleApplyHeroSearch}
+                      >
+                        <Search size={20} color="#fff" strokeWidth={2.5} />
+                        <Text style={styles.searchBtnText}>Search</Text>
+                      </Pressable>
+                    </View>
+                  </BlurView>
                 </View>
 
                 <View style={styles.resultsInfoRow}>
@@ -282,7 +315,7 @@ export default function ListingsScreen() {
                   </Pressable>
 
                   <View style={styles.countIndicator}>
-                    <View style={[styles.dot, { backgroundColor: listingType === 'buy' ? colors.success : colors.primary }]} />
+                    <View style={[styles.dot, { backgroundColor: accent }]} />
                     <Text style={[styles.countLabel, { color: colors.textSecondary }]}>
                       <Text style={[styles.countValue, { color: colors.textPrimary }]}>{totalCount}</Text> found
                     </Text>
@@ -306,7 +339,7 @@ export default function ListingsScreen() {
                       style={[styles.modeBtn, viewMode === 'grid' && styles.modeBtnActive]}
                       onPress={() => setViewMode('grid')}
                     >
-                      <LayoutGrid size={18} color={viewMode === 'grid' ? (listingType === 'buy' ? colors.success : colors.primary) : colors.textSecondary} />
+                      <LayoutGrid size={18} color={viewMode === 'grid' ? accent : colors.textSecondary} />
                     </Pressable>
                     <Pressable 
                       style={styles.modeBtn}
@@ -322,7 +355,7 @@ export default function ListingsScreen() {
               <RefreshControl
                 refreshing={isRefetching}
                 onRefresh={() => refetch()}
-                colors={[listingType === 'buy' ? colors.success : colors.primary]}
+                colors={[accent]}
               />
             }
             ListEmptyComponent={
@@ -335,13 +368,13 @@ export default function ListingsScreen() {
             ListFooterComponent={
               isPending ? (
                 <View style={styles.center}>
-                  <ActivityIndicator size="large" color={listingType === 'buy' ? colors.success : colors.primary} />
+                  <ActivityIndicator size="large" color={accent} />
                   <Text style={styles.loadingText}>Loading properties…</Text>
                 </View>
               ) : isFetchingNextPage ? (
                 <ActivityIndicator
                   size="small"
-                  color={listingType === 'buy' ? colors.success : colors.primary}
+                  color={accent}
                   style={{ paddingVertical: 20 }}
                 />
               ) : null
@@ -409,7 +442,7 @@ export default function ListingsScreen() {
           </Pressable>
         </Pressable>
       </Modal>
-    </View>
+    </SafeAreaView>
   );
 }
 
@@ -419,54 +452,66 @@ const getStyles = (colors: any, isDark: boolean) => StyleSheet.create({
     backgroundColor: colors.background,
   },
   heroContainer: {
-    padding: 16,
-    paddingTop: 12,
-  },
-  heroRent: {
-    backgroundColor: isDark ? '#0f172a' : '#1e293b',
-  },
-  heroBuy: {
-    backgroundColor: isDark ? '#064e3b' : '#064e3b',
+    paddingHorizontal: 12,
+    paddingTop: 20, // Reduced from 120 to 20 since SafeAreaView handles safe area
+    paddingBottom: 8,
   },
   pageTitleRow: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
-    marginBottom: 16,
+    marginBottom: 8,
     marginTop: 4,
   },
   pageTitle: {
     fontSize: 24,
     fontWeight: '900',
-    color: '#fff',
+    color: colors.textPrimary,
+    letterSpacing: -0.6,
   },
   statusBadge: {
-    backgroundColor: 'rgba(255,255,255,0.15)',
+    backgroundColor: isDark ? "rgba(255,255,255,0.08)" : colors.input,
     paddingHorizontal: 8,
     paddingVertical: 4,
     borderRadius: 6,
     borderWidth: 1,
-    borderColor: 'rgba(255,255,255,0.2)',
+    borderColor: colors.border,
   },
   statusBadgeText: {
-    color: '#fff',
+    color: colors.textSecondary,
     fontSize: 10,
     fontWeight: '800',
     textTransform: 'uppercase',
   },
+  heroSubtitle: {
+    color: colors.textSecondary,
+    fontSize: 12,
+    lineHeight: 16,
+    fontWeight: "500",
+    marginTop: -2,
+    marginBottom: 8,
+  },
   heroCard: {
-    backgroundColor: colors.surface,
-    borderRadius: 20,
-    padding: 20,
+    backgroundColor: 'transparent',
+    borderRadius: 16,
+    paddingHorizontal: 14,
+    paddingVertical: 12,
+  },
+  heroCardBlur: {
+    borderRadius: 16,
+    overflow: "hidden",
+    borderWidth: 1,
+    borderColor: isDark ? "rgba(255,255,255,0.1)" : "rgba(0,0,0,0.05)",
+    backgroundColor: isDark ? 'rgba(15,23,42,0.85)' : 'rgba(255,255,255,0.85)',
     shadowColor: '#000',
-    shadowOffset: { width: 0, height: 10 },
+    shadowOffset: { width: 0, height: 4 },
     shadowOpacity: 0.1,
-    shadowRadius: 20,
-    elevation: 10,
+    shadowRadius: 12,
+    elevation: 5,
   },
   floatingToggles: {
     position: 'absolute',
-    top: 20,
+    top: 60, // Increased from 20 to account for safe area
     alignSelf: 'center',
     zIndex: 1000,
     shadowColor: '#000',
@@ -489,7 +534,7 @@ const getStyles = (colors: any, isDark: boolean) => StyleSheet.create({
     fontSize: 14,
   },
   inputGroup: {
-    marginBottom: 16,
+    marginBottom: 10,
   },
   inputLabel: {
     fontSize: 10,
@@ -504,21 +549,21 @@ const getStyles = (colors: any, isDark: boolean) => StyleSheet.create({
     backgroundColor: colors.input,
     borderRadius: 12,
     paddingHorizontal: 12,
-    paddingVertical: 12,
+    paddingVertical: 10,
     gap: 10,
     borderWidth: 1,
     borderColor: colors.border,
   },
   heroInput: {
     flex: 1,
-    fontSize: 14,
+    fontSize: 13,
     color: colors.textPrimary,
     fontWeight: '500',
     padding: 0,
   },
   valueText: {
     flex: 1,
-    fontSize: 14,
+    fontSize: 13,
     color: colors.textPrimary,
     fontWeight: '600',
   },
@@ -526,8 +571,8 @@ const getStyles = (colors: any, isDark: boolean) => StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
-    paddingVertical: 14,
-    borderRadius: 14,
+    paddingVertical: 10,
+    borderRadius: 999,
     gap: 10,
     marginTop: 8,
   },
@@ -545,6 +590,7 @@ const getStyles = (colors: any, isDark: boolean) => StyleSheet.create({
     fontSize: 18,
     fontWeight: '800',
     color: colors.textPrimary,
+    letterSpacing: -0.3,
   },
   filterRow: {
     flexDirection: 'row',
@@ -618,7 +664,7 @@ const getStyles = (colors: any, isDark: boolean) => StyleSheet.create({
   },
   list: {
     paddingTop: 8,
-    paddingBottom: 40,
+    paddingBottom: 80, // Reduced from 100 to 80 to match map view spacing
   },
   cardWrapper: {
     alignItems: 'center',

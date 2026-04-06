@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback, useMemo, useRef } from "react";
+import { useState, useEffect, useCallback, useMemo, useRef } from "react";
 import {
   View,
   Text,
@@ -9,17 +9,32 @@ import {
   ActivityIndicator,
   KeyboardAvoidingView,
   Platform,
-  SafeAreaView,
   RefreshControl,
   Alert,
   Image,
-  Pressable,
+  Modal,
+  ScrollView,
 } from "react-native";
+import { SafeAreaView } from "react-native-safe-area-context";
 import { useNavigation, useRoute } from "@react-navigation/native";
-import { ArrowLeft, Send, MessageSquare, Trash2, RefreshCw, ChevronLeft } from "lucide-react-native";
+import { ArrowLeft, Send, MessageSquare, Trash2, ChevronLeft, Paperclip, Smile, X, FileText } from "lucide-react-native";
+import * as ImagePicker from 'expo-image-picker';
 import { useTheme } from "../../theme/useTheme";
 import { useAuth } from "../../features/auth/AuthContext";
+import ProtectedScreen from "../../components/auth/ProtectedScreen";
 import { messageService } from "../../features/messages/services/messageService";
+
+const MAX_FILE_SIZE = 10 * 1024 * 1024; // 10MB
+
+// Common emojis for quick access
+const EMOJI_LIST = [
+  '😀', '😃', '😄', '😁', '😅', '😂', '🤣', '😊', '😇', '🙂',
+  '😉', '😍', '🥰', '😘', '😋', '😎', '🤔', '🤗', '🤩', '😏',
+  '😢', '😭', '😤', '😠', '🤯', '😱', '😰', '🥺', '😴', '🤮',
+  '👍', '👎', '👏', '🙌', '🤝', '💪', '✌️', '🤞', '👋', '🙏',
+  '❤️', '🧡', '💛', '💚', '💙', '💜', '🖤', '💔', '💯', '✨',
+  '🔥', '⭐', '🎉', '🎊', '💐', '🏠', '🏡', '🏢', '🔑', '📍'
+];
 
 type Conversation = {
   _id: string;
@@ -57,10 +72,21 @@ export default function MessagesScreen() {
   const [inputText, setInputText] = useState("");
   const [view, setView] = useState<"list" | "chat">("list");
   const [refreshing, setRefreshing] = useState(false);
+  const [selectedImage, setSelectedImage] = useState<any>(null);
+  const [showEmojiPicker, setShowEmojiPicker] = useState(false);
+  const [uploadError, setUploadError] = useState<string | null>(null);
   const flatRef = useRef<FlatList>(null);
+  const inputRef = useRef<TextInput>(null);
 
   // Load conversations
   const loadConversations = useCallback(async () => {
+    // Don't load conversations if user is not authenticated
+    if (!user) {
+      setConvsLoading(false);
+      setRefreshing(false);
+      return;
+    }
+
     try {
       setConvsLoading(true);
       const result = await messageService.getConversations();
@@ -72,7 +98,7 @@ export default function MessagesScreen() {
       setConvsLoading(false);
       setRefreshing(false);
     }
-  }, []);
+  }, [user]);
 
   useEffect(() => { loadConversations(); }, [loadConversations]);
 
@@ -129,31 +155,88 @@ export default function MessagesScreen() {
     }
   }, []);
 
+  const handlePickImage = useCallback(async () => {
+    try {
+      const permissionResult = await ImagePicker.requestMediaLibraryPermissionsAsync();
+      
+      if (!permissionResult.granted) {
+        Alert.alert("Permission Required", "Please allow access to your photo library to upload images.");
+        return;
+      }
+
+      const result = await ImagePicker.launchImageLibraryAsync({
+        mediaTypes: ImagePicker.MediaTypeOptions.Images,
+        allowsEditing: true,
+        quality: 0.8,
+        base64: false,
+      });
+
+      if (!result.canceled && result.assets[0]) {
+        const asset = result.assets[0];
+        
+        // Check file size (approximate from dimensions if fileSize not available)
+        if (asset.fileSize && asset.fileSize > MAX_FILE_SIZE) {
+          setUploadError(`File size must be less than ${MAX_FILE_SIZE / (1024 * 1024)}MB`);
+          return;
+        }
+
+        setSelectedImage(asset);
+        setUploadError(null);
+      }
+    } catch (error) {
+      console.error("Error picking image:", error);
+      Alert.alert("Error", "Failed to pick image. Please try again.");
+    }
+  }, []);
+
+  const clearImage = useCallback(() => {
+    setSelectedImage(null);
+    setUploadError(null);
+  }, []);
+
+  const handleEmojiSelect = useCallback((emoji: string) => {
+    setInputText(prev => prev + emoji);
+    setShowEmojiPicker(false);
+    // Focus back on input
+    setTimeout(() => inputRef.current?.focus(), 100);
+  }, []);
+
+  const formatFileSize = (bytes: number) => {
+    if (bytes === 0) return '0 Bytes';
+    const k = 1024;
+    const sizes = ['Bytes', 'KB', 'MB'];
+    const i = Math.floor(Math.log(bytes) / Math.log(k));
+    return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + ' ' + sizes[i];
+  };
+
   const handleSend = useCallback(async () => {
-    if (!inputText.trim() || !selectedConv) return;
+    if ((!inputText.trim() && !selectedImage) || !selectedConv) return;
     const text = inputText.trim();
     setInputText("");
+    const imageToSend = selectedImage;
+    setSelectedImage(null);
 
     const tempMsg: Message = {
       _id: `temp-${Date.now()}`,
       sender: currentUserId,
-      text,
+      text: text || (imageToSend ? "📷 Image" : ""),
       createdAt: new Date().toISOString(),
       read: false,
       pending: true,
     };
     setMessages(prev => [...prev, tempMsg]);
-    setTimeout(() => flatRef.current?.scrollToEnd({ animated: true }), 100);
+    // No need to scroll with inverted list - new messages appear at bottom automatically
 
     setSending(true);
     try {
       const convId = selectedConv._id || (selectedConv as any).id;
+      // TODO: Update messageService to handle image uploads
       const result = await messageService.sendMessage(convId, text);
       const realMsg = result?.data?.message || result?.message || result;
       setMessages(prev => prev.map(m => m._id === tempMsg._id ? { ...realMsg, pending: false } : m));
       setConversations(prev => prev.map(c =>
         c._id === convId || (c as any).id === convId
-          ? { ...c, lastMessage: { text, sender: currentUserId, createdAt: new Date().toISOString() }, lastActivityAt: new Date().toISOString() }
+          ? { ...c, lastMessage: { text: text || "📷 Image", sender: currentUserId, createdAt: new Date().toISOString() }, lastActivityAt: new Date().toISOString() }
           : c
       ).sort((a, b) => new Date(b.lastActivityAt || 0).getTime() - new Date(a.lastActivityAt || 0).getTime()));
     } catch(e) {
@@ -162,7 +245,7 @@ export default function MessagesScreen() {
     } finally {
       setSending(false);
     }
-  }, [inputText, selectedConv, currentUserId]);
+  }, [inputText, selectedImage, selectedConv, currentUserId]);
 
   const handleDeleteConversation = useCallback(async () => {
     if (!selectedConv) return;
@@ -266,14 +349,19 @@ export default function MessagesScreen() {
   // ── LIST VIEW ──
   if (view === "list") {
     return (
-      <SafeAreaView style={[styles.safe, { backgroundColor: colors.background }]}>
+      <ProtectedScreen 
+        requireAuth={true}
+        title="Sign In Required"
+        message="Please sign in to access your messages"
+      >
+        <SafeAreaView style={[styles.safe, { backgroundColor: colors.background }]}>
         {/* Header */}
         <View style={styles.pageHeader}>
           <TouchableOpacity onPress={() => navigation.goBack()} style={styles.backBtn}>
             <ArrowLeft size={22} color={colors.textPrimary} />
           </TouchableOpacity>
-          <View style={styles.headerIcon}>
-            <MessageSquare size={22} color={colors.primary} />
+          <View style={[styles.headerIcon, { backgroundColor: colors.primary }]}>
+            <MessageSquare size={22} color="#ffffff" />
           </View>
           <Text style={styles.pageTitle}>Messages</Text>
         </View>
@@ -309,6 +397,7 @@ export default function MessagesScreen() {
           />
         )}
       </SafeAreaView>
+      </ProtectedScreen>
     );
   }
 
@@ -316,36 +405,41 @@ export default function MessagesScreen() {
   const otherParticipant = selectedConv ? getOtherParticipant(selectedConv) : null;
 
   return (
-    <SafeAreaView style={[styles.safe, { backgroundColor: colors.background }]}>
-      {/* Chat Header */}
-      <View style={[styles.chatHeader, { borderBottomColor: colors.border }]}>
-        <TouchableOpacity onPress={() => { setView("list"); setSelectedConv(null); setMessages([]); }} style={styles.backBtn}>
-          <ChevronLeft size={26} color={colors.textPrimary} />
-        </TouchableOpacity>
-        <View style={[styles.avatar, { backgroundColor: colors.primary, width: 36, height: 36, borderRadius: 18 }]}>
-          <Text style={styles.avatarText}>{(otherParticipant?.name || "?")[0]?.toUpperCase()}</Text>
-        </View>
-        <View style={{ flex: 1, marginLeft: 10 }}>
-          <Text style={[styles.chatTitle, { color: colors.textPrimary }]} numberOfLines={1}>
-            {otherParticipant?.name || "Unknown User"}
-          </Text>
-          {selectedConv?.property?.title && (
-            <Text style={[styles.chatSubtitle, { color: colors.textSecondary }]} numberOfLines={1}>
-              🏠 {selectedConv.property.title}
-            </Text>
-          )}
-        </View>
-        <TouchableOpacity onPress={handleDeleteConversation} style={{ padding: 8 }}>
-          <Trash2 size={18} color={colors.error} />
-        </TouchableOpacity>
-      </View>
-
-      {/* Messages */}
+    <ProtectedScreen 
+      requireAuth={true}
+      title="Sign In Required"
+      message="Please sign in to access your messages"
+    >
+      <SafeAreaView style={[styles.safe, { backgroundColor: colors.background }]}>
       <KeyboardAvoidingView
         style={{ flex: 1 }}
         behavior={Platform.OS === "ios" ? "padding" : undefined}
-        keyboardVerticalOffset={90}
+        keyboardVerticalOffset={Platform.OS === "ios" ? 0 : 0}
       >
+        {/* Chat Header */}
+        <View style={[styles.chatHeader, { borderBottomColor: colors.border }]}>
+          <TouchableOpacity onPress={() => { setView("list"); setSelectedConv(null); setMessages([]); }} style={styles.backBtn}>
+            <ChevronLeft size={26} color={colors.textPrimary} />
+          </TouchableOpacity>
+          <View style={[styles.avatar, { backgroundColor: colors.primary, width: 36, height: 36, borderRadius: 18 }]}>
+            <Text style={styles.avatarText}>{(otherParticipant?.name || "?")[0]?.toUpperCase()}</Text>
+          </View>
+          <View style={{ flex: 1, marginLeft: 10 }}>
+            <Text style={[styles.chatTitle, { color: colors.textPrimary }]} numberOfLines={1}>
+              {otherParticipant?.name || "Unknown User"}
+            </Text>
+            {selectedConv?.property?.title && (
+              <Text style={[styles.chatSubtitle, { color: colors.textSecondary }]} numberOfLines={1}>
+                🏠 {selectedConv.property.title}
+              </Text>
+            )}
+          </View>
+          <TouchableOpacity onPress={handleDeleteConversation} style={{ padding: 8 }}>
+            <Trash2 size={18} color={colors.error} />
+          </TouchableOpacity>
+        </View>
+
+        {/* Messages */}
         {msgsLoading ? (
           <View style={styles.center}>
             <ActivityIndicator size="large" color={colors.primary} />
@@ -356,41 +450,126 @@ export default function MessagesScreen() {
             data={messages}
             renderItem={renderMessageItem}
             keyExtractor={item => item._id || (item as any).id}
+            inverted
             contentContainerStyle={styles.msgList}
-            onContentSizeChange={() => flatRef.current?.scrollToEnd({ animated: false })}
+            style={{ flex: 1 }}
             ListEmptyComponent={
-              <View style={styles.center}>
-                <Text style={{ color: colors.textSecondary, marginTop: 40 }}>No messages yet. Say hello! 👋</Text>
+              <View style={styles.emptyMsgContainer}>
+                <Text style={{ color: colors.textSecondary }}>No messages yet. Say hello! 👋</Text>
               </View>
             }
           />
         )}
 
-        {/* Input */}
-        <View style={[styles.inputBar, { backgroundColor: colors.surface, borderTopColor: colors.border }]}>
-          <TextInput
-            style={[styles.msgInput, { backgroundColor: colors.input, color: colors.textPrimary, borderColor: colors.border }]}
-            placeholder="Type a message..."
-            placeholderTextColor={colors.textSecondary}
-            value={inputText}
-            onChangeText={setInputText}
-            multiline
-            maxLength={2000}
-            onSubmitEditing={handleSend}
-          />
-          <TouchableOpacity
-            onPress={handleSend}
-            disabled={sending || !inputText.trim()}
-            style={[styles.sendBtn, { backgroundColor: !inputText.trim() ? colors.border : colors.primary }]}
-          >
-            {sending
-              ? <ActivityIndicator size="small" color="#fff" />
-              : <Send size={18} color="#fff" />
-            }
-          </TouchableOpacity>
+        {/* Input Bar - Always at bottom */}
+        <View style={{ backgroundColor: colors.surface }}>
+          {/* Upload Error */}
+          {uploadError && (
+            <View style={[styles.errorBanner, { backgroundColor: colors.error + '20', borderColor: colors.error + '40' }]}>
+              <Text style={[styles.errorText, { color: colors.error }]}>{uploadError}</Text>
+              <TouchableOpacity onPress={() => setUploadError(null)}>
+                <Text style={[styles.errorDismiss, { color: colors.error }]}>✕</Text>
+              </TouchableOpacity>
+            </View>
+          )}
+
+          {/* Image Preview */}
+          {selectedImage && (
+            <View style={[styles.imagePreview, { backgroundColor: colors.input, borderColor: colors.border }]}>
+              <Image source={{ uri: selectedImage.uri }} style={styles.previewImage} />
+              <View style={styles.previewInfo}>
+                <Text style={[styles.previewName, { color: colors.textPrimary }]} numberOfLines={1}>
+                  {selectedImage.fileName || 'Image'}
+                </Text>
+                {selectedImage.fileSize && (
+                  <Text style={[styles.previewSize, { color: colors.textSecondary }]}>
+                    {formatFileSize(selectedImage.fileSize)}
+                  </Text>
+                )}
+              </View>
+              <TouchableOpacity onPress={clearImage} style={styles.previewClose}>
+                <X size={18} color={colors.textSecondary} />
+              </TouchableOpacity>
+            </View>
+          )}
+
+          <View style={[styles.inputBar, { borderTopColor: colors.border }]}>
+            <TouchableOpacity
+              onPress={handlePickImage}
+              disabled={sending}
+              style={styles.iconBtn}
+            >
+              <Paperclip size={20} color={colors.textSecondary} />
+            </TouchableOpacity>
+
+            <TextInput
+              ref={inputRef}
+              style={[styles.msgInput, { backgroundColor: colors.input, color: colors.textPrimary, borderColor: colors.border }]}
+              placeholder={selectedImage ? "Add a caption..." : "Type a message..."}
+              placeholderTextColor={colors.textSecondary}
+              value={inputText}
+              onChangeText={setInputText}
+              multiline
+              maxLength={2000}
+            />
+
+            <TouchableOpacity
+              onPress={() => setShowEmojiPicker(true)}
+              disabled={sending}
+              style={styles.iconBtn}
+            >
+              <Smile size={20} color={colors.textSecondary} />
+            </TouchableOpacity>
+
+            <TouchableOpacity
+              onPress={handleSend}
+              disabled={sending || (!inputText.trim() && !selectedImage)}
+              style={[styles.sendBtn, { backgroundColor: (!inputText.trim() && !selectedImage) ? colors.border : colors.primary }]}
+            >
+              {sending
+                ? <ActivityIndicator size="small" color="#fff" />
+                : <Send size={18} color="#fff" />
+              }
+            </TouchableOpacity>
+          </View>
         </View>
+
+        {/* Emoji Picker Modal */}
+        <Modal
+          visible={showEmojiPicker}
+          transparent
+          animationType="slide"
+          onRequestClose={() => setShowEmojiPicker(false)}
+        >
+          <TouchableOpacity
+            style={styles.emojiModalOverlay}
+            activeOpacity={1}
+            onPress={() => setShowEmojiPicker(false)}
+          >
+            <View style={[styles.emojiPicker, { backgroundColor: colors.surface }]}>
+              <View style={styles.emojiHeader}>
+                <Text style={[styles.emojiTitle, { color: colors.textPrimary }]}>Select Emoji</Text>
+                <TouchableOpacity onPress={() => setShowEmojiPicker(false)}>
+                  <X size={24} color={colors.textSecondary} />
+                </TouchableOpacity>
+              </View>
+              <ScrollView contentContainerStyle={styles.emojiGrid}>
+                {EMOJI_LIST.map((emoji, idx) => (
+                  <TouchableOpacity
+                    key={idx}
+                    onPress={() => handleEmojiSelect(emoji)}
+                    style={styles.emojiButton}
+                  >
+                    <Text style={styles.emojiText}>{emoji}</Text>
+                  </TouchableOpacity>
+                ))}
+              </ScrollView>
+            </View>
+          </TouchableOpacity>
+        </Modal>
       </KeyboardAvoidingView>
     </SafeAreaView>
+    </ProtectedScreen>
   );
 }
 
@@ -415,7 +594,6 @@ const getStyles = (colors: any, isDark: boolean) => StyleSheet.create({
     width: 40,
     height: 40,
     borderRadius: 20,
-    backgroundColor: `${colors.primary}20`,
     alignItems: "center",
     justifyContent: "center",
   },
@@ -481,8 +659,17 @@ const getStyles = (colors: any, isDark: boolean) => StyleSheet.create({
   },
   chatTitle: { fontSize: 16, fontWeight: "700" },
   chatSubtitle: { fontSize: 12, marginTop: 1 },
-  msgList: { padding: 16, paddingBottom: 8 },
-  msgRow: { marginBottom: 8 },
+  msgList: { 
+    padding: 16, 
+    paddingTop: 8,
+  },
+  emptyMsgContainer: {
+    flex: 1,
+    alignItems: "center",
+    justifyContent: "center",
+    transform: [{ scaleY: -1 }], // Flip back the empty state since list is inverted
+  },
+  msgRow: { marginTop: 8 }, // Changed from marginBottom since list is inverted
   msgRowMine: { alignItems: "flex-end" },
   msgRowOther: { alignItems: "flex-start" },
   msgBubble: {
@@ -505,13 +692,48 @@ const getStyles = (colors: any, isDark: boolean) => StyleSheet.create({
   msgTime: { fontSize: 11, marginTop: 4, alignSelf: "flex-end" },
 
   // Input bar
+  errorBanner: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+    paddingHorizontal: 12,
+    paddingVertical: 8,
+    borderBottomWidth: 1,
+  },
+  errorText: { fontSize: 12, flex: 1 },
+  errorDismiss: { fontSize: 16, fontWeight: "700", marginLeft: 8 },
+  imagePreview: {
+    flexDirection: "row",
+    alignItems: "center",
+    marginHorizontal: 12,
+    marginTop: 8,
+    padding: 8,
+    borderRadius: 12,
+    borderWidth: 1,
+    gap: 10,
+  },
+  previewImage: {
+    width: 50,
+    height: 50,
+    borderRadius: 8,
+  },
+  previewInfo: { flex: 1 },
+  previewName: { fontSize: 13, fontWeight: "600" },
+  previewSize: { fontSize: 11, marginTop: 2 },
+  previewClose: { padding: 4 },
   inputBar: {
     flexDirection: "row",
     alignItems: "flex-end",
     paddingHorizontal: 12,
     paddingVertical: 10,
     borderTopWidth: 1,
-    gap: 10,
+    gap: 8,
+  },
+  iconBtn: {
+    width: 36,
+    height: 36,
+    alignItems: "center",
+    justifyContent: "center",
   },
   msgInput: {
     flex: 1,
@@ -529,4 +751,39 @@ const getStyles = (colors: any, isDark: boolean) => StyleSheet.create({
     alignItems: "center",
     justifyContent: "center",
   },
+  // Emoji picker
+  emojiModalOverlay: {
+    flex: 1,
+    backgroundColor: "rgba(0,0,0,0.5)",
+    justifyContent: "flex-end",
+  },
+  emojiPicker: {
+    borderTopLeftRadius: 20,
+    borderTopRightRadius: 20,
+    paddingBottom: 20,
+    maxHeight: "60%",
+  },
+  emojiHeader: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+    paddingHorizontal: 20,
+    paddingVertical: 16,
+    borderBottomWidth: 1,
+    borderBottomColor: "rgba(0,0,0,0.1)",
+  },
+  emojiTitle: { fontSize: 18, fontWeight: "700" },
+  emojiGrid: {
+    flexDirection: "row",
+    flexWrap: "wrap",
+    padding: 16,
+    gap: 8,
+  },
+  emojiButton: {
+    width: 44,
+    height: 44,
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  emojiText: { fontSize: 28 },
 });

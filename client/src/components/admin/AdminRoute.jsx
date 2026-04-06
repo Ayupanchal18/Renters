@@ -1,7 +1,8 @@
 import React, { useEffect, useState } from 'react';
 import { Navigate, useLocation } from 'react-router-dom';
 import { isAuthenticated, getToken, getTokenPayload } from '../../utils/auth';
-import { Loader2 } from 'lucide-react';
+import { Loader2, Shield, AlertTriangle } from 'lucide-react';
+import { showErrorToast, showWarningToast } from '../../utils/toastNotifications';
 
 /**
  * Admin Route Protection Component (HOC)
@@ -55,11 +56,27 @@ const AdminRoute = ({ children }) => {
 
   // Redirect to login if not authenticated
   if (!isAuthenticated()) {
+    showWarningToast(
+      'Please log in to access the admin panel',
+      'authentication',
+      {
+        title: 'Authentication Required',
+        description: 'Admin access requires authentication'
+      }
+    );
     return <Navigate to="/login" state={{ from: location }} replace />;
   }
 
   // Redirect to home if not admin
   if (!isAdmin) {
+    showErrorToast(
+      'Access denied. Admin privileges required.',
+      'authorization',
+      {
+        title: 'Access Denied',
+        description: 'You do not have permission to access the admin panel'
+      }
+    );
     return <Navigate to="/" replace />;
   }
 

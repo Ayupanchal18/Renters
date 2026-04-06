@@ -83,8 +83,8 @@ export default function ContactScreen() {
           {/* Contact Info Cards */}
           <View style={styles.infoGrid}>
             <View style={styles.infoCard}>
-              <View style={[styles.iconWrap, { backgroundColor: `${colors.primary}15` }]}>
-                <Mail size={22} color={colors.primary} />
+              <View style={[styles.iconWrap, { backgroundColor: colors.primary }]}>
+                <Mail size={22} color="#ffffff" />
               </View>
               <Text style={styles.infoTitle}>Email</Text>
               <Text style={styles.infoVal}>support@renters.in</Text>
@@ -92,8 +92,8 @@ export default function ContactScreen() {
             </View>
 
             <View style={styles.infoCard}>
-              <View style={[styles.iconWrap, { backgroundColor: `${colors.secondary}15` }]}>
-                <Phone size={22} color={colors.secondary} />
+              <View style={[styles.iconWrap, { backgroundColor: colors.secondary }]}>
+                <Phone size={22} color="#ffffff" />
               </View>
               <Text style={styles.infoTitle}>Phone</Text>
               <Text style={styles.infoVal}>+91 79 1234 5678</Text>
@@ -101,8 +101,8 @@ export default function ContactScreen() {
             </View>
 
             <View style={styles.infoCard}>
-              <View style={[styles.iconWrap, { backgroundColor: `${colors.error}15` }]}>
-                <MapPin size={22} color={colors.error} />
+              <View style={[styles.iconWrap, { backgroundColor: colors.error }]}>
+                <MapPin size={22} color="#ffffff" />
               </View>
               <Text style={styles.infoTitle}>Address</Text>
               <Text style={styles.infoVal}>CG Road, Navrangpura</Text>
@@ -110,8 +110,8 @@ export default function ContactScreen() {
             </View>
 
             <View style={styles.infoCard}>
-              <View style={[styles.iconWrap, { backgroundColor: `${colors.success}15` }]}>
-                <Clock size={22} color={colors.success} />
+              <View style={[styles.iconWrap, { backgroundColor: colors.success }]}>
+                <Clock size={22} color="#ffffff" />
               </View>
               <Text style={styles.infoTitle}>Hours</Text>
               <Text style={styles.infoVal}>Mon–Sat: 10AM – 7PM</Text>

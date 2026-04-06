@@ -2,7 +2,7 @@ import React, { useState } from "react";
 import { StyleSheet, Text, View, Alert, TouchableOpacity, ActivityIndicator } from "react-native";
 import { Mail, Phone, ShieldCheck, CheckCircle, AlertCircle, ChevronRight, BadgeCheck } from "lucide-react-native";
 import { useNavigation } from "@react-navigation/native";
-import { colors } from "../../../theme/tokens";
+import { useTheme } from "../../../theme/useTheme";
 import { User } from "../../../types/types";
 import { getAccessToken } from "../../../features/auth/services/tokenStorage";
 import { env } from "../../../config/env";
@@ -16,6 +16,9 @@ type Props = {
 export default function VerificationSection({ user }: Props) {
   const navigation = useNavigation<NativeStackNavigationProp<RootStackParamList>>();
   const [loadingType, setLoadingType] = useState<"email" | "phone" | null>(null);
+  const { colors } = useTheme();
+  
+  const styles = React.useMemo(() => getStyles(colors), [colors]);
 
   const handleVerify = async (type: "email" | "phone") => {
     const contact = type === "email" ? user?.email : user?.phone;
@@ -68,6 +71,7 @@ export default function VerificationSection({ user }: Props) {
           statusIcon={user?.emailVerified ? <CheckCircle color={colors.success} size={18} /> : <AlertCircle color={colors.error} size={18} />}
           onPress={() => !user?.emailVerified && handleVerify("email")}
           isLoading={loadingType === "email"}
+          colors={colors}
         />
         <View style={styles.divider} />
         <PressableRow 
@@ -78,15 +82,7 @@ export default function VerificationSection({ user }: Props) {
           statusIcon={user?.phoneVerified ? <CheckCircle color={colors.success} size={18} /> : <AlertCircle color={colors.error} size={18} />}
           onPress={() => !user?.phoneVerified && handleVerify("phone")}
           isLoading={loadingType === "phone"}
-        />
-        <View style={styles.divider} />
-        <PressableRow 
-          label="Identity Verification" 
-          sublabel="Required for renting/buying"
-          statusText="Unverified"
-          icon={<ShieldCheck color={colors.textSecondary} size={22} />} 
-          statusIcon={<AlertCircle color={colors.error} size={18} />}
-          onPress={() => Alert.alert("Verify Identity", "You will be prompted to upload a valid Government ID document.")}
+          colors={colors}
         />
       </View>
     </View>
@@ -100,7 +96,8 @@ function PressableRow({
   icon, 
   statusIcon, 
   onPress,
-  isLoading
+  isLoading,
+  colors
 }: { 
   label: string; 
   sublabel?: string; 
@@ -109,7 +106,10 @@ function PressableRow({
   statusIcon?: React.ReactNode; 
   onPress: () => void;
   isLoading?: boolean;
+  colors: any;
 }) {
+  const styles = React.useMemo(() => getStyles(colors), [colors]);
+  
   return (
     <TouchableOpacity style={styles.pressableRow} onPress={onPress} disabled={isLoading}>
       <View style={styles.leftContent}>
@@ -136,9 +136,9 @@ function PressableRow({
   );
 }
 
-const styles = StyleSheet.create({
+const getStyles = (colors: any) => StyleSheet.create({
   card: {
-    backgroundColor: "#ffffff",
+    backgroundColor: colors.surface,
     borderRadius: 16,
     borderWidth: 1,
     borderColor: colors.border,

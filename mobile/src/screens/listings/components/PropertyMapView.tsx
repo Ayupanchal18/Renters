@@ -142,7 +142,7 @@ const PropertyMapView = ({ properties, onPropertyPress, type }: PropertyMapViewP
 
                 <G opacity={isSelected ? 1 : 0.9}>
                   <View style={[styles.pinShadow, isSelected && styles.pinShadowSelected]}>
-                    <Svg width={isSelected ? 60 : 48} height={isSelected ? 80 : 64} viewBox="0 0 384 512">
+                    <Svg width={isSelected ? 40 : 32} height={isSelected ? 52 : 42} viewBox="0 0 384 512">
                       <Path
                         d="M172.268 501.67C26.97 291.031 0 269.413 0 192 0 85.961 85.961 0 192 0s192 85.961 192 192c0 77.413-26.97 99.031-172.268 309.67-9.535 13.774-29.93 13.773-39.464 0z"
                         fill={themeColor}
@@ -266,14 +266,14 @@ const getStyles = (colors: any, isDark: boolean) => StyleSheet.create({
   svgMarkerContainer: {
     alignItems: 'center',
     justifyContent: 'flex-end',
-    width: 100,
-    height: 120,
+    width: 70, // Reduced from 100 to 70 to match smaller pins
+    height: 80, // Reduced from 120 to 80 to match smaller pins
     backgroundColor: 'transparent',
   },
   markerPriceBubble: {
-    paddingHorizontal: 12,
-    paddingVertical: 6,
-    borderRadius: 20,
+    paddingHorizontal: 8, // Reduced from 12 to 8 for smaller bubble
+    paddingVertical: 4, // Reduced from 6 to 4 for smaller bubble
+    borderRadius: 16, // Reduced from 20 to 16 to match smaller padding
     borderWidth: 1.5,
     marginBottom: 4,
     shadowColor: '#000',
@@ -285,9 +285,9 @@ const getStyles = (colors: any, isDark: boolean) => StyleSheet.create({
     justifyContent: 'center',
   },
   markerPriceText: {
-    fontSize: 13,
-    fontWeight: '900',
-    letterSpacing: -0.2,
+    fontSize: 10, // Reduced from 13 to 10 for better proportion with smaller markers
+    fontWeight: '800', // Reduced from 900 to 800 for slightly less bold appearance
+    letterSpacing: -0.1, // Reduced from -0.2 to -0.1
     textAlign: 'center',
   },
   pinShadow: {
@@ -415,7 +415,7 @@ const getStyles = (colors: any, isDark: boolean) => StyleSheet.create({
   },
   bottomListContainer: {
     position: 'absolute',
-    bottom: 20,
+    bottom: 80, // Reduced from 100 to 80 to minimize gap while still clearing tab bar
     left: 0,
     right: 0,
     zIndex: 500,

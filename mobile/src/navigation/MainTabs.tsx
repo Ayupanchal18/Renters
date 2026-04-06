@@ -6,6 +6,7 @@ import WishlistScreen from "../screens/wishlist/WishlistScreen";
 import ProfileScreen from "../screens/profile/ProfileScreen";
 import { useTheme } from "../theme/useTheme";
 import { Text, StyleSheet, View, Image, TouchableOpacity } from "react-native";
+import { BlurView } from "expo-blur";
 import { Home, Search, Heart, User, Banknote, Key, Bell, MessageSquare } from "lucide-react-native";
 import { useNavigation } from "@react-navigation/native";
 
@@ -76,17 +77,30 @@ export default function MainTabs() {
   return (
     <Tab.Navigator
       screenOptions={({ route }) => ({
+        headerBackground: () => (
+          <BlurView
+            intensity={80}
+            tint={isDark ? "dark" : "light"}
+            style={{ flex: 1 }}
+          />
+        ),
         headerStyle: { 
-          backgroundColor: colors.surface, 
-          borderBottomWidth: 1, 
-          borderBottomColor: colors.border,
+          backgroundColor: "transparent",
           elevation: 0,
           shadowOpacity: 0,
         },
+        headerTransparent: true,
         tabBarActiveTintColor: colors.primary,
         tabBarInactiveTintColor: colors.textSecondary,
         tabBarStyle: styles.tabBar,
         tabBarLabelStyle: styles.tabLabel,
+        tabBarBackground: () => (
+          <BlurView
+            intensity={100}
+            tint={isDark ? "dark" : "light"}
+            style={styles.tabBarBlur}
+          />
+        ),
         tabBarIcon: ({ focused }) => (
           <TabIcon name={route.name} focused={focused} type={route.name.includes('Buy') ? 'buy' : 'rent'} colors={colors} />
         ),
@@ -150,12 +164,33 @@ export default function MainTabs() {
 
 const getStyles = (colors: any, isDark: boolean) => StyleSheet.create({
   tabBar: {
-    backgroundColor: colors.surface,
-    borderTopWidth: 1,
-    borderTopColor: colors.border,
+    position: "absolute",
+    left: 16,
+    right: 16,
+    bottom: 10,
+    borderRadius: 28,
+    borderTopWidth: 0,
     height: 60,
     paddingBottom: 8,
     paddingTop: 4,
+    backgroundColor: "transparent",
+    borderWidth: 1,
+    borderColor: isDark ? 'rgba(255,255,255,0.1)' : 'rgba(0,0,0,0.05)',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.15,
+    shadowRadius: 12,
+    elevation: 8,
+  },
+  tabBarBlur: {
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    right: 0,
+    bottom: 0,
+    borderRadius: 28,
+    overflow: 'hidden',
+    backgroundColor: isDark ? 'rgba(30,41,59,0.25)' : 'rgba(248,250,252,0.25)',
   },
   tabLabel: {
     fontSize: 11,

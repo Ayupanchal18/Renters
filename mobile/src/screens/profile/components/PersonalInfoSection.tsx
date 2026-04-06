@@ -1,7 +1,7 @@
 import React from "react";
 import { StyleSheet, Text, View, TouchableOpacity, Image } from "react-native";
 import { Sparkles, Edit2, Mail, Phone, MapPin, Calendar } from "lucide-react-native";
-import { colors } from "../../../theme/tokens";
+import { useTheme } from "../../../theme/useTheme";
 import { User } from "../../../types/types";
 
 type Props = {
@@ -10,6 +10,10 @@ type Props = {
 };
 
 export default function PersonalInfoSection({ user, onEditPress }: Props) {
+  const { colors } = useTheme();
+  
+  const styles = React.useMemo(() => getStyles(colors), [colors]);
+  
   const info = [
     { icon: <Mail size={16} color="#ffffff" />, label: "Email", value: user?.email || "Not provided", bg: "#10b981" },
     { icon: <Phone size={16} color="#ffffff" />, label: "Phone", value: user?.phone || "Not provided", bg: "#f97316" },
@@ -25,8 +29,8 @@ export default function PersonalInfoSection({ user, onEditPress }: Props) {
       {/* Header */}
       <View style={styles.headerRow}>
         <View style={styles.headerLeft}>
-          <View style={styles.headerIconWrap}>
-            <Sparkles size={18} color={colors.primary} />
+          <View style={[styles.headerIconWrap, { backgroundColor: colors.primary }]}>
+            <Sparkles size={18} color="#ffffff" />
           </View>
           <View>
             <Text style={styles.title}>Personal Information</Text>
@@ -70,9 +74,9 @@ export default function PersonalInfoSection({ user, onEditPress }: Props) {
   );
 }
 
-const styles = StyleSheet.create({
+const getStyles = (colors: any) => StyleSheet.create({
   card: {
-    backgroundColor: "#ffffff",
+    backgroundColor: colors.surface,
     borderRadius: 16,
     borderWidth: 1,
     borderColor: colors.border,
@@ -85,7 +89,7 @@ const styles = StyleSheet.create({
     justifyContent: "space-between",
     paddingHorizontal: 16,
     paddingVertical: 14,
-    backgroundColor: "#f8fafc", // muted/30 equivalent
+    backgroundColor: colors.input, // Use theme color instead of hardcoded
     borderBottomWidth: 1,
     borderBottomColor: colors.border,
   },
@@ -137,7 +141,7 @@ const styles = StyleSheet.create({
     gap: 12,
     padding: 12,
     borderRadius: 12,
-    backgroundColor: "#f1f5f9", // muted/40 equivalent
+    backgroundColor: colors.input, // Use theme color instead of hardcoded
   },
   infoIconWrap: {
     width: 32,

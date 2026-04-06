@@ -70,7 +70,7 @@ export default function FilterDrawer({ visible, onClose, onApply, currentFilters
         <SafeAreaView style={styles.sheet}>
           <View style={styles.header}>
             <View style={styles.headerTitleContainer}>
-              <View style={[styles.iconContainer, { backgroundColor: themeColor + '1A' }]}>
+              <View style={[styles.iconContainer, { backgroundColor: colors.input, borderColor: themeColor }]}>
                 <SlidersHorizontal size={18} color={themeColor} />
               </View>
               <Text style={styles.headerTitle}>{type === 'buy' ? 'Buy Filters' : 'Rent Filters'}</Text>
@@ -315,7 +315,7 @@ const getStyles = (colors: any, isDark: boolean) => StyleSheet.create({
   sheet: { backgroundColor: colors.background, borderTopLeftRadius: 24, borderTopRightRadius: 24, height: '85%' },
   header: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', padding: 16, borderBottomWidth: 1, borderBottomColor: colors.border, backgroundColor: colors.surface, borderTopLeftRadius: 24, borderTopRightRadius: 24 },
   headerTitleContainer: { flexDirection: 'row', alignItems: 'center', gap: 12 },
-  iconContainer: { width: 36, height: 36, borderRadius: 8, alignItems: 'center', justifyContent: 'center' },
+  iconContainer: { width: 36, height: 36, borderRadius: 8, alignItems: 'center', justifyContent: 'center', borderWidth: 1 },
   headerTitle: { fontSize: 18, fontWeight: '700', color: colors.textPrimary },
   closeBtn: { padding: 8 },
   scrollContent: { padding: 20 },

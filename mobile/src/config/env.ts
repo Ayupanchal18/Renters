@@ -1,4 +1,4 @@
-const DEFAULT_API_BASE_URL = "http://192.168.1.15:8080";
+const DEFAULT_API_BASE_URL = "http://172.20.10.3:8080";
 
 function requiredEnv(value: string | undefined, fallback: string) {
   if (value && value.trim().length > 0) {

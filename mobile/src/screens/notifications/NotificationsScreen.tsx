@@ -16,6 +16,7 @@ import {
 } from "lucide-react-native";
 import { useTheme } from "../../theme/useTheme";
 import { useAuth } from "../../features/auth/AuthContext";
+import ProtectedScreen from "../../components/auth/ProtectedScreen";
 import { notificationService } from "../../features/notifications/services/notificationService";
 
 type Notification = {
@@ -39,7 +40,7 @@ const NOTIFICATION_ICONS: Record<string, string> = {
 export default function NotificationsScreen() {
   const { colors, isDark } = useTheme();
   const styles = useMemo(() => getStyles(colors, isDark), [colors, isDark]);
-  const { user, isGuest } = useAuth();
+  const { user, isGuest, logout } = useAuth();
   const navigation = useNavigation<any>();
 
   const [notifications, setNotifications] = useState<Notification[]>([]);
@@ -53,7 +54,9 @@ export default function NotificationsScreen() {
   const unreadCount = Array.isArray(notifications) ? notifications.filter(n => !n.read).length : 0;
 
   const load = useCallback(async (p = 1, unreadOnly = false, append = false) => {
-    if (isGuest) return;
+    // Don't load notifications if user is not authenticated
+    if (isGuest || !user) return;
+    
     try {
       if (!append) setLoading(true);
       else setLoadingMore(true);
@@ -80,7 +83,7 @@ export default function NotificationsScreen() {
       setLoadingMore(false);
       setRefreshing(false);
     }
-  }, [isGuest]);
+  }, [isGuest, user]);
 
   useEffect(() => { load(1, filter === "unread"); }, [load, filter]);
 
@@ -91,23 +94,24 @@ export default function NotificationsScreen() {
   };
 
   const handleMarkAsRead = useCallback(async (notification: Notification) => {
-    if (notification.read) return;
+    if (notification.read || isGuest || !user) return;
     try {
       await notificationService.markAsRead(notification._id);
       setNotifications(prev =>
         prev.map(n => n._id === notification._id ? { ...n, read: true } : n)
       );
     } catch(e) {}
-  }, []);
+  }, [isGuest, user]);
 
   const handleMarkAllAsRead = useCallback(async () => {
+    if (isGuest || !user) return;
     try {
       await notificationService.markAllAsRead();
       setNotifications(prev => prev.map(n => ({ ...n, read: true })));
     } catch(e) {
       Alert.alert("Error", "Failed to mark all as read.");
     }
-  }, []);
+  }, [isGuest, user]);
 
   const handleNotificationPress = (notification: Notification) => {
     handleMarkAsRead(notification);
@@ -158,7 +162,7 @@ export default function NotificationsScreen() {
             Sign in to see your notifications
           </Text>
           <TouchableOpacity
-            onPress={() => navigation.navigate("Login")}
+            onPress={async () => await logout()}
             style={[styles.primaryBtn, { backgroundColor: colors.primary }]}
           >
             <Text style={styles.primaryBtnText}>Sign In</Text>
@@ -201,15 +205,20 @@ export default function NotificationsScreen() {
   };
 
   return (
-    <SafeAreaView style={[styles.safe, { backgroundColor: colors.background }]}>
+    <ProtectedScreen 
+      requireAuth={true}
+      title="Sign In Required"
+      message="Please sign in to view your notifications"
+    >
+      <SafeAreaView style={[styles.safe, { backgroundColor: colors.background }]}>
       {/* Header */}
       <View style={[styles.headerCard, { backgroundColor: colors.surface, borderColor: colors.border }]}>
         <View style={styles.pageHeader}>
           <TouchableOpacity onPress={() => navigation.goBack()} style={styles.backBtn}>
             <ArrowLeft size={22} color={colors.textPrimary} />
           </TouchableOpacity>
-          <View style={[styles.headerIcon, { backgroundColor: `${colors.primary}20` }]}>
-            <Bell size={22} color={colors.primary} />
+          <View style={[styles.headerIcon, { backgroundColor: colors.primary }]}>
+            <Bell size={22} color="#ffffff" />
           </View>
           <View style={{ flex: 1 }}>
             <Text style={styles.pageTitle}>Notifications</Text>
@@ -301,6 +310,7 @@ export default function NotificationsScreen() {
         />
       )}
     </SafeAreaView>
+    </ProtectedScreen>
   );
 }
 

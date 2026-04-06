@@ -7,20 +7,21 @@ import {
   TextInput,
   TouchableOpacity,
   ActivityIndicator,
-  SafeAreaView,
   Alert,
   Switch,
   KeyboardAvoidingView,
   Platform,
   Modal,
 } from "react-native";
+import { SafeAreaView } from "react-native-safe-area-context";
 import { useNavigation } from "@react-navigation/native";
 import {
   ArrowLeft, ArrowRight, Check, ShoppingBag, Home, Building2, MapPin,
-  DollarSign, Camera, User, AlertCircle, CheckCircle
+  DollarSign, Camera, User, AlertCircle, CheckCircle, Key
 } from "lucide-react-native";
 import { useTheme } from "../../theme/useTheme";
 import { useAuth } from "../../features/auth/AuthContext";
+import ProtectedScreen from "../../components/auth/ProtectedScreen";
 import { apiClient } from "../../api/client";
 import * as ImagePicker from "expo-image-picker";
 
@@ -75,25 +76,24 @@ const STEPS = [
 ];
 
 const LISTING_TYPES = [
-  { key: "rent", label: "For Rent", emoji: "🔑", desc: "List a property for rental" },
-  { key: "buy", label: "For Sale", emoji: "🏡", desc: "List a property for sale" },
+  { key: "rent", label: "For Rent", icon: Key, desc: "List a property for rental" },
+  { key: "buy", label: "For Sale", icon: Home, desc: "List a property for sale" },
 ];
 
-const CATEGORIES = ["flat", "house", "room", "pg", "hostel", "commercial", "plot", "villa"];
+const CATEGORIES = ["flat", "house", "room", "pg", "hostel", "commercial"];
 
-const PROPERTY_TYPES = ["Apartment", "Independent House", "Builder Floor", "Studio", "DuplEX", "Penthouse"];
+const PROPERTY_TYPES = ["Apartment", "Independent House", "Builder Floor", "Studio", "Duplex", "Penthouse"];
 
 const FURNISHING = [
-  { key: "fully-furnished", label: "Fully Furnished" },
-  { key: "semi-furnished", label: "Semi Furnished" },
   { key: "unfurnished", label: "Unfurnished" },
+  { key: "semi", label: "Semi Furnished" },
+  { key: "fully", label: "Fully Furnished" },
 ];
 
 const PREFERRED_TENANTS = [
   { key: "any", label: "Any" },
   { key: "family", label: "Family" },
-  { key: "bachelors", label: "Bachelors" },
-  { key: "working-professionals", label: "Working Professionals" },
+  { key: "bachelor", label: "Bachelor" },
 ];
 
 const AMENITIES_LIST = [
@@ -104,13 +104,13 @@ const AMENITIES_LIST = [
 
 const POSSESSION_STATUS = [
   { key: "ready", label: "Ready to Move" },
-  { key: "under-construction", label: "Under Construction" },
-  { key: "possession-in-6-months", label: "Possession in 6 months" },
+  { key: "under_construction", label: "Under Construction" },
+  { key: "resale", label: "Resale" },
 ];
 
 const OWNER_TYPES = [
   { key: "owner", label: "Owner" },
-  { key: "broker", label: "Broker/Agent" },
+  { key: "agent", label: "Agent/Broker" },
   { key: "builder", label: "Builder" },
 ];
 
@@ -134,15 +134,28 @@ function SelectOption({
         borderRadius: 10,
         borderWidth: 1.5,
         borderColor: selected ? colors.primary : colors.border,
-        backgroundColor: selected ? `${colors.primary}15` : colors.surface,
+        backgroundColor: selected ? colors.surface : colors.surface,
         marginRight: 8,
         marginBottom: 8,
         flexDirection: "row",
         alignItems: "center",
         gap: 6,
+        shadowColor: selected ? colors.primary : 'transparent',
+        shadowOpacity: selected ? 0.1 : 0,
+        shadowRadius: 4,
+        elevation: selected ? 2 : 0,
       }}
     >
-      {selected && <Check size={14} color={colors.primary} />}
+      <View style={{
+        width: 16,
+        height: 16,
+        borderRadius: 8,
+        backgroundColor: selected ? colors.primary : colors.input,
+        alignItems: 'center',
+        justifyContent: 'center',
+      }}>
+        {selected && <Check size={10} color="#ffffff" />}
+      </View>
       <Text style={{ color: selected ? colors.primary : colors.textPrimary, fontWeight: selected ? "700" : "500", fontSize: 13 }}>
         {label}
       </Text>
@@ -193,7 +206,7 @@ export default function PostPropertyScreen() {
   const { colors, isDark } = useTheme();
   const styles = useMemo(() => getStyles(colors, isDark), [colors, isDark]);
   const navigation = useNavigation<any>();
-  const { user, isGuest } = useAuth();
+  const { user, logout } = useAuth();
 
   const [step, setStep] = useState(1);
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -292,13 +305,39 @@ export default function PostPropertyScreen() {
         }
       });
 
-      const endpoint = form.listingType === "buy" ? "/api/buy-properties" : "/api/rent-properties";
-      await apiClient.post(endpoint, fd, {
-        headers: { "Content-Type": "multipart/form-data" },
-      });
+      // Handle photo uploads
+      if (form.photos.length > 0) {
+        form.photos.forEach((uri, index) => {
+          const filename = uri.split('/').pop() || `photo_${index}.jpg`;
+          const match = /\.(\w+)$/.exec(filename);
+          const type = match ? `image/${match[1]}` : 'image/jpeg';
+          
+          fd.append('photos', {
+            uri,
+            name: filename,
+            type,
+          } as any);
+        });
+      }
+
+      const endpoint = form.listingType === "buy" ? "/api/properties/buy" : "/api/properties/rent";
+      console.log("Submitting to:", endpoint);
+      console.log("Form data keys:", Array.from((fd as any)._parts || []).map((p: any) => p[0]));
+      
+      const response = await apiClient.post(endpoint, fd);
+      console.log("Submission successful:", response.data);
       setSubmitted(true);
     } catch (e: any) {
-      Alert.alert("Submission Failed", e?.response?.data?.message || "Something went wrong. Please try again.");
+      console.error("Submission error:", e);
+      console.error("Error response:", e?.response?.data);
+      console.error("Error status:", e?.response?.status);
+      
+      const errorMessage = e?.response?.data?.message 
+        || e?.response?.data?.error 
+        || e?.message 
+        || "Something went wrong. Please try again.";
+      
+      Alert.alert("Submission Failed", errorMessage);
     } finally {
       setIsSubmitting(false);
     }
@@ -306,7 +345,7 @@ export default function PostPropertyScreen() {
 
   const pickPhoto = async () => {
     const result = await ImagePicker.launchImageLibraryAsync({
-      mediaTypes: ImagePicker.MediaTypeOptions.Images,
+      mediaTypes: ['images'],
       allowsMultipleSelection: true,
       quality: 0.8,
     });
@@ -326,49 +365,65 @@ export default function PostPropertyScreen() {
   // ── Success Page ──────────────────────────────────────────────
   if (submitted) {
     return (
-      <SafeAreaView style={[styles.safe, { backgroundColor: colors.background }]}>
-        <View style={styles.center}>
-          <View style={[styles.successIcon, { backgroundColor: `${colors.success}20` }]}>
-            <CheckCircle size={64} color={colors.success} />
+      <SafeAreaView style={[styles.safe, { backgroundColor: colors.background }]} edges={['top', 'bottom']}>
+        <ScrollView contentContainerStyle={styles.successContainer}>
+          {/* Success Icon */}
+          <View style={styles.successIconWrapper}>
+            <View style={[styles.successIconGlow, { backgroundColor: colors.success }]} />
+            <CheckCircle size={80} color={colors.success} strokeWidth={2} />
           </View>
-          <Text style={[styles.successTitle, { color: colors.textPrimary }]}>Property Listed! 🎉</Text>
-          <Text style={[styles.successMsg, { color: colors.textSecondary }]}>
-            Your property has been submitted and will be reviewed shortly.
-          </Text>
-          <TouchableOpacity
-            onPress={() => navigation.goBack()}
-            style={[styles.primaryBtn, { backgroundColor: colors.primary }]}
-          >
-            <Text style={styles.primaryBtnText}>Back to Home</Text>
-          </TouchableOpacity>
-        </View>
-      </SafeAreaView>
-    );
-  }
 
-  // ── Guest Gate ────────────────────────────────────────────────
-  if (isGuest) {
-    return (
-      <SafeAreaView style={[styles.safe, { backgroundColor: colors.background }]}>
-        <View style={styles.pageHeader}>
-          <TouchableOpacity onPress={() => navigation.goBack()} style={styles.backBtn}>
-            <ArrowLeft size={22} color={colors.textPrimary} />
-          </TouchableOpacity>
-          <Text style={styles.pageTitle}>Post Property</Text>
-        </View>
-        <View style={styles.center}>
-          <Building2 size={56} color={colors.textSecondary} />
-          <Text style={[styles.emptyTitle, { color: colors.textPrimary, marginTop: 16 }]}>Sign in required</Text>
-          <Text style={[styles.emptyText, { color: colors.textSecondary }]}>
-            You need to be signed in to post a property listing.
+          {/* Success Message */}
+          <Text style={[styles.successTitle, { color: colors.textPrimary }]}>Listing Submitted!</Text>
+          <Text style={[styles.successMsg, { color: colors.textSecondary }]}>
+            Your property has been successfully submitted for review. Our team will verify the details and publish your listing shortly.
           </Text>
-          <TouchableOpacity
-            onPress={() => navigation.navigate("Login")}
-            style={[styles.primaryBtn, { backgroundColor: colors.primary, marginTop: 24 }]}
-          >
-            <Text style={styles.primaryBtnText}>Sign In</Text>
-          </TouchableOpacity>
-        </View>
+
+          {/* Timeline */}
+          <View style={styles.timeline}>
+            <View style={[styles.timelineItem, { backgroundColor: colors.surface, borderColor: colors.border }]}>
+              <View style={[styles.timelineIconBg, { backgroundColor: `${colors.primary}20` }]}>
+                <Building2 size={24} color={colors.primary} />
+              </View>
+              <View style={styles.timelineContent}>
+                <Text style={[styles.timelineTitle, { color: colors.textPrimary }]}>Review in Progress</Text>
+                <Text style={[styles.timelineText, { color: colors.textSecondary }]}>
+                  We are reviewing your property details. This usually takes 24–48 hours.
+                </Text>
+              </View>
+            </View>
+
+            <View style={[styles.timelineItem, { backgroundColor: colors.surface, borderColor: colors.border }]}>
+              <View style={[styles.timelineIconBg, { backgroundColor: `${colors.success}20` }]}>
+                <Home size={24} color={colors.success} />
+              </View>
+              <View style={styles.timelineContent}>
+                <Text style={[styles.timelineTitle, { color: colors.textPrimary }]}>Listing Published</Text>
+                <Text style={[styles.timelineText, { color: colors.textSecondary }]}>
+                  Once approved, your listing will be visible to potential tenants.
+                </Text>
+              </View>
+            </View>
+          </View>
+
+          {/* Buttons */}
+          <View style={styles.successButtons}>
+            <TouchableOpacity
+              onPress={() => navigation.navigate('MainTabs')}
+              style={[styles.successPrimaryBtn, { backgroundColor: colors.primary }]}
+            >
+              <Text style={styles.successPrimaryBtnText}>Back to Home</Text>
+            </TouchableOpacity>
+          </View>
+
+          {/* Reference Number */}
+          <View style={[styles.referenceBox, { borderTopColor: colors.border }]}>
+            <Text style={[styles.referenceLabel, { color: colors.textSecondary }]}>Your Listing Reference</Text>
+            <Text style={[styles.referenceNumber, { color: colors.textPrimary }]}>
+              #LST-{Math.random().toString(36).substr(2, 9).toUpperCase()}
+            </Text>
+          </View>
+        </ScrollView>
       </SafeAreaView>
     );
   }
@@ -384,24 +439,47 @@ export default function PostPropertyScreen() {
             <Text style={[styles.stepSub, { color: colors.textSecondary }]}>
               Choose whether this property is for rent or for sale.
             </Text>
-            {LISTING_TYPES.map(lt => (
-              <TouchableOpacity
-                key={lt.key}
-                onPress={() => update("listingType", lt.key)}
-                style={[styles.typeCard, form.listingType === lt.key && { borderColor: colors.primary, backgroundColor: `${colors.primary}10` }]}
-              >
-                <Text style={{ fontSize: 32, marginBottom: 8 }}>{lt.emoji}</Text>
-                <Text style={[styles.typeCardTitle, { color: form.listingType === lt.key ? colors.primary : colors.textPrimary }]}>
-                  {lt.label}
-                </Text>
-                <Text style={{ color: colors.textSecondary, fontSize: 13, textAlign: "center" }}>{lt.desc}</Text>
-                {form.listingType === lt.key && (
-                  <View style={[styles.typeCardCheck, { backgroundColor: colors.primary }]}>
-                    <Check size={14} color="#fff" />
+            {LISTING_TYPES.map(lt => {
+              const ListingIcon = lt.icon;
+              return (
+                <TouchableOpacity
+                  key={lt.key}
+                  onPress={() => update("listingType", lt.key)}
+                  style={[
+                    styles.typeCard, 
+                    form.listingType === lt.key && { 
+                      borderColor: colors.primary, 
+                      backgroundColor: colors.surface,
+                      shadowColor: colors.primary,
+                      shadowOpacity: 0.1,
+                      shadowRadius: 8,
+                      elevation: 4,
+                    }
+                  ]}
+                >
+                  <View style={{
+                    width: 48,
+                    height: 48,
+                    borderRadius: 24,
+                    backgroundColor: form.listingType === lt.key ? colors.primary : colors.input,
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    marginBottom: 12,
+                  }}>
+                    <ListingIcon size={24} color={form.listingType === lt.key ? "#ffffff" : colors.textSecondary} />
                   </View>
-                )}
-              </TouchableOpacity>
-            ))}
+                  <Text style={[styles.typeCardTitle, { color: form.listingType === lt.key ? colors.primary : colors.textPrimary }]}>
+                    {lt.label}
+                  </Text>
+                  <Text style={{ color: colors.textSecondary, fontSize: 13, textAlign: "center" }}>{lt.desc}</Text>
+                  {form.listingType === lt.key && (
+                    <View style={[styles.typeCardCheck, { backgroundColor: colors.primary }]}>
+                      <Check size={14} color="#fff" />
+                    </View>
+                  )}
+                </TouchableOpacity>
+              );
+            })}
           </View>
         );
 
@@ -679,7 +757,12 @@ export default function PostPropertyScreen() {
   const StepIcon = currentStepInfo.icon;
 
   return (
-    <SafeAreaView style={[styles.safe, { backgroundColor: colors.background }]}>
+    <ProtectedScreen 
+      requireAuth={true}
+      title="Sign In Required"
+      message="Please sign in to post a property listing"
+    >
+      <SafeAreaView style={[styles.safe, { backgroundColor: colors.background }]} edges={['top']}>
       {/* Top header */}
       <View style={[styles.pageHeader, { borderBottomColor: colors.border }]}>
         <TouchableOpacity
@@ -710,14 +793,23 @@ export default function PostPropertyScreen() {
           const SIcon = s.icon;
           return (
             <View key={s.id} style={[styles.stepPill,
-              { backgroundColor: done ? `${colors.success}20` : current ? `${colors.primary}15` : colors.surface,
+              { backgroundColor: done ? colors.success : current ? colors.primary : colors.surface,
                 borderColor: done ? colors.success : current ? colors.primary : colors.border }]}>
-              {done
-                ? <Check size={12} color={colors.success} />
-                : <SIcon size={12} color={current ? colors.primary : colors.textSecondary} />
-              }
-              <Text style={{ fontSize: 11, fontWeight: "600", marginLeft: 4,
-                color: done ? colors.success : current ? colors.primary : colors.textSecondary }}>
+              <View style={{
+                width: 20,
+                height: 20,
+                borderRadius: 10,
+                backgroundColor: done ? '#ffffff' : current ? '#ffffff' : colors.input,
+                alignItems: 'center',
+                justifyContent: 'center',
+              }}>
+                {done
+                  ? <Check size={12} color={colors.success} />
+                  : <SIcon size={12} color={current ? colors.primary : colors.textSecondary} />
+                }
+              </View>
+              <Text style={{ fontSize: 12, fontWeight: "700", marginLeft: 6,
+                color: done ? '#ffffff' : current ? '#ffffff' : colors.textSecondary }}>
                 {s.name}
               </Text>
             </View>
@@ -727,11 +819,11 @@ export default function PostPropertyScreen() {
 
       {/* Validation errors */}
       {Object.keys(errors).length > 0 && (
-        <View style={[styles.errorBanner, { backgroundColor: `${colors.error}15`, borderColor: `${colors.error}40` }]}>
-          <AlertCircle size={16} color={colors.error} />
+        <View style={[styles.errorBanner, { backgroundColor: colors.error + '15', borderColor: colors.error + '40' }]}>
+          <AlertCircle size={18} color={colors.error} />
           <View style={{ flex: 1 }}>
             {Object.values(errors).map((err, i) => (
-              <Text key={i} style={{ color: colors.error, fontSize: 13 }}>• {err}</Text>
+              <Text key={i} style={{ color: colors.error, fontSize: 13, lineHeight: 18 }}>• {err}</Text>
             ))}
           </View>
         </View>
@@ -783,6 +875,7 @@ export default function PostPropertyScreen() {
         </View>
       </KeyboardAvoidingView>
     </SafeAreaView>
+    </ProtectedScreen>
   );
 }
 
@@ -796,16 +889,18 @@ const getStyles = (colors: any, isDark: boolean) => StyleSheet.create({
     paddingBottom: 12,
     gap: 12,
     borderBottomWidth: 1,
+    backgroundColor: colors.background,
+    zIndex: 10,
   },
   backBtn: { width: 36, height: 36, borderRadius: 18, alignItems: "center", justifyContent: "center" },
   pageTitle: { fontSize: 18, fontWeight: "800", color: colors.textPrimary },
   stepIndicator: { fontSize: 12, marginTop: 1 },
-  progressBg: { height: 3, width: "100%" },
+  progressBg: { height: 3, width: "100%", zIndex: 9 },
   progressFill: { height: 3, borderRadius: 2 },
-  stepPills: { maxHeight: 44, flexGrow: 0, paddingVertical: 8 },
+  stepPills: { maxHeight: 50, flexGrow: 0, paddingVertical: 10, backgroundColor: colors.background, zIndex: 8 },
   stepPill: {
-    flexDirection: "row", alignItems: "center", paddingHorizontal: 10, paddingVertical: 4,
-    borderRadius: 20, borderWidth: 1,
+    flexDirection: "row", alignItems: "center", paddingHorizontal: 12, paddingVertical: 6,
+    borderRadius: 20, borderWidth: 1.5,
   },
   body: { flex: 1 },
   bodyContent: { padding: 16, paddingBottom: 24 },
@@ -833,14 +928,29 @@ const getStyles = (colors: any, isDark: boolean) => StyleSheet.create({
   pickerTitle: { fontSize: 18, fontWeight: "800", marginBottom: 16 },
   pickerRow: { flexDirection: "row", justifyContent: "space-between", alignItems: "center", paddingVertical: 14, borderBottomWidth: 1 },
   photoPickerBtn: { borderWidth: 2, borderStyle: "dashed", borderRadius: 16, padding: 32, alignItems: "center", justifyContent: "center" },
-  errorBanner: { flexDirection: "row", gap: 10, marginHorizontal: 16, marginTop: 8, padding: 12, borderRadius: 12, borderWidth: 1, alignItems: "flex-start" },
+  errorBanner: { flexDirection: "row", gap: 10, marginHorizontal: 16, marginTop: 8, marginBottom: 8, padding: 12, borderRadius: 12, borderWidth: 1, alignItems: "flex-start", zIndex: 5 },
   navRow: { flexDirection: "row", gap: 12, padding: 16, borderTopWidth: 1 },
   prevBtn: { flexDirection: "row", alignItems: "center", gap: 8, flex: 1, paddingVertical: 14, borderRadius: 14, borderWidth: 1, justifyContent: "center" },
   nextBtn: { flexDirection: "row", alignItems: "center", gap: 8, flex: 2, paddingVertical: 14, borderRadius: 14, justifyContent: "center" },
   center: { flex: 1, alignItems: "center", justifyContent: "center", padding: 24 },
+  successContainer: { flexGrow: 1, padding: 24, alignItems: "center", justifyContent: "center" },
+  successIconWrapper: { alignItems: "center", justifyContent: "center", marginBottom: 24, position: "relative", width: 120, height: 120 },
+  successIconGlow: { position: "absolute", width: 120, height: 120, borderRadius: 60, opacity: 0.2 },
+  successTitle: { fontSize: 32, fontWeight: "800", marginBottom: 12, textAlign: "center" },
+  successMsg: { fontSize: 16, textAlign: "center", lineHeight: 24, marginBottom: 32, paddingHorizontal: 16 },
+  timeline: { width: "100%", marginBottom: 32, gap: 16 },
+  timelineItem: { flexDirection: "row", padding: 16, borderRadius: 12, borderWidth: 1, gap: 12, alignItems: "flex-start" },
+  timelineIconBg: { width: 48, height: 48, borderRadius: 24, alignItems: "center", justifyContent: "center", flexShrink: 0 },
+  timelineContent: { flex: 1 },
+  timelineTitle: { fontSize: 16, fontWeight: "700", marginBottom: 6 },
+  timelineText: { fontSize: 14, lineHeight: 20 },
+  successButtons: { width: "100%", gap: 12, marginBottom: 32 },
+  successPrimaryBtn: { paddingVertical: 16, borderRadius: 12, alignItems: "center" },
+  successPrimaryBtnText: { color: "#fff", fontWeight: "700", fontSize: 16 },
+  referenceBox: { width: "100%", paddingTop: 24, borderTopWidth: 1, alignItems: "center" },
+  referenceLabel: { fontSize: 13, marginBottom: 8 },
+  referenceNumber: { fontSize: 24, fontWeight: "700", fontFamily: "monospace" },
   successIcon: { width: 100, height: 100, borderRadius: 50, alignItems: "center", justifyContent: "center", marginBottom: 20 },
-  successTitle: { fontSize: 26, fontWeight: "800", marginBottom: 10, textAlign: "center" },
-  successMsg: { fontSize: 15, textAlign: "center", lineHeight: 22, marginBottom: 32 },
   emptyTitle: { fontSize: 20, fontWeight: "700", marginBottom: 8, textAlign: "center" },
   emptyText: { fontSize: 14, textAlign: "center", lineHeight: 20 },
   primaryBtn: { marginTop: 20, paddingHorizontal: 32, paddingVertical: 14, borderRadius: 14 },

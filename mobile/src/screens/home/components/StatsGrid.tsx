@@ -39,46 +39,46 @@ const getStyles = (colors: any, isDark: boolean) => StyleSheet.create({
     flexDirection: 'row',
     flexWrap: 'wrap',
     paddingHorizontal: 16,
-    gap: 12,
-    marginTop: 32,
+    gap: 10, // Reduced from 12
+    marginTop: 24, // Reduced from 32
   },
   statBox: {
     width: '48%',
     alignItems: 'center',
     justifyContent: 'center',
     backgroundColor: isDark ? '#1E293B' : '#FFFFFF',
-    paddingVertical: 24,
-    borderRadius: 16,
+    paddingVertical: 18, // Reduced from 24
+    borderRadius: 14, // Reduced from 16
     borderWidth: 1,
     borderColor: isDark ? '#334155' : '#F3F4F6',
     shadowColor: '#000',
     shadowOpacity: isDark ? 0.2 : 0.05,
-    shadowRadius: 10,
-    shadowOffset: { width: 0, height: 4 },
-    elevation: 3,
+    shadowRadius: 8, // Reduced from 10
+    shadowOffset: { width: 0, height: 3 }, // Reduced from 4
+    elevation: 2, // Reduced from 3
   },
   value: {
-    fontSize: 26,
+    fontSize: 22, // Reduced from 26
     fontWeight: '800',
     color: '#0066FF',
-    marginBottom: 6,
+    marginBottom: 4, // Reduced from 6
   },
   label: {
-    fontSize: 11,
+    fontSize: 10, // Reduced from 11
     fontWeight: '600',
     color: isDark ? '#94A3B8' : '#4B5563',
     textAlign: 'center',
     textTransform: 'uppercase',
-    letterSpacing: 0.5,
+    letterSpacing: 0.4,
   },
   ratingRow: {
     flexDirection: 'row',
     alignItems: 'center',
-    marginBottom: 6,
+    marginBottom: 4, // Reduced from 6
   },
   ratingValue: {
     color: isDark ? '#FFFFFF' : '#0D3B66',
-    marginHorizontal: 8,
+    marginHorizontal: 6, // Reduced from 8
     marginBottom: 0,
   },
   star: {

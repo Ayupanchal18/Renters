@@ -23,6 +23,12 @@ const __dirname = path.dirname(__filename);
 
 export default async function createServer(devMode = false) {
     const app = express();
+    
+    // DEBUG: Log all incoming requests to check mobile connectivity
+    app.use((req, res, next) => {
+        console.log(`[SERVER DEBUG] ${req.method} ${req.url} - Origin: ${req.get('origin') || 'none'} - IP: ${req.ip}`);
+        next();
+    });
 
     // Create http server for both dev and production to support Socket.IO
     const httpServer = http.createServer(app);
@@ -243,7 +249,7 @@ export default async function createServer(devMode = false) {
         app.use("/api/privacy", (await safeImport("routes/privacy.js")).default);
         app.use("/api/delivery-preferences", (await safeImport("routes/deliveryPreferences.js")).default);
         app.use("/api/delivery-metrics", (await safeImport("routes/deliveryMetrics.js")).default);
-        app.use("/api/configuration-testing", (await safeImport("routes/configurationTesting.js")).default);
+
         app.use("/api/user-diagnostics", (await safeImport("routes/userDiagnostics.js")).default);
         app.use("/api/alerts", (await safeImport("routes/alertRoutes.js")).default);
         app.use("/api/nearby", (await safeImport("routes/nearby.js")).default);

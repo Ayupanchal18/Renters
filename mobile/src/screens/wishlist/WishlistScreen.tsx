@@ -13,6 +13,8 @@ import type { NativeStackNavigationProp } from "@react-navigation/native-stack";
 import { fetchWishlist } from "../../features/wishlist/services/wishlistService";
 import PropertyCard from "../../components/ui/PropertyCard";
 import { useTheme } from "../../theme/useTheme";
+import { useAuth } from "../../features/auth/AuthContext";
+import ProtectedScreen from "../../components/auth/ProtectedScreen";
 import type { WishlistItem } from "../../types/types";
 import type { RootStackParamList } from "../../navigation/types";
 
@@ -22,9 +24,12 @@ export default function WishlistScreen() {
   const { colors, isDark } = useTheme();
   const styles = useMemo(() => getStyles(colors, isDark), [colors, isDark]);
   const navigation = useNavigation<NavProp>();
+  const { isGuest } = useAuth();
+  
   const { data, isPending, isError, refetch, isRefetching } = useQuery({
     queryKey: ["wishlist"],
     queryFn: fetchWishlist,
+    enabled: !isGuest, // Don't fetch if user is guest
   });
 
   const renderItem = useCallback(
@@ -44,6 +49,19 @@ export default function WishlistScreen() {
     },
     [navigation]
   );
+
+  // Show guest message if user is in guest mode
+  if (isGuest) {
+    return (
+      <View style={[styles.center, { backgroundColor: colors.background }]}>
+        <Text style={styles.emptyEmoji}>♡</Text>
+        <Text style={styles.emptyTitle}>Sign in to save properties</Text>
+        <Text style={styles.emptyText}>
+          Create an account or sign in to save your favorite properties and access them from any device.
+        </Text>
+      </View>
+    );
+  }
 
   if (isPending) {
     return (
@@ -93,7 +111,7 @@ export default function WishlistScreen() {
 }
 
 const getStyles = (colors: any, isDark: boolean) => StyleSheet.create({
-  list: { padding: 20, paddingBottom: 40 },
+  list: { padding: 20, paddingBottom: 40, paddingTop: 130 }, // Increased top padding for transparent header
   emptyContainer: { flexGrow: 1 },
   center: {
     flex: 1,

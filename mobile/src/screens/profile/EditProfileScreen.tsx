@@ -1,14 +1,16 @@
-import React, { useState } from "react"; 
+import React, { useMemo, useState } from "react";
 import { StyleSheet, Text, View, TextInput, Alert, ActivityIndicator } from "react-native";
 import { useNavigation } from "@react-navigation/native";
 import AppScreen from "../../components/layout/AppScreen";
 import AppButton from "../../components/ui/AppButton";
-import { colors } from "../../theme/tokens";
 import { useAuth } from "../../features/auth/AuthContext";
 import { getAccessToken } from "../../features/auth/services/tokenStorage";
 import { env } from "../../config/env";
+import { useTheme } from "../../theme/useTheme";
 
 export default function EditProfileScreen() {
+  const { colors } = useTheme();
+  const styles = useMemo(() => getStyles(colors), [colors]);
   const { user, updateSessionUser } = useAuth();
   const navigation = useNavigation();
   const [name, setName] = useState(user?.name || "");
@@ -92,40 +94,44 @@ export default function EditProfileScreen() {
   );
 }
 
-const styles = StyleSheet.create({
-  container: {
-    padding: 16,
-  },
-  label: {
-    fontSize: 14,
-    fontWeight: "600",
-    color: colors.textPrimary,
-    marginBottom: 6,
-    marginTop: 16,
-  },
-  input: {
-    borderWidth: 1,
-    borderColor: colors.border,
-    borderRadius: 8,
-    paddingHorizontal: 16,
-    paddingVertical: 12,
-    fontSize: 15,
-    color: colors.textPrimary,
-    backgroundColor: "#fff",
-  },
-  inputDisabled: {
-    backgroundColor: "#f1f5f9",
-    color: colors.textSecondary,
-  },
-  textArea: {
-    height: 100,
-  },
-  helperText: {
-    fontSize: 12,
-    color: colors.textSecondary,
-    marginTop: 4,
-  },
-  btnWrap: {
-    marginTop: 32,
-  },
-});
+const getStyles = (colors: any) =>
+  StyleSheet.create({
+    container: {
+      paddingHorizontal: 4,
+      paddingTop: 8,
+    },
+    label: {
+      fontSize: 13,
+      fontWeight: "700",
+      color: colors.textPrimary,
+      marginBottom: 8,
+      marginTop: 14,
+    },
+    input: {
+      borderWidth: 1,
+      borderColor: colors.border,
+      borderRadius: 14,
+      paddingHorizontal: 16,
+      paddingVertical: 12,
+      fontSize: 15,
+      color: colors.textPrimary,
+      backgroundColor: colors.input,
+    },
+    inputDisabled: {
+      backgroundColor: colors.surface,
+      color: colors.textSecondary,
+      opacity: 0.9,
+    },
+    textArea: {
+      height: 110,
+    },
+    helperText: {
+      fontSize: 12,
+      color: colors.textSecondary,
+      marginTop: 6,
+    },
+    btnWrap: {
+      marginTop: 22,
+      paddingBottom: 12,
+    },
+  });

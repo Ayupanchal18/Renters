@@ -12,9 +12,10 @@ interface CollapsibleSectionProps {
   children: React.ReactNode;
   defaultOpen?: boolean;
   count?: number;
+  icon?: React.ReactNode;
 }
 
-export default function CollapsibleSection({ title, children, defaultOpen = true, count }: CollapsibleSectionProps) {
+export default function CollapsibleSection({ title, children, defaultOpen = true, count, icon }: CollapsibleSectionProps) {
   const [isOpen, setIsOpen] = useState(defaultOpen);
 
   const toggleOpen = () => {
@@ -27,11 +28,15 @@ export default function CollapsibleSection({ title, children, defaultOpen = true
       <Pressable onPress={toggleOpen} style={styles.header}>
         <View style={styles.titleRow}>
           <Text style={styles.title}>{title}</Text>
-          {count !== undefined && (
+          {icon ? (
+            <View style={styles.iconContainer}>
+              {icon}
+            </View>
+          ) : count !== undefined ? (
             <View style={styles.badge}>
               <Text style={styles.badgeText}>{count}</Text>
             </View>
-          )}
+          ) : null}
         </View>
         <Text style={[styles.chevron, isOpen && styles.chevronOpen]}>▼</Text>
       </Pressable>
@@ -75,6 +80,12 @@ const styles = StyleSheet.create({
     color: colors.primary,
     fontSize: 12,
     fontWeight: '600',
+  },
+  iconContainer: {
+    width: 20,
+    height: 20,
+    alignItems: 'center',
+    justifyContent: 'center',
   },
   chevron: {
     fontSize: 12,

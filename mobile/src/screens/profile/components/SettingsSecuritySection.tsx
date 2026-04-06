@@ -1,8 +1,8 @@
 import React from "react";
 import { StyleSheet, Text, View, Alert, TouchableOpacity } from "react-native";
 import { useNavigation } from "@react-navigation/native";
-import { MapPin, Settings, ShieldAlert, CreditCard, ChevronRight, Lock } from "lucide-react-native";
-import { colors } from "../../../theme/tokens";
+import { Lock, Phone, Trash2, ChevronRight, ShieldCheck } from "lucide-react-native";
+import { useTheme } from "../../../theme/useTheme";
 
 import { User } from "../../../types/types";
 
@@ -12,34 +12,40 @@ type Props = {
 
 export default function SettingsSecuritySection({ user }: Props) {
   const navigation = useNavigation<any>();
+  const { colors } = useTheme();
+  
+  const styles = React.useMemo(() => getStyles(colors), [colors]);
 
   return (
     <View>
       <View style={styles.sectionHeader}>
-        <Lock color={colors.primary} size={22} />
+        <ShieldCheck color={colors.primary} size={22} />
         <Text style={styles.sectionTitle}>Security & Login</Text>
       </View>
       <View style={styles.card}>
         <PressableRow 
           label="Change Password" 
           sublabel="Update your password"
-          icon={<Settings color={colors.primary} size={22} />} 
-          onPress={() => navigation.navigate("ChangePassword")} 
+          icon={<Lock color="#ffffff" size={20} />} 
+          onPress={() => navigation.navigate("ChangePassword")}
+          colors={colors}
         />
         <View style={styles.divider} />
         <PressableRow 
           label="Change Phone" 
           sublabel="Update phone number"
-          icon={<ShieldAlert color={colors.primary} size={22} />} 
-          onPress={() => navigation.navigate("ChangePhone")} 
+          icon={<Phone color="#ffffff" size={20} />} 
+          onPress={() => navigation.navigate("ChangePhone")}
+          colors={colors}
         />
         <View style={styles.divider} />
         <PressableRow 
           label="Delete Account" 
           sublabel="Remove your account"
-          icon={<CreditCard color={colors.error} size={22} />} 
+          icon={<Trash2 color="#ffffff" size={20} />} 
           iconBg={colors.error + "1A"}
-          onPress={() => navigation.navigate("DeleteAccount")} 
+          onPress={() => navigation.navigate("DeleteAccount")}
+          colors={colors}
         />
         
         <View style={styles.footerWrap}>
@@ -70,14 +76,18 @@ function PressableRow({
   sublabel, 
   icon, 
   iconBg,
-  onPress 
+  onPress,
+  colors
 }: { 
   label: string; 
   sublabel?: string; 
   icon?: React.ReactNode; 
   iconBg?: string;
-  onPress: () => void 
+  onPress: () => void;
+  colors: any;
 }) {
+  const styles = React.useMemo(() => getStyles(colors), [colors]);
+  
   return (
     <TouchableOpacity style={styles.pressableRow} onPress={onPress}>
       <View style={styles.leftContent}>
@@ -94,9 +104,9 @@ function PressableRow({
   );
 }
 
-const styles = StyleSheet.create({
+const getStyles = (colors: any) => StyleSheet.create({
   card: {
-    backgroundColor: "#ffffff",
+    backgroundColor: colors.surface,
     borderRadius: 16,
     borderWidth: 1,
     borderColor: colors.border,
