@@ -11,34 +11,45 @@ import {
   ScrollView,
   Pressable,
   Image,
-  Alert,
 } from "react-native";
-import { Mail, ArrowLeft, Shield, CheckCircle } from "lucide-react-native";
+import { Lock, ArrowLeft, Shield, CheckCircle } from "lucide-react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import AppButton from "../../components/ui/AppButton";
 import { useTheme } from "../../theme/useTheme";
 import type { RootStackParamList } from "../../navigation/types";
-import { apiClient } from "../../api/client";
+import { resetPassword } from "../../features/auth/services/authService";
 
-type Props = NativeStackScreenProps<RootStackParamList, "ForgotPassword">;
+type Props = NativeStackScreenProps<RootStackParamList, "ResetPassword">;
 
-export default function ForgotPasswordScreen({ navigation }: Props) {
+export default function ResetPasswordScreen({ navigation, route }: Props) {
   const { colors, isDark } = useTheme();
   const styles = useMemo(() => getStyles(colors, isDark), [colors, isDark]);
-  const [email, setEmail] = useState("");
+  const token = route.params?.token || "";
+  
+  const [password, setPassword] = useState("");
+  const [confirmPassword, setConfirmPassword] = useState("");
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
   const [success, setSuccess] = useState(false);
 
-  const handleForgotPassword = async () => {
-    if (!email.trim()) {
-      setError("Please enter your email address.");
+  const handleResetPassword = async () => {
+    if (!password || !confirmPassword) {
+      setError("Please fill in all fields.");
       return;
     }
 
-    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-    if (!emailRegex.test(email.trim())) {
-      setError("Please enter a valid email address.");
+    if (password.length < 8) {
+      setError("Password must be at least 8 characters.");
+      return;
+    }
+
+    if (password !== confirmPassword) {
+      setError("Passwords do not match.");
+      return;
+    }
+
+    if (!token) {
+      setError("Missing reset token.");
       return;
     }
 
@@ -46,23 +57,15 @@ export default function ForgotPasswordScreen({ navigation }: Props) {
     setLoading(true);
     
     try {
-      const response = await apiClient.post("/api/auth/forgot-password", {
-        email: email.trim().toLowerCase(),
-      });
-      
-      // For development: auto-navigate to reset screen if token is provided
-      if (response.data?.development_token) {
-        navigation.navigate("ResetPassword", { token: response.data.development_token });
-      } else {
-        setSuccess(true);
-      }
+      await resetPassword(token, password);
+      setSuccess(true);
     } catch (err: any) {
-      console.error("Forgot password error:", err);
+      console.error("Reset password error:", err);
       const msg =
         err?.response?.data?.error ??
         err?.response?.data?.message ??
         err?.message ??
-        "Failed to send reset email. Please try again.";
+        "Failed to reset password. Please try again.";
       setError(msg);
     } finally {
       setLoading(false);
@@ -70,7 +73,7 @@ export default function ForgotPasswordScreen({ navigation }: Props) {
   };
 
   const handleBackToLogin = () => {
-    navigation.goBack();
+    navigation.navigate("Login");
   };
 
   if (success) {
@@ -79,12 +82,12 @@ export default function ForgotPasswordScreen({ navigation }: Props) {
         <View style={styles.container}>
           <View style={styles.successContainer}>
             <CheckCircle size={64} color={colors.success} />
-            <Text style={styles.successTitle}>Check Your Email</Text>
+            <Text style={styles.successTitle}>Password Reset</Text>
             <Text style={styles.successMessage}>
-              We've sent a password reset link to {email}
+              Your password has been successfully reset!
             </Text>
             <Text style={styles.successSubtext}>
-              Click the link in the email to reset your password. If you don't see it, check your spam folder.
+              You can now sign in with your new password.
             </Text>
             <AppButton onPress={handleBackToLogin} style={styles.backButton}>
               <Text style={styles.backButtonText}>Back to Login</Text>
@@ -105,27 +108,24 @@ export default function ForgotPasswordScreen({ navigation }: Props) {
           contentContainerStyle={styles.scrollContent}
           keyboardShouldPersistTaps="handled"
         >
-          {/* Header with Back Button */}
           <View style={styles.headerRow}>
             <Pressable onPress={handleBackToLogin} style={styles.backIconButton}>
               <ArrowLeft size={24} color={colors.textPrimary} />
             </Pressable>
           </View>
 
-          {/* Header */}
           <View style={styles.header}>
             <Image 
               source={require("../../../assets/images/logo.png")} 
               style={styles.logo}
               resizeMode="contain"
             />
-            <Text style={styles.title}>Forgot Password?</Text>
+            <Text style={styles.title}>Create New Password</Text>
             <Text style={styles.subtitle}>
-              Enter your email address and we'll send you a link to reset your password
+              Your new password must be different from previous used passwords.
             </Text>
           </View>
 
-          {/* Form Container */}
           <View style={styles.card}>
             {error ? (
               <View style={styles.errorContainer}>
@@ -136,20 +136,35 @@ export default function ForgotPasswordScreen({ navigation }: Props) {
 
             <View style={styles.form}>
               <View style={styles.inputGroup}>
-                <Text style={styles.label}>Email Address</Text>
+                <Text style={styles.label}>New Password</Text>
                 <View style={styles.inputWrapper}>
-                  <Mail size={20} color={colors.textSecondary} style={styles.inputIcon} />
+                  <Lock size={20} color={colors.textSecondary} style={styles.inputIcon} />
                   <TextInput
                     autoCapitalize="none"
-                    keyboardType="email-address"
-                    placeholder="you@example.com"
+                    secureTextEntry
+                    placeholder="Enter new password"
                     placeholderTextColor={colors.textSecondary}
-                    value={email}
-                    onChangeText={setEmail}
+                    value={password}
+                    onChangeText={setPassword}
                     style={styles.input}
                     editable={!loading}
-                    autoComplete="email"
-                    autoFocus
+                  />
+                </View>
+              </View>
+
+              <View style={styles.inputGroup}>
+                <Text style={styles.label}>Confirm Password</Text>
+                <View style={styles.inputWrapper}>
+                  <Lock size={20} color={colors.textSecondary} style={styles.inputIcon} />
+                  <TextInput
+                    autoCapitalize="none"
+                    secureTextEntry
+                    placeholder="Confirm new password"
+                    placeholderTextColor={colors.textSecondary}
+                    value={confirmPassword}
+                    onChangeText={setConfirmPassword}
+                    style={styles.input}
+                    editable={!loading}
                   />
                 </View>
               </View>
@@ -157,16 +172,10 @@ export default function ForgotPasswordScreen({ navigation }: Props) {
               {loading ? (
                 <ActivityIndicator size="large" color={colors.primary} style={{ marginVertical: 12 }} />
               ) : (
-                <AppButton onPress={handleForgotPassword} style={styles.resetButton}>
-                  <Text style={styles.resetButtonText}>Send Reset Link</Text>
+                <AppButton onPress={handleResetPassword} style={styles.resetButton}>
+                  <Text style={styles.resetButtonText}>Reset Password</Text>
                 </AppButton>
               )}
-
-              <Pressable onPress={handleBackToLogin} style={styles.backToLoginButton}>
-                <Text style={styles.backToLoginText}>
-                  Remember your password? <Text style={styles.backToLoginBold}>Sign In</Text>
-                </Text>
-              </Pressable>
             </View>
           </View>
         </ScrollView>
@@ -252,9 +261,6 @@ const getStyles = (colors: any, isDark: boolean) => StyleSheet.create({
   },
   resetButton: { height: 44, borderRadius: 10 },
   resetButtonText: { color: "#ffffff", fontSize: 15, fontWeight: "600" },
-  backToLoginButton: { alignItems: "center", paddingVertical: 10 },
-  backToLoginText: { color: colors.textSecondary, fontSize: 13 },
-  backToLoginBold: { color: colors.primary, fontWeight: "700" },
   
   // Success state styles
   successContainer: {

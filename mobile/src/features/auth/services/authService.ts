@@ -94,3 +94,19 @@ export async function fetchCurrentUser(): Promise<User | null> {
     return null;
   }
 }
+
+/**
+ * POST /api/auth/forgot-password
+ */
+export async function forgotPassword(email: string): Promise<{ success: boolean; message: string; development_token?: string }> {
+  const res = await apiClient.post("/api/auth/forgot-password", { email });
+  return res.data;
+}
+
+/**
+ * POST /api/auth/reset-password
+ */
+export async function resetPassword(token: string, newPassword: string): Promise<{ success: boolean; message: string }> {
+  const res = await apiClient.post("/api/auth/reset-password", { token, newPassword });
+  return res.data;
+}

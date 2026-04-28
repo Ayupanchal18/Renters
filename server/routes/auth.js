@@ -447,5 +447,98 @@ router.post("/logout", (async (req, res) => {
         });
     }
 }));
+/* ---------------------- FORGOT PASSWORD ---------------------- */
+router.post("/forgot-password", async (req, res) => {
+    try {
+        await connectDB();
+        const { email } = req.body;
+        
+        if (!email) {
+            return res.status(400).json({ success: false, error: "Email is required" });
+        }
+
+        const user = await User.findOne({ email: email.toLowerCase().trim(), isDeleted: { $ne: true } });
+        
+        // We always return success to prevent email enumeration attacks
+        if (!user) {
+            return res.json({ success: true, message: "If an account exists, a reset link has been sent." });
+        }
+
+        // Generate reset token (in a real app use crypto.randomBytes)
+        const resetToken = Math.random().toString(36).substring(2, 15) + Math.random().toString(36).substring(2, 15);
+        
+        // Set token and expiry (1 hour)
+        user.resetPasswordToken = resetToken;
+        user.resetPasswordExpires = new Date(Date.now() + 3600000);
+        await user.save();
+
+        // In a real app, send the email using emailService
+        // const emailService = new EmailService();
+        // await emailService.sendPasswordResetEmail(user.email, resetToken, user.name);
+        
+        // For development/demo, we'll return the token
+        res.json({ 
+            success: true, 
+            message: "If an account exists, a reset link has been sent.",
+            // IMPORTANT: Remove this in production! Only sent to email.
+            development_token: resetToken 
+        });
+    } catch (err) {
+        console.error("FORGOT PASSWORD ERROR ->", err.message);
+        res.status(500).json({ success: false, error: "Server error" });
+    }
+});
+
+/* ---------------------- RESET PASSWORD ---------------------- */
+router.post("/reset-password", async (req, res) => {
+    try {
+        await connectDB();
+        const { token, newPassword } = req.body;
+
+        if (!token || !newPassword) {
+            return res.status(400).json({ success: false, error: "Token and new password are required" });
+        }
+
+        if (newPassword.length < 8) {
+            return res.status(400).json({ success: false, error: "Password must be at least 8 characters" });
+        }
+
+        const user = await User.findOne({
+            resetPasswordToken: token,
+            resetPasswordExpires: { $gt: Date.now() },
+            isDeleted: { $ne: true }
+        });
+
+        if (!user) {
+            return res.status(400).json({ success: false, error: "Invalid or expired reset token" });
+        }
+
+        // Hash new password
+        const salt = await bcrypt.genSalt(BCRYPT_SALT_ROUNDS);
+        const passwordHash = await bcrypt.hash(newPassword, salt);
+
+        // Update user
+        user.passwordHash = passwordHash;
+        user.resetPasswordToken = undefined;
+        user.resetPasswordExpires = undefined;
+        user.lastPasswordChange = new Date();
+        
+        if (!user.passwordHistory) user.passwordHistory = [];
+        user.passwordHistory.push({ hash: passwordHash, createdAt: new Date() });
+
+        await user.save();
+
+        // Log security event
+        if (typeof logAuthEvent === 'function') {
+            await logAuthEvent(user._id, 'password_reset', true, {}, req);
+        }
+
+        res.json({ success: true, message: "Password has been successfully reset" });
+    } catch (err) {
+        console.error("RESET PASSWORD ERROR ->", err.message);
+        res.status(500).json({ success: false, error: "Server error" });
+    }
+});
+
 /* ---------------------- EXPORT ROUTER ---------------------- */
 export default router;

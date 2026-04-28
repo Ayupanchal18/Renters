@@ -180,6 +180,8 @@ export default async function createServer(devMode = false) {
     app.get("/api/config/public", (_req, res) => {
         res.json({
             googleClientId: process.env.GOOGLE_CLIENT_ID || process.env.VITE_GOOGLE_CLIENT_ID || null,
+            googleAndroidClientId: process.env.GOOGLE_ANDROID_CLIENT_ID || process.env.GOOGLE_CLIENT_ID || null,
+            googleIosClientId: process.env.GOOGLE_IOS_CLIENT_ID || process.env.GOOGLE_CLIENT_ID || null,
             facebookAppId: process.env.FACEBOOK_APP_ID || process.env.VITE_FACEBOOK_APP_ID || null,
         });
     });

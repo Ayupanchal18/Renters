@@ -60,7 +60,9 @@ export default function RegisterScreen({ navigation }: Props) {
         acceptPrivacyPolicy: true,
       });
     } catch (err: any) {
-      console.error("Register detail err:", err);
+      if (err?.response?.status !== 409 && err?.response?.status !== 400) {
+        console.error("Register detail err:", err);
+      }
       const data = err?.response?.data;
       let msg = data?.error ?? data?.message ?? err?.message ?? "Registration failed.";
       if (data?.details && Array.isArray(data.details)) {
@@ -221,7 +223,15 @@ export default function RegisterScreen({ navigation }: Props) {
                     onValueChange={setAcceptTerms}
                     trackColor={{ false: colors.border, true: colors.primary }}
                   />
-                  <Text style={styles.switchLabel}>I accept the Terms of Service</Text>
+                  <Text style={styles.switchLabel}>
+                    I accept the{" "}
+                    <Text 
+                      style={{ color: colors.primary, textDecorationLine: "underline" }} 
+                      onPress={() => navigation.navigate("Legal")}
+                    >
+                      Terms of Service
+                    </Text>
+                  </Text>
                 </View>
 
                 <View style={styles.switchRow}>
@@ -230,7 +240,15 @@ export default function RegisterScreen({ navigation }: Props) {
                     onValueChange={setAcceptPrivacy}
                     trackColor={{ false: colors.border, true: colors.primary }}
                   />
-                  <Text style={styles.switchLabel}>I accept the Privacy Policy</Text>
+                  <Text style={styles.switchLabel}>
+                    I accept the{" "}
+                    <Text 
+                      style={{ color: colors.primary, textDecorationLine: "underline" }} 
+                      onPress={() => navigation.navigate("Legal")}
+                    >
+                      Privacy Policy
+                    </Text>
+                  </Text>
                 </View>
               </View>
 

@@ -3,6 +3,8 @@ import { z } from "zod";
 import multer from "multer";
 import { uploadToCloudinary, deleteFromCloudinary } from "../src/config/cloudinary.js";
 import { authenticateToken } from "../src/middleware/security.js";
+import { User } from "../models/User.js";
+import { connectDB } from "../src/config/db.js";
 
 const router = Router();
 
@@ -45,6 +47,12 @@ router.post("/profile-photo", authenticateToken, upload.single('image'), async (
                 { quality: 'auto:good' },
                 { fetch_format: 'auto' }
             ]
+        });
+
+        // Update the user's avatar in the database
+        await connectDB();
+        await User.findByIdAndUpdate(req.user._id, {
+            avatar: result.secure_url
         });
 
         res.json({

@@ -4,6 +4,7 @@ import { ActivityIndicator, View, StyleSheet } from "react-native";
 import LoginScreen from "../screens/auth/LoginScreen";
 import RegisterScreen from "../screens/auth/RegisterScreen";
 import ForgotPasswordScreen from "../screens/auth/ForgotPasswordScreen";
+import ResetPasswordScreen from "../screens/auth/ResetPasswordScreen";
 import MainTabs from "./MainTabs";
 import PropertyDetailScreen from "../screens/properties/PropertyDetailScreen";
 import AboutScreen from "../screens/info/AboutScreen";
@@ -44,7 +45,9 @@ export default function RootNavigator() {
         headerTitleStyle: { fontWeight: "700" as const, color: colors.textPrimary },
         headerStyle: { backgroundColor: colors.surface },
         headerTintColor: colors.primary,
-        contentStyle: { backgroundColor: colors.background }
+        contentStyle: { backgroundColor: colors.background },
+        animation: "slide_from_right",
+        gestureEnabled: true,
       }}
     >
       {!hasAccess ? (
@@ -63,6 +66,16 @@ export default function RootNavigator() {
           <Stack.Screen
             name="ForgotPassword"
             component={ForgotPasswordScreen}
+            options={{ headerShown: false }}
+          />
+          <Stack.Screen
+            name="ResetPassword"
+            component={ResetPasswordScreen}
+            options={{ headerShown: false }}
+          />
+          <Stack.Screen
+            name="Legal"
+            component={LegalScreen}
             options={{ headerShown: false }}
           />
         </>

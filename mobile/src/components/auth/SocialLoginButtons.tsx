@@ -19,7 +19,12 @@ export default function SocialLoginButtons({ disabled }: Props) {
   const { colors, isDark } = useTheme();
   const styles = useMemo(() => getStyles(colors, isDark), [colors, isDark]);
   const { socialLogin } = useAuth();
-  const [config, setConfig] = useState({ googleClientId: "", facebookAppId: "" });
+  const [config, setConfig] = useState({ 
+    googleClientId: "", 
+    googleAndroidClientId: "", 
+    googleIosClientId: "", 
+    facebookAppId: "" 
+  });
   const [loadingGoogle, setLoadingGoogle] = useState(false);
   const [loadingFacebook, setLoadingFacebook] = useState(false);
 
@@ -30,6 +35,8 @@ export default function SocialLoginButtons({ disabled }: Props) {
       .then((res: any) => {
         setConfig({
           googleClientId: res.data.googleClientId || "",
+          googleAndroidClientId: res.data.googleAndroidClientId || res.data.googleClientId || "",
+          googleIosClientId: res.data.googleIosClientId || res.data.googleClientId || "",
           facebookAppId: res.data.facebookAppId || "",
         });
       })
@@ -39,6 +46,8 @@ export default function SocialLoginButtons({ disabled }: Props) {
   const [gRequest, gResponse, gPromptAsync] = Google.useAuthRequest({
     clientId: config.googleClientId || "dummy",
     webClientId: config.googleClientId || "dummy",
+    androidClientId: config.googleAndroidClientId || "dummy",
+    iosClientId: config.googleIosClientId || "dummy",
   });
 
   const [fRequest, fResponse, fPromptAsync] = Facebook.useAuthRequest({

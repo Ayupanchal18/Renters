@@ -1,4 +1,4 @@
-import { getToken, clearAuth, isTokenExpired } from '../utils/auth.js';
+import { getToken, clearAuth, isTokenExpired, refreshAccessToken } from '../utils/auth.js';
 import {
     logAuthenticationError,
     logAuthenticationSuccess,
@@ -76,16 +76,26 @@ export async function authenticatedFetch(url, options = {}, navigate = null) {
     const startTime = performance.now();
 
     // Check if token is expired before making the request
-    const token = getToken();
+    let token = getToken();
     if (token && isTokenExpired(token)) {
-        const error = new Error('Authentication token has expired');
-
-        logAuthenticationError(error, AUTH_ERROR_CONTEXTS.TOKEN_EXPIRY, {
-            url,
-            method: options.method || 'GET',
-            tokenExpired: true,
-            redirecting: !!navigate
-        });
+        try {
+            // Attempt to refresh token first
+            const newToken = await refreshAccessToken();
+            if (newToken) {
+                token = newToken;
+            } else {
+                throw new Error('Authentication token has expired and refresh failed');
+            }
+        } catch (refreshError) {
+            const error = new Error('Authentication token has expired');
+            
+            logAuthenticationError(error, AUTH_ERROR_CONTEXTS.TOKEN_EXPIRY, {
+                url,
+                method: options.method || 'GET',
+                tokenExpired: true,
+                redirecting: !!navigate
+            });
+        }
 
         logTokenEvent('TOKEN_EXPIRED_CLEANUP', {
             url,
@@ -132,6 +142,29 @@ export async function authenticatedFetch(url, options = {}, navigate = null) {
     }
 
     // Handle authentication errors
+    if (response.status === 401) {
+        // One last attempt to refresh if we get a 401 from server
+        try {
+            const newToken = await refreshAccessToken();
+            if (newToken) {
+                // Retry the request once with the new token
+                const newHeaders = getHeaders(newToken);
+                // Also need to include dev headers if any
+                if (options.headers && options.headers['x-user-id']) {
+                    newHeaders['x-user-id'] = options.headers['x-user-id'];
+                }
+                
+                response = await fetch(url, { ...options, headers: newHeaders });
+                
+                if (response.ok) {
+                    return response;
+                }
+            }
+        } catch (e) {
+            // Ignore error and fall through to handleAuthError
+        }
+    }
+
     if (handleAuthError(response, navigate, AUTH_ERROR_CONTEXTS.API_REQUEST)) {
         throw new Error(`Authentication failed (${response.status})`);
     }

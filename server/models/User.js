@@ -102,6 +102,10 @@ const UserSchema = new Schema(
         blockedReason: { type: String },
         mustChangePassword: { type: Boolean, default: false },
         lastActivityAt: { type: Date },
+        
+        // Password reset tracking
+        resetPasswordToken: { type: String },
+        resetPasswordExpires: { type: Date },
     },
     { timestamps: true }
 );

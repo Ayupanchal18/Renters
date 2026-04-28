@@ -12,6 +12,7 @@ import { RouteErrorBoundary } from "./components/ui/route-error-boundary";
 import { SocketProvider } from "./contexts/SocketContext";
 import { HelmetProvider } from "react-helmet-async";
 import { useWebVitals, WEB_VITALS_THRESHOLDS } from "./hooks/useWebVitals";
+import { setupTokenRefresh } from "./utils/auth";
 
 // Critical path - load immediately (lightweight)
 import NotFound from "./pages/NotFound";
@@ -153,6 +154,10 @@ const App = () => {
                 console.log('New app version available');
             },
         });
+        
+        // Setup automatic token refresh
+        const cleanupTokenRefresh = setupTokenRefresh();
+        return cleanupTokenRefresh;
     }, []);
 
     return (

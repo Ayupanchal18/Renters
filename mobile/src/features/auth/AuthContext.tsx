@@ -99,8 +99,10 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       setUser(response.user);
       setToken(response.token);
       setIsGuest(false);
-    } catch (error) {
-      console.error("Registration failed:", error);
+    } catch (error: any) {
+      if (error?.response?.status !== 409 && error?.response?.status !== 400) {
+        console.error("Registration failed:", error);
+      }
       throw error;
     }
   }, []);

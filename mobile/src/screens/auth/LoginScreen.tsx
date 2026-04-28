@@ -106,7 +106,7 @@ export default function LoginScreen({ navigation }: Props) {
               <View style={styles.inputGroup}>
                 <View style={styles.labelRow}>
                   <Text style={styles.label}>Password</Text>
-                  <Pressable onPress={() => navigation.navigate("ForgotPassword")}>
+                  <Pressable onPress={() => navigation.navigate("ForgotPassword" as any)}>
                     <Text style={styles.forgotPassword}>Forgot Password?</Text>
                   </Pressable>
                 </View>

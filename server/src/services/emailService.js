@@ -142,6 +142,52 @@ class EmailService {
     }
 
     /**
+     * Send password reset email
+     * @param {string} email - Recipient email address
+     * @param {string} resetToken - Token for password reset
+     * @param {string} userName - User's name for personalization
+     * @returns {Promise<{success: boolean, messageId?: string, error?: string}>}
+     */
+    async sendPasswordResetEmail(email, resetToken, userName = 'User') {
+        try {
+            if (!this.isConfigured || this.testMode) {
+                console.log(`\n========================================`);
+                console.log(`[EMAIL SERVICE - TEST MODE]`);
+                console.log(`To: ${email}`);
+                console.log(`Password Reset Token: ${resetToken}`);
+                console.log(`========================================\n`);
+                return {
+                    success: true,
+                    messageId: 'test-mode-' + Date.now(),
+                    testMode: true
+                };
+            }
+
+            const mailOptions = {
+                from: process.env.SMTP_FROM || process.env.SMTP_USER,
+                to: email,
+                subject: 'Password Reset Request',
+                html: this.generatePasswordResetTemplate(userName, resetToken),
+                text: this.generatePasswordResetText(userName, resetToken)
+            };
+
+            const info = await this.transporter.sendMail(mailOptions);
+
+            return {
+                success: true,
+                messageId: info.messageId
+            };
+
+        } catch (error) {
+            console.error('Failed to send password reset email:', error);
+            return {
+                success: false,
+                error: error.message
+            };
+        }
+    }
+
+    /**
      * Send account deletion confirmation email
      * @param {string} email - Recipient email address
      * @param {string} userName - User's name for personalization
