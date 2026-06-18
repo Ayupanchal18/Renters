@@ -12,13 +12,16 @@
 import { useState, useEffect, useCallback, useRef } from 'react';
 import messageService from '../api/messageService';
 import {
-    getSocket,
     onMessageReceived,
     onMessageReadUpdate,
     joinConversation as socketJoinConversation,
     leaveConversation as socketLeaveConversation,
     sendTypingStart,
-    sendTypingStop
+    sendTypingStop,
+    onUserOnline,
+    onUserOffline,
+    onUserTyping,
+    markAsReadSocket
 } from '../lib/socket';
 import { getUser, isAuthenticated } from '../utils/auth';
 
@@ -70,6 +73,7 @@ export function useMessages(options = {}) {
     const [sending, setSending] = useState(false);
     const [error, setError] = useState(null);
     const [retrying, setRetrying] = useState(false);
+    const [isRecipientTyping, setIsRecipientTyping] = useState(false);
 
     // Refs for socket event handlers
     const selectedConversationRef = useRef(null);
@@ -189,6 +193,9 @@ export function useMessages(options = {}) {
      * @param {Object|string} conversation - Conversation object or ID
      */
     const selectConversation = useCallback(async (conversation) => {
+        // Reset typing indicator when switching
+        setIsRecipientTyping(false);
+
         // Leave previous conversation room
         if (selectedConversationRef.current) {
             const prevId = selectedConversationRef.current._id || selectedConversationRef.current.id;
@@ -368,6 +375,9 @@ export function useMessages(options = {}) {
             const response = await messageService.markAsRead(convId);
 
             if (response.success && mountedRef.current) {
+                // Emit socket read receipt
+                markAsReadSocket(convId);
+
                 // Update messages read status
                 setMessages(prev =>
                     prev.map(msg => ({ ...msg, read: true }))
@@ -595,6 +605,69 @@ export function useMessages(options = {}) {
         }
     }, []);
 
+    /**
+     * Handle user online event
+     */
+    const handleUserOnline = useCallback((data) => {
+        if (!mountedRef.current || !data) return;
+        const { userId } = data;
+        setConversations(prev =>
+            prev.map(conv => {
+                const updatedParticipants = conv.participants?.map(p =>
+                    (p.id === userId || p._id === userId) ? { ...p, isOnline: true } : p
+                );
+                return { ...conv, participants: updatedParticipants };
+            })
+        );
+        setSelectedConversation(prev => {
+            if (!prev) return null;
+            const updatedParticipants = prev.participants?.map(p =>
+                (p.id === userId || p._id === userId) ? { ...p, isOnline: true } : p
+            );
+            return { ...prev, participants: updatedParticipants };
+        });
+    }, []);
+
+    /**
+     * Handle user offline event
+     */
+    const handleUserOffline = useCallback((data) => {
+        if (!mountedRef.current || !data) return;
+        const { userId, timestamp } = data;
+        setConversations(prev =>
+            prev.map(conv => {
+                const updatedParticipants = conv.participants?.map(p =>
+                    (p.id === userId || p._id === userId) ? { ...p, isOnline: false, lastActivityAt: timestamp } : p
+                );
+                return { ...conv, participants: updatedParticipants };
+            })
+        );
+        setSelectedConversation(prev => {
+            if (!prev) return null;
+            const updatedParticipants = prev.participants?.map(p =>
+                (p.id === userId || p._id === userId) ? { ...p, isOnline: false, lastActivityAt: timestamp } : p
+            );
+            return { ...prev, participants: updatedParticipants };
+        });
+    }, []);
+
+    /**
+     * Handle user typing event
+     */
+    const handleUserTyping = useCallback((data) => {
+        if (!mountedRef.current || !data) return;
+        const { conversationId, userId, isTyping } = data;
+        const currentConv = selectedConversationRef.current;
+        const currentConvId = currentConv?._id || currentConv?.id;
+        
+        const currentUser = getUser();
+        const currentUserId = currentUser?._id || currentUser?.id;
+
+        if (currentConvId === conversationId && userId !== currentUserId) {
+            setIsRecipientTyping(isTyping);
+        }
+    }, []);
+
     // Setup socket listeners
     useEffect(() => {
         if (!isAuthenticated()) return;
@@ -602,6 +675,9 @@ export function useMessages(options = {}) {
         // Set up socket event listeners
         onMessageReceived(handleNewMessage);
         onMessageReadUpdate(handleReadUpdate);
+        onUserOnline(handleUserOnline);
+        onUserOffline(handleUserOffline);
+        onUserTyping(handleUserTyping);
 
         // Cleanup
         return () => {
@@ -611,7 +687,7 @@ export function useMessages(options = {}) {
                 socketLeaveConversation(convId);
             }
         };
-    }, [handleNewMessage, handleReadUpdate]);
+    }, [handleNewMessage, handleReadUpdate, handleUserOnline, handleUserOffline, handleUserTyping]);
 
     // Fetch conversations on mount
     useEffect(() => {
@@ -639,6 +715,7 @@ export function useMessages(options = {}) {
         sending,
         error,
         retrying,
+        isRecipientTyping,
 
         // Actions
         fetchConversations,

@@ -217,6 +217,13 @@ export default function PropertiesSection({ user }: Props) {
                   [
                     { text: 'Cancel', style: 'cancel' },
                     {
+                      text: 'Manage Availability',
+                      onPress: () => navigation.navigate("AvailabilityEditor", {
+                        propertyId: property._id,
+                        propertyTitle: property.title
+                      })
+                    },
+                    {
                       text: property.status === 'active' ? 'Deactivate' : 'Activate',
                       onPress: () => handleToggleStatus(property._id, property.status)
                     },

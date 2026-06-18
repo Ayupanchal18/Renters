@@ -106,3 +106,25 @@ export async function uploadMessageFile(file) {
         publicId: result.public_id
     };
 }
+
+/**
+ * Upload property panorama images to Cloudinary (without cropping transformations)
+ * @param {Array} files - Array of multer file objects
+ * @returns {Promise<Array>} Array of Cloudinary URLs
+ */
+export async function uploadPanoramaImages(files) {
+    if (!files || files.length === 0) return [];
+
+    const uploadPromises = files.map(file =>
+        uploadToCloudinary(file.buffer, {
+            folder: 'properties/panoramas',
+            transformation: [
+                { quality: 'auto:good' },
+                { fetch_format: 'auto' }
+            ]
+        })
+    );
+
+    const results = await Promise.all(uploadPromises);
+    return results.map(result => result.secure_url);
+}

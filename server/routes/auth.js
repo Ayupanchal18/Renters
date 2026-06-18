@@ -452,40 +452,52 @@ router.post("/forgot-password", async (req, res) => {
     try {
         await connectDB();
         const { email } = req.body;
-        
-        if (!email) {
-            return res.status(400).json({ success: false, error: "Email is required" });
+        if (!email || typeof email !== 'string') {
+            return res.status(400).json({ success: false, error: "Valid email is required" });
         }
 
-        const user = await User.findOne({ email: email.toLowerCase().trim(), isDeleted: { $ne: true } });
-        
+        const normalizedEmail = email.toLowerCase().trim();
+        console.log(`[AUTH] Forgot password request for: ${normalizedEmail}`);
+
+        const user = await User.findOne({
+            email: normalizedEmail,
+            isDeleted: { $ne: true }
+        });
+
         // We always return success to prevent email enumeration attacks
         if (!user) {
+            console.log(`[AUTH] User not found for forgot password: ${normalizedEmail}`);
             return res.json({ success: true, message: "If an account exists, a reset link has been sent." });
         }
 
-        // Generate reset token (in a real app use crypto.randomBytes)
+        // Generate reset token
         const resetToken = Math.random().toString(36).substring(2, 15) + Math.random().toString(36).substring(2, 15);
-        
-        // Set token and expiry (1 hour)
-        user.resetPasswordToken = resetToken;
-        user.resetPasswordExpires = new Date(Date.now() + 3600000);
-        await user.save();
+
+        console.log(`[AUTH] Saving reset token for user: ${user._id}`);
+        await User.updateOne(
+            { _id: user._id },
+            {
+                $set: {
+                    resetPasswordToken: resetToken,
+                    resetPasswordExpires: new Date(Date.now() + 3600000)
+                }
+            }
+        );
 
         // In a real app, send the email using emailService
         // const emailService = new EmailService();
         // await emailService.sendPasswordResetEmail(user.email, resetToken, user.name);
-        
+
         // For development/demo, we'll return the token
-        res.json({ 
-            success: true, 
+        res.json({
+            success: true,
             message: "If an account exists, a reset link has been sent.",
             // IMPORTANT: Remove this in production! Only sent to email.
-            development_token: resetToken 
+            development_token: resetToken
         });
     } catch (err) {
         console.error("FORGOT PASSWORD ERROR ->", err.message);
-        res.status(500).json({ success: false, error: "Server error" });
+        res.status(500).json({ success: false, error: "Server error", message: err.message });
     }
 });
 
@@ -522,7 +534,7 @@ router.post("/reset-password", async (req, res) => {
         user.resetPasswordToken = undefined;
         user.resetPasswordExpires = undefined;
         user.lastPasswordChange = new Date();
-        
+
         if (!user.passwordHistory) user.passwordHistory = [];
         user.passwordHistory.push({ hash: passwordHash, createdAt: new Date() });
 

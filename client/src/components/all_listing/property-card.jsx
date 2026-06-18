@@ -1,15 +1,27 @@
 import { useState, useEffect } from "react";
-import { Heart, MapPin, Bed, Bath, Home, Phone, MessageCircle, Sparkles, BadgeCheck, Flame, Clock, Calendar } from "lucide-react";
+import { Heart, MapPin, Bed, Bath, Home, Phone, MessageCircle, Sparkles, BadgeCheck, Flame, Clock, Calendar, Share2, Globe } from "lucide-react";
 import { Button } from "../ui/button";
 import { useNavigate } from "react-router-dom";
+import VerifiedBadge from "../common/VerifiedBadge";
 import { PropertyImage } from "../ui/lazy-image";
 import { useNavigationStateContext } from "../ui/navigation-state-provider";
 import wishlistService from "../../api/wishlistService";
 import { isAuthenticated } from "../../utils/auth";
 import { useMessages } from "../../hooks/useMessages";
-import { getRelativeTimeString } from "../../utils/relative-time";
+import { getRelativeTimeString } from "@shared/utils/time";
+import { cn } from "../../lib/utils";
 
-export function PropertyCard({ property, viewMode, initialSaved = false, onWishlistChange, priority = false }) {
+export function PropertyCard({ 
+    property, 
+    viewMode, 
+    initialSaved = false, 
+    onWishlistChange, 
+    priority = false,
+    isHighlighted = false,
+    isActive = false,
+    onMouseEnter,
+    onMouseLeave
+}) {
     const navigate = useNavigate();
     const { navigateWithState } = useNavigationStateContext();
     const { createConversation } = useMessages();
@@ -103,6 +115,39 @@ export function PropertyCard({ property, viewMode, initialSaved = false, onWishl
         return property.ownerPhone || property.contactPhone || property.phone || property.owner?.phone || '+91 9876543210';
     };
 
+    // Handle share button click - copies link to clipboard
+    const handleShare = (e) => {
+        e.stopPropagation();
+        const route = property.listingType === 'buy' 
+            ? `/buy/${property.slug}` 
+            : `/rent/${property.slug}`;
+        const shareUrl = `${window.location.origin}${route}`;
+
+        if (navigator.share) {
+            navigator.share({
+                title: cleanTitle,
+                text: `Check out this property: ${cleanTitle}`,
+                url: shareUrl
+            }).catch(err => {
+                if (err.name !== 'AbortError') {
+                    copyToClipboard(shareUrl);
+                }
+            });
+        } else {
+            copyToClipboard(shareUrl);
+        }
+    };
+
+    const copyToClipboard = (url) => {
+        navigator.clipboard.writeText(url).then(() => {
+            import("../../utils/toastNotifications").then(({ showSuccessToast }) => {
+                showSuccessToast("Property link copied to clipboard!");
+            });
+        }).catch(err => {
+            console.error("Failed to copy link:", err);
+        });
+    };
+
     // Handle call button click - opens dial pad
     const handleCall = (e) => {
         e.stopPropagation();
@@ -149,8 +194,19 @@ export function PropertyCard({ property, viewMode, initialSaved = false, onWishl
     if (viewMode === "list") {
         return (
             <article
-                className="group relative bg-card border border-border rounded-2xl overflow-hidden transition-all duration-200 hover:shadow-lg hover:border-primary/30 cursor-pointer"
+                className={cn(
+                    "group relative bg-card border border-border rounded-2xl overflow-hidden transition-all duration-200 hover:shadow-lg hover:border-primary/30 cursor-pointer hover-pop",
+                    isHighlighted && "ring-2 ring-primary/50 shadow-rt-glow scale-[1.01] z-10",
+                    isActive && "ring-2 ring-primary border-l-4 border-primary z-10"
+                )}
                 onClick={() => handleClick(property.slug)}
+                onMouseEnter={onMouseEnter}
+                onMouseLeave={onMouseLeave}
+                role="link"
+                tabIndex={0}
+                onKeyDown={(e) => {
+                    if (e.key === "Enter") handleClick(property.slug);
+                }}
             >
                 <div className="flex flex-col sm:flex-row">
                     {/* Image Section */}
@@ -193,9 +249,23 @@ export function PropertyCard({ property, viewMode, initialSaved = false, onWishl
                             )}
                         </div>
                         
+                        {/* Virtual Tour badge - bottom left of image */}
+                        {property.virtualTour?.type && property.virtualTour.type !== "none" && (
+                            <div className="absolute bottom-2.5 left-2.5 pointer-events-none">
+                                <span className="inline-flex items-center gap-1 px-2 py-0.5 bg-indigo-600/90 backdrop-blur-sm text-white text-[10px] font-semibold rounded-full">
+                                    <Globe className="w-2.5 h-2.5" />
+                                    {property.virtualTour.type === "matterport" ? "3D Tour" :
+                                     property.virtualTour.type === "panorama" ? "360° View" : "Video Tour"}
+                                </span>
+                            </div>
+                        )}
+                        
                         {/* Mobile: Price overlay on image */}
-                        <div className="sm:hidden absolute bottom-2.5 right-2.5 bg-white/95 dark:bg-card/95 backdrop-blur-sm px-3 py-1.5 rounded-xl shadow-lg">
+                        <div className="sm:hidden absolute bottom-2.5 right-2.5 bg-white/95 dark:bg-card/95 backdrop-blur-sm px-3 py-1.5 rounded-xl shadow-lg flex items-center gap-1">
                             <span className="text-lg font-bold text-primary">{formatPrice(getPrice())}</span>
+                            {(property.ownerId?.isVerified || property.owner?.isVerified) && (
+                                <VerifiedBadge size="sm" />
+                            )}
                             <span className="text-[10px] text-muted-foreground ml-0.5">{getPriceSuffix()}</span>
                         </div>
                     </div>
@@ -211,7 +281,12 @@ export function PropertyCard({ property, viewMode, initialSaved = false, onWishl
                                 </h3>
                                 {/* Desktop: Price */}
                                 <div className="hidden sm:flex flex-col items-end flex-shrink-0">
-                                    <span className="text-xl font-bold text-primary">{formatPrice(getPrice())}</span>
+                                    <div className="flex items-center gap-1">
+                                        <span className="text-xl font-bold text-primary">{formatPrice(getPrice())}</span>
+                                        {(property.ownerId?.isVerified || property.owner?.isVerified) && (
+                                            <VerifiedBadge size="sm" />
+                                        )}
+                                    </div>
                                     <span className="text-xs text-muted-foreground">{getPriceSuffix()}</span>
                                 </div>
                             </div>
@@ -303,8 +378,19 @@ export function PropertyCard({ property, viewMode, initialSaved = false, onWishl
     /* ------------------------- GRID VIEW ------------------------- */
     return (
         <article
-            className="group h-full flex flex-col bg-card border border-border rounded-2xl overflow-hidden transition-all duration-300 hover:shadow-xl hover:shadow-primary/5 hover:border-primary/20 hover:-translate-y-1 cursor-pointer"
+            className={cn(
+                "group h-full flex flex-col bg-card border border-border rounded-2xl overflow-hidden transition-all duration-300 hover:shadow-xl hover:shadow-primary/5 hover:border-primary/20 hover:-translate-y-1 cursor-pointer hover-pop",
+                isHighlighted && "ring-2 ring-primary/50 shadow-rt-glow scale-[1.01] z-10",
+                isActive && "ring-2 ring-primary border-l-4 border-primary z-10"
+            )}
             onClick={() => handleClick(property.slug)}
+            onMouseEnter={onMouseEnter}
+            onMouseLeave={onMouseLeave}
+            role="link"
+            tabIndex={0}
+            onKeyDown={(e) => {
+                if (e.key === "Enter") handleClick(property.slug);
+            }}
         >
             {/* Image Section */}
             <div className="relative h-52 overflow-hidden">
@@ -349,6 +435,17 @@ export function PropertyCard({ property, viewMode, initialSaved = false, onWishl
                     )}
                 </div>
 
+                {/* Virtual Tour badge */}
+                {property.virtualTour?.type && property.virtualTour.type !== "none" && (
+                    <div className="absolute bottom-3 left-3 pointer-events-none">
+                        <span className="inline-flex items-center gap-1 px-2 py-1 bg-indigo-600/90 backdrop-blur-sm text-white text-xs font-semibold rounded-full">
+                            <Globe className="w-3 h-3" />
+                            {property.virtualTour.type === "matterport" ? "3D Tour" :
+                             property.virtualTour.type === "panorama" ? "360° View" : "Video Tour"}
+                        </span>
+                    </div>
+                )}
+
                 {/* Save Button */}
                 <button
                     onClick={handleToggleFavorite}
@@ -362,8 +459,11 @@ export function PropertyCard({ property, viewMode, initialSaved = false, onWishl
 
                 {/* Price Tag */}
                 <div className="absolute bottom-3 left-3 right-3 flex items-end justify-between">
-                    <div className="bg-white/95 dark:bg-card/95 backdrop-blur-sm px-3 py-2 rounded-xl shadow-lg">
+                    <div className="bg-white/95 dark:bg-card/95 backdrop-blur-sm px-3 py-2 rounded-xl shadow-lg flex items-center gap-1.5">
                         <span className="text-xl font-bold text-primary">{formatPrice(getPrice())}</span>
+                        {(property.ownerId?.isVerified || property.owner?.isVerified) && (
+                            <VerifiedBadge size="sm" />
+                        )}
                         <span className="text-xs text-muted-foreground">{getPriceSuffix()}</span>
                     </div>
                 </div>
@@ -426,6 +526,15 @@ export function PropertyCard({ property, viewMode, initialSaved = false, onWishl
                     >
                         <MessageCircle className="w-3.5 h-3.5 mr-1.5" />
                         {isCreatingConversation ? 'Starting...' : 'Message'}
+                    </Button>
+                    <Button
+                        variant="outline"
+                        size="icon"
+                        className="h-9 w-9 rounded-xl border-border hover:bg-muted hover:border-primary/30 text-muted-foreground hover:text-foreground flex-shrink-0"
+                        onClick={handleShare}
+                        title="Share property"
+                    >
+                        <Share2 className="w-4 h-4" />
                     </Button>
                 </div>
             </div>

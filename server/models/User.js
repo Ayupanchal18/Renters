@@ -1,4 +1,5 @@
 import mongoose from "mongoose";
+import softDeletePlugin from "../src/plugins/softDeletePlugin.js";
 const { Schema } = mongoose;
 
 const UserSchema = new Schema(
@@ -32,12 +33,13 @@ const UserSchema = new Schema(
 
         role: {
             type: String,
-            enum: ["user", "seller", "admin"],
+            enum: ["user", "seller", "admin", "super_admin", "ops_admin", "content_admin"],
             default: "user",
         },
 
         avatar: { type: String },
         verified: { type: Boolean, default: false },
+        isVerified: { type: Boolean, default: false, index: true },
 
         // New verification fields
         emailVerified: { type: Boolean, default: false },
@@ -106,11 +108,19 @@ const UserSchema = new Schema(
         // Password reset tracking
         resetPasswordToken: { type: String },
         resetPasswordExpires: { type: Date },
+
+        // FCM device tokens for push notifications
+        fcmTokens: [{
+            token: { type: String, required: true },
+            deviceType: { type: String, enum: ["android", "ios", "web", "other"], default: "other" },
+            lastUsedAt: { type: Date, default: Date.now }
+        }],
     },
     { timestamps: true }
 );
 
 // Additional indexes for performance optimization
+UserSchema.index({ isVerified: 1 });
 UserSchema.index({ emailVerified: 1 });
 UserSchema.index({ phoneVerified: 1 });
 UserSchema.index({ emailVerified: 1, phoneVerified: 1 });
@@ -124,6 +134,9 @@ UserSchema.index({ isBlocked: 1 });
 UserSchema.index({ lastActivityAt: -1 });
 UserSchema.index({ isActive: 1, isBlocked: 1 });
 UserSchema.index({ role: 1, isActive: 1, isBlocked: 1 });
+UserSchema.index({ role: 1, isActive: 1, isBlocked: 1, email: 1 });
+
+UserSchema.plugin(softDeletePlugin);
 
 export const User =
     mongoose.models.User || mongoose.model("User", UserSchema);

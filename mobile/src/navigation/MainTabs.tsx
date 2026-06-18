@@ -1,4 +1,4 @@
-import React, { useMemo } from "react";
+import React, { useMemo, useEffect, useRef } from "react";
 import { createBottomTabNavigator } from "@react-navigation/bottom-tabs";
 import HomeScreen from "../screens/home/HomeScreen";
 import ListingsScreen from "../screens/listings/ListingsScreen";
@@ -9,6 +9,7 @@ import { Text, StyleSheet, View, Image, TouchableOpacity } from "react-native";
 import { BlurView } from "expo-blur";
 import { Home, Search, Heart, User, Banknote, Key, Bell, MessageSquare } from "lucide-react-native";
 import { useNavigation } from "@react-navigation/native";
+import AsyncStorage from "@react-native-async-storage/async-storage";
 
 const Tab = createBottomTabNavigator();
 
@@ -69,10 +70,26 @@ function HeaderRight({ colors, isDark }: { colors: any; isDark: boolean }) {
   );
 }
 
+const LAST_TAB_KEY = 'nav:lastTab';
+const TAB_NAMES = ['HomeTab', 'RentTab', 'BuyTab', 'WishlistTab', 'ProfileTab'];
+
 export default function MainTabs() {
   const { colors, isDark } = useTheme();
-  
   const styles = useMemo(() => getStyles(colors, isDark), [colors, isDark]);
+  const initialRouteRef = useRef<string | undefined>(undefined);
+  const [initialRoute, setInitialRoute] = React.useState<string | undefined>(undefined);
+
+  // ── Restore last tab once on mount ─────────────────────────────────────
+  useEffect(() => {
+    AsyncStorage.getItem(LAST_TAB_KEY)
+      .then((tab) => {
+        if (tab && TAB_NAMES.includes(tab)) {
+          initialRouteRef.current = tab;
+          setInitialRoute(tab);
+        }
+      })
+      .catch(() => {});
+  }, []);
 
   return (
     <Tab.Navigator
@@ -124,6 +141,17 @@ export default function MainTabs() {
           );
         },
       })}
+      screenListeners={{
+        state: (e: any) => {
+          const routes = e.data?.state?.routes;
+          const idx    = e.data?.state?.index;
+          if (routes && idx !== undefined) {
+            const tabName = routes[idx]?.name;
+            if (tabName) AsyncStorage.setItem(LAST_TAB_KEY, tabName).catch(() => {});
+          }
+        },
+      }}
+      initialRouteName={initialRoute ?? 'HomeTab'}
     >
       <Tab.Screen
         name="HomeTab"
@@ -167,7 +195,7 @@ const getStyles = (colors: any, isDark: boolean) => StyleSheet.create({
     position: "absolute",
     left: 16,
     right: 16,
-    bottom: 10,
+    bottom: 24,
     borderRadius: 28,
     borderTopWidth: 0,
     height: 60,

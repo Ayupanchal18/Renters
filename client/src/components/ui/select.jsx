@@ -27,12 +27,12 @@ const SelectTrigger = React.forwardRef(({ className, children, ...props }, ref) 
       "flex h-10 w-full items-center justify-between rounded-md border border-input bg-background px-3 py-2 text-sm",
       // Placeholder styles
       "placeholder:text-muted-foreground",
-      // Premium focus styles with ring and 2px offset using primary color
-      "focus:outline-none focus:ring-2 focus:ring-primary/30 focus:ring-offset-2 focus:ring-offset-background",
+      // Premium focus styles — full primary ring, keyboard-only
+      "focus:outline-none focus:ring-2 focus:ring-primary focus:ring-offset-2 focus:ring-offset-background",
       // Focus border enhancement
       "focus:border-primary",
       // Smooth transition
-      "transition-all duration-160 ease-smooth",
+      "transition-all duration-200",
       // Disabled state
       "disabled:cursor-not-allowed disabled:opacity-50",
       // Line clamp for overflow

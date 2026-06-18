@@ -1,7 +1,7 @@
-import React from "react";
+import React, { useMemo } from "react";
 import { StyleSheet, Text, View, Linking, Pressable } from "react-native";
 import { MapPin, Navigation, ExternalLink } from "lucide-react-native";
-import { colors } from "../../../theme/tokens";
+import { useTheme } from "../../../theme/useTheme";
 import { Property } from "../../../types/types";
 
 interface Props {
@@ -9,6 +9,9 @@ interface Props {
 }
 
 export default function PropertyLocation({ property }: Props) {
+  const { colors, isDark } = useTheme();
+  const styles = useMemo(() => getStyles(colors, isDark), [colors, isDark]);
+
   // Parse coordinates
   const parseCoordinates = () => {
     const mapLocation = property?.mapLocation;
@@ -91,9 +94,9 @@ export default function PropertyLocation({ property }: Props) {
   );
 }
 
-const styles = StyleSheet.create({
+const getStyles = (colors: any, isDark: boolean) => StyleSheet.create({
   container: {
-    backgroundColor: "#fff",
+    backgroundColor: colors.surface,
     borderRadius: 16,
     borderWidth: 1,
     borderColor: colors.border,
@@ -128,7 +131,7 @@ const styles = StyleSheet.create({
   landmarkBox: {
     flexDirection: "row",
     gap: 8,
-    backgroundColor: "#f8fafc",
+    backgroundColor: isDark ? "rgba(255,255,255,0.03)" : "#f8fafc",
     padding: 12,
     borderRadius: 10,
     marginBottom: 16,
@@ -147,7 +150,7 @@ const styles = StyleSheet.create({
     alignItems: "center",
     justifyContent: "center",
     gap: 8,
-    backgroundColor: "#f1f5f9",
+    backgroundColor: isDark ? "rgba(255,255,255,0.05)" : "#f1f5f9",
     paddingVertical: 12,
     borderRadius: 10,
     marginBottom: 16,

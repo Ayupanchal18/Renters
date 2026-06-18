@@ -76,7 +76,7 @@ const COMPLETION_ITEMS = [
         category: 'Profile Enhancement',
         weight: 5,
         priority: 'optional',
-        check: (user) => !!(user?.userType && user.userType !== 'buyer')
+        check: (user) => !!user?.userType
     },
 
     // Privacy Setup - 10% total

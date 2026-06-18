@@ -5,7 +5,7 @@ import { useNavigate } from "react-router-dom";
 import { isAuthenticated, getToken, getUser, setUser as setUserInStorage } from "../utils/auth";
 import { propertiesAPI } from "../lib/api";
 import { showSuccessToast, showErrorToast } from "../utils/toastNotifications";
-import { Sparkles } from "lucide-react";
+import { Sparkles, Calendar } from "lucide-react";
 import { calculateProfileCompletion } from "../utils/profileCompletion";
 
 // Lazy load heavy components
@@ -15,9 +15,13 @@ const PersonalInfoSection = lazy(() => import("../components/dashboard/PersonalI
 const VerificationSection = lazy(() => import("../components/dashboard/VerificationSection"));
 const PropertiesSection = lazy(() => import("../components/dashboard/PropertiesSection"));
 const SecuritySection = lazy(() => import("../components/dashboard/SecuritySection"));
+const MyVisits = lazy(() => import("../components/scheduling/MyVisits"));
+const IncomingVisits = lazy(() => import("../components/scheduling/IncomingVisits"));
+const DocumentVault = lazy(() => import("../components/vault/DocumentVault"));
 
 import { ProfileCardSkeleton, StatsGridSkeleton } from "../components/ui/skeleton-loaders";
 import { PageLoading, NetworkStatus } from "../components/ui/loading-states";
+import { cn } from "../lib/utils";
 
 const Dashboard = React.memo(function Dashboard() {
     const navigate = useNavigate();
@@ -32,6 +36,7 @@ const Dashboard = React.memo(function Dashboard() {
     const [verificationError, setVerificationError] = useState(null);
     const conversations = [];
     const wishlist = [];
+    const [activeVisitsTab, setActiveVisitsTab] = useState("tenant");
 
     // Memoize authentication check to prevent unnecessary re-renders
     const shouldRedirectToLogin = useMemo(() => {
@@ -322,6 +327,13 @@ const Dashboard = React.memo(function Dashboard() {
                     </Suspense>
                 </div>
 
+                {/* Document Vault */}
+                <div className="mb-3 sm:mb-6">
+                    <Suspense fallback={<div className="animate-pulse bg-card h-64 rounded-xl sm:rounded-2xl border border-border"></div>}>
+                        <DocumentVault onStatusChange={fetchVerificationStatus} />
+                    </Suspense>
+                </div>
+
                 {/* Properties Section */}
                 <div className="mb-3 sm:mb-6">
                     <Suspense fallback={<div className="animate-pulse bg-card h-64 sm:h-96 rounded-xl sm:rounded-2xl border border-border"></div>}>
@@ -334,6 +346,59 @@ const Dashboard = React.memo(function Dashboard() {
                             onRetry={handleRetryDataLoad}
                         />
                     </Suspense>
+                </div>
+
+                {/* Visit Scheduler Section */}
+                <div className="mb-3 sm:mb-6">
+                    <div className="bg-card border border-border rounded-xl sm:rounded-2xl p-5 sm:p-6 shadow-sm">
+                        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pb-4 border-b border-border mb-6">
+                            <div>
+                                <h2 className="text-base sm:text-lg font-bold text-foreground flex items-center gap-2">
+                                    <Calendar className="w-5 h-5 text-primary" />
+                                    Visit Schedule
+                                </h2>
+                                <p className="text-xs text-muted-foreground mt-0.5">
+                                    Track and manage your upcoming walkthroughs and tour bookings
+                                </p>
+                            </div>
+                            
+                            {/* Render Tab buttons if user has both roles (is an owner/has listings) */}
+                            {(userListings.length > 0 || user?.role !== "user") && (
+                                <div className="flex bg-muted/65 p-1 rounded-xl border border-border/40 self-start sm:self-auto">
+                                    <button
+                                        onClick={() => setActiveVisitsTab("tenant")}
+                                        className={cn(
+                                            "px-3 py-1.5 text-xs font-bold rounded-lg transition-all",
+                                            activeVisitsTab === "tenant"
+                                                ? "bg-background text-primary shadow-sm"
+                                                : "text-muted-foreground hover:text-foreground"
+                                        )}
+                                    >
+                                        My Booked Visits
+                                    </button>
+                                    <button
+                                        onClick={() => setActiveVisitsTab("owner")}
+                                        className={cn(
+                                            "px-3 py-1.5 text-xs font-bold rounded-lg transition-all",
+                                            activeVisitsTab === "owner"
+                                                ? "bg-background text-primary shadow-sm"
+                                                : "text-muted-foreground hover:text-foreground"
+                                        )}
+                                    >
+                                        Visits to My Listings
+                                    </button>
+                                </div>
+                            )}
+                        </div>
+
+                        <Suspense fallback={<div className="animate-pulse bg-card h-48 rounded-xl border border-border"></div>}>
+                            {(userListings.length > 0 || user?.role !== "user") ? (
+                                activeVisitsTab === "tenant" ? <MyVisits /> : <IncomingVisits />
+                            ) : (
+                                <MyVisits />
+                            )}
+                        </Suspense>
+                    </div>
                 </div>
 
                 {/* Security Section */}

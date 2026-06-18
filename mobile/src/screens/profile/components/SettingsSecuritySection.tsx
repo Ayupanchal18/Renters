@@ -1,8 +1,10 @@
-import React from "react";
-import { StyleSheet, Text, View, Alert, TouchableOpacity } from "react-native";
+import React, { useState } from "react";
+import { StyleSheet, Text, View, Alert, TouchableOpacity, Switch } from "react-native";
 import { useNavigation } from "@react-navigation/native";
-import { Lock, Phone, Trash2, ChevronRight, ShieldCheck } from "lucide-react-native";
+import { Lock, Phone, Trash2, ChevronRight, ShieldCheck, Bell } from "lucide-react-native";
 import { useTheme } from "../../../theme/useTheme";
+import { useAuth } from "../../../features/auth/AuthContext";
+import { apiClient } from "../../../api/client";
 
 import { User } from "../../../types/types";
 
@@ -16,6 +18,43 @@ export default function SettingsSecuritySection({ user }: Props) {
   
   const styles = React.useMemo(() => getStyles(colors), [colors]);
 
+  const { updateSessionUser } = useAuth();
+  
+  // Initialize from user.privacySettings.communications.pushNotifications (defaults to true)
+  const initialPushValue = user?.privacySettings?.communications?.pushNotifications ?? true;
+  const [pushEnabled, setPushEnabled] = useState(initialPushValue);
+  const [updating, setUpdating] = useState(false);
+
+  const togglePushNotifications = async (value: boolean) => {
+    try {
+      setUpdating(true);
+      setPushEnabled(value);
+      
+      const response = await apiClient.patch('/users/me/privacy', {
+        pushNotifications: value
+      });
+      
+      if (response.data?.success) {
+        // Optimistically update the local auth context if needed
+        updateSessionUser({
+           privacySettings: {
+             ...user?.privacySettings,
+             communications: {
+               ...user?.privacySettings?.communications,
+               pushNotifications: value
+             }
+           }
+        });
+      }
+    } catch (error) {
+      console.error('Error updating push settings:', error);
+      Alert.alert('Error', 'Failed to update notification settings');
+      setPushEnabled(!value); // Revert on failure
+    } finally {
+      setUpdating(false);
+    }
+  };
+
   return (
     <View>
       <View style={styles.sectionHeader}>
@@ -23,6 +62,27 @@ export default function SettingsSecuritySection({ user }: Props) {
         <Text style={styles.sectionTitle}>Security & Login</Text>
       </View>
       <View style={styles.card}>
+        <View style={styles.pressableRow}>
+          <View style={styles.leftContent}>
+            <View style={styles.iconContainer}>
+              <Bell color="#ffffff" size={20} />
+            </View>
+            <View style={styles.textContainer}>
+              <Text style={styles.label}>Property Alerts</Text>
+              <Text style={styles.sublabel}>Push notifications for alerts</Text>
+            </View>
+          </View>
+          <View style={styles.rightContent}>
+            <Switch 
+              value={pushEnabled} 
+              onValueChange={togglePushNotifications} 
+              disabled={updating}
+              trackColor={{ false: colors.border, true: colors.primary }}
+              thumbColor={"#ffffff"}
+            />
+          </View>
+        </View>
+        <View style={styles.divider} />
         <PressableRow 
           label="Change Password" 
           sublabel="Update your password"

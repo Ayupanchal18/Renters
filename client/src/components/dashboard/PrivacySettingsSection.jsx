@@ -16,7 +16,8 @@ import {
     Settings,
     Lock,
     Globe,
-    Bell
+    Bell,
+    Smartphone
 } from 'lucide-react';
 import { useToast } from '../ui/use-toast';
 import { getHeaders } from '../../lib/api.js';
@@ -69,6 +70,25 @@ const PrivacySettingsSection = ({ user, onUpdate }) => {
     const updatePrivacySettings = async (section, updates) => {
         try {
             setUpdating(true);
+
+            // Special handling for push notifications to manage FCM subscriptions
+            if (section === 'communications' && updates.pushNotifications !== undefined) {
+                const response = await fetch('/api/users/me/privacy', {
+                    method: 'PATCH',
+                    headers: getHeaders(),
+                    body: JSON.stringify({ pushNotifications: updates.pushNotifications })
+                });
+
+                if (!response.ok) throw new Error('Failed to update push notification settings');
+                
+                await loadPrivacyData(); // Reload to get updated settings
+                
+                toast({
+                    title: "Success",
+                    description: "Push notification settings updated successfully"
+                });
+                return;
+            }
 
             const response = await fetch('/api/privacy/settings', {
                 method: 'PATCH',
@@ -432,6 +452,33 @@ const PrivacySettingsSection = ({ user, onUpdate }) => {
                             checked={privacySettings.privacy?.visibility?.showProperties !== false}
                             onCheckedChange={(checked) => 
                                 updatePrivacySettings('visibility', { showProperties: checked })
+                            }
+                            disabled={updating}
+                        />
+                    </div>
+                </div>
+            </Card>
+
+            {/* Communication Preferences */}
+            <Card className="p-6">
+                <div className="flex items-center space-x-2 mb-4">
+                    <Smartphone className="h-5 w-5" />
+                    <h3 className="text-lg font-semibold">Notifications & Alerts</h3>
+                </div>
+                <p className="text-sm text-gray-600 mb-4">
+                    Control how we send you property alerts and notifications.
+                </p>
+
+                <div className="space-y-4">
+                    <div className="flex items-center justify-between">
+                        <div>
+                            <label className="font-medium">Property Alerts (Push Notifications)</label>
+                            <p className="text-sm text-gray-500">Receive instant alerts for properties</p>
+                        </div>
+                        <Switch
+                            checked={privacySettings.privacy?.communications?.pushNotifications !== false}
+                            onCheckedChange={(checked) => 
+                                updatePrivacySettings('communications', { pushNotifications: checked })
                             }
                             disabled={updating}
                         />

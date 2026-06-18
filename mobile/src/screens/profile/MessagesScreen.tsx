@@ -5,40 +5,40 @@ import {
   StyleSheet,
   FlatList,
   TouchableOpacity,
-  TextInput,
   ActivityIndicator,
   KeyboardAvoidingView,
   Platform,
   RefreshControl,
   Alert,
-  Image,
   Modal,
   ScrollView,
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { useNavigation, useRoute } from "@react-navigation/native";
-import { ArrowLeft, Send, MessageSquare, Trash2, ChevronLeft, Paperclip, Smile, X, FileText } from "lucide-react-native";
-import * as ImagePicker from 'expo-image-picker';
+import { ArrowLeft, MessageSquare, ChevronLeft, Trash2, X } from "lucide-react-native";
 import { useTheme } from "../../theme/useTheme";
 import { useAuth } from "../../features/auth/AuthContext";
 import ProtectedScreen from "../../components/auth/ProtectedScreen";
 import { messageService } from "../../features/messages/services/messageService";
-
-const MAX_FILE_SIZE = 10 * 1024 * 1024; // 10MB
+import { socketService } from "../../features/messages/services/socketService";
+import ConversationListItem from "../../components/chat/ConversationListItem";
+import MessageBubble from "../../components/chat/MessageBubble";
+import MessageComposer from "../../components/chat/MessageComposer";
+import VerifiedBadge from "../../components/ui/VerifiedBadge";
 
 // Common emojis for quick access
 const EMOJI_LIST = [
-  '😀', '😃', '😄', '😁', '😅', '😂', '🤣', '😊', '😇', '🙂',
-  '😉', '😍', '🥰', '😘', '😋', '😎', '🤔', '🤗', '🤩', '😏',
-  '😢', '😭', '😤', '😠', '🤯', '😱', '😰', '🥺', '😴', '🤮',
-  '👍', '👎', '👏', '🙌', '🤝', '💪', '✌️', '🤞', '👋', '🙏',
-  '❤️', '🧡', '💛', '💚', '💙', '💜', '🖤', '💔', '💯', '✨',
-  '🔥', '⭐', '🎉', '🎊', '💐', '🏠', '🏡', '🏢', '🔑', '📍'
+  "😀", "😃", "😄", "😁", "😅", "😂", "🤣", "😊", "😇", "🙂",
+  "😉", "😍", "🥰", "😘", "😋", "😎", "🤔", "🤗", "🤩", "😏",
+  "😢", "😭", "😤", "😠", "🤯", "😱", "😰", "🥺", "😴", "🤮",
+  "👍", "👎", "👏", "🙌", "🤝", "💪", "✌️", "🤞", "👋", "🙏",
+  "❤️", "🧡", "💛", "💚", "💙", "💜", "🖤", "💔", "💯", "✨",
+  "🔥", "⭐", "🎉", "🎊", "💐", "🏠", "🏡", "🏢", "🔑", "📍"
 ];
 
 type Conversation = {
   _id: string;
-  participants: Array<{ _id: string; name: string; avatar?: string }>;
+  participants: Array<{ _id: string; name: string; avatar?: string; isOnline?: boolean }>;
   lastMessage?: { text: string; createdAt: string; sender: string };
   lastActivityAt?: string;
   unreadCount?: any;
@@ -52,6 +52,21 @@ type Message = {
   createdAt: string;
   read: boolean;
   pending?: boolean;
+  type?: string;
+  image?: string;
+  file?: {
+    originalName?: string;
+    filename?: string;
+    mimetype?: string;
+    size?: number;
+    url?: string;
+  };
+  attachment?: {
+    url?: string;
+    filename?: string;
+    mimeType?: string;
+    size?: number;
+  };
 };
 
 export default function MessagesScreen() {
@@ -72,15 +87,16 @@ export default function MessagesScreen() {
   const [inputText, setInputText] = useState("");
   const [view, setView] = useState<"list" | "chat">("list");
   const [refreshing, setRefreshing] = useState(false);
-  const [selectedImage, setSelectedImage] = useState<any>(null);
+  const [selectedFile, setSelectedFile] = useState<any>(null);
   const [showEmojiPicker, setShowEmojiPicker] = useState(false);
-  const [uploadError, setUploadError] = useState<string | null>(null);
+  const [isRecipientTyping, setIsRecipientTyping] = useState(false);
+
   const flatRef = useRef<FlatList>(null);
-  const inputRef = useRef<TextInput>(null);
+  const typingTimeoutRef = useRef<NodeJS.Timeout | null>(null);
+  const isTypingRef = useRef(false);
 
   // Load conversations
   const loadConversations = useCallback(async () => {
-    // Don't load conversations if user is not authenticated
     if (!user) {
       setConvsLoading(false);
       setRefreshing(false);
@@ -92,7 +108,7 @@ export default function MessagesScreen() {
       const result = await messageService.getConversations();
       const convs = result?.data?.conversations || result?.data || result?.conversations || [];
       setConversations(Array.isArray(convs) ? convs : []);
-    } catch(e) {
+    } catch (e) {
       console.error("Failed to load conversations", e);
     } finally {
       setConvsLoading(false);
@@ -100,27 +116,141 @@ export default function MessagesScreen() {
     }
   }, [user]);
 
-  useEffect(() => { loadConversations(); }, [loadConversations]);
+  useEffect(() => {
+    loadConversations();
+  }, [loadConversations]);
+
+  // Sync online/offline updates from socket globally
+  useEffect(() => {
+    const socket = socketService.getSocket();
+    if (!socket) return;
+
+    const handleUserOnline = (data: { userId: string }) => {
+      setConversations(prev =>
+        prev.map(c => {
+          const updated = c.participants?.map(p =>
+            p._id === data.userId ? { ...p, isOnline: true } : p
+          );
+          return { ...c, participants: updated };
+        })
+      );
+    };
+
+    const handleUserOffline = (data: { userId: string }) => {
+      setConversations(prev =>
+        prev.map(c => {
+          const updated = c.participants?.map(p =>
+            p._id === data.userId ? { ...p, isOnline: false } : p
+          );
+          return { ...c, participants: updated };
+        })
+      );
+    };
+
+    socket.on("user.online", handleUserOnline);
+    socket.on("user.offline", handleUserOffline);
+
+    return () => {
+      socket.off("user.online", handleUserOnline);
+      socket.off("user.offline", handleUserOffline);
+    };
+  }, [conversations.length]);
+
+  // Handle joining conversation rooms and setting up thread socket listeners
+  useEffect(() => {
+    if (!selectedConv) return;
+    const convId = selectedConv._id || (selectedConv as any).id;
+
+    // Join room
+    socketService.joinConversation(convId);
+
+    // Listen for new messages
+    const handleNewMsg = (data: { conversationId: string; message: any }) => {
+      if (data.conversationId === convId) {
+        setMessages(prev => {
+          if (prev.some(m => m._id === data.message._id)) return prev;
+
+          // Deduplicate optimistic messages if socket broadcast comes first
+          const senderId = typeof data.message.sender === "object" ? data.message.sender._id : data.message.sender;
+          if (senderId === currentUserId) {
+            const pendingIndex = prev.findIndex(
+              m => m.pending === true && (m.text === data.message.text || m.type === data.message.type)
+            );
+            if (pendingIndex !== -1) {
+              const updated = [...prev];
+              updated[pendingIndex] = { ...data.message, pending: false };
+              return updated;
+            }
+          }
+
+          return [data.message, ...prev]; // Prepend because FlatList is inverted (index 0 is at bottom)
+        });
+        // Auto-mark as read on receipt if viewing this thread
+        messageService.markAsRead(convId).catch(() => {});
+      } else {
+        // Increment unread count in conversations list for other conversations
+        setConversations(prev =>
+          prev.map(c => {
+            const cId = c._id || (c as any).id;
+            if (cId === data.conversationId) {
+              const currentUnread = getUnreadCount(c);
+              return {
+                ...c,
+                unreadCount: currentUnread + 1,
+                lastMessage: {
+                  text: data.message.text || "📎 Attachment",
+                  sender: typeof data.message.sender === "object" ? data.message.sender._id : data.message.sender,
+                  createdAt: data.message.createdAt,
+                },
+                lastActivityAt: data.message.createdAt,
+              };
+            }
+            return c;
+          }).sort((a, b) => new Date(b.lastActivityAt || 0).getTime() - new Date(a.lastActivityAt || 0).getTime())
+        );
+      }
+    };
+
+    // Listen for read updates (marks all received messages as read by partner)
+    const handleReadUpdate = (data: { conversationId: string; userId: string }) => {
+      if (data.conversationId === convId && data.userId !== currentUserId) {
+        setMessages(prev => prev.map(m => ({ ...m, read: true })));
+      }
+    };
+
+    // Listen for typing indicator
+    const handleUserTyping = (data: { conversationId: string; userId: string; isTyping: boolean }) => {
+      if (data.conversationId === convId && data.userId !== currentUserId) {
+        setIsRecipientTyping(data.isTyping);
+      }
+    };
+
+    socketService.onMessageNew(handleNewMsg);
+    socketService.onMessageReadUpdate(handleReadUpdate);
+    socketService.onUserTyping(handleUserTyping);
+
+    return () => {
+      socketService.leaveConversation(convId);
+      socketService.offMessageNew(handleNewMsg);
+      socketService.offMessageReadUpdate(handleReadUpdate);
+      socketService.offUserTyping(handleUserTyping);
+    };
+  }, [selectedConv, currentUserId]);
 
   // Auto-select if navigated with conversationId
   useEffect(() => {
     const convId = route.params?.conversationId;
     if (!convId) return;
 
-    // Wait until initial load is finished so we don't accidentally fetch multiple times
     if (convsLoading) return;
 
-    // Check if it's in our local loaded list first
     const target = conversations.find(c => c._id === convId || (c as any).id === convId);
     if (target) {
       openConversation(target);
     } else {
-      // It's not in our list (could be a newly created conversation from property detail) or list is empty
-      // Let's fetch it directly
       messageService.getConversation(convId).then(result => {
         const convData = result?.data?.conversation || result?.conversation;
         if (convData) {
-          // Add to local list and open
           setConversations(prev => {
             if (prev.find(c => c._id === convId)) return prev;
             return [convData, ...prev];
@@ -136,116 +266,122 @@ export default function MessagesScreen() {
     setView("chat");
     setMsgsLoading(true);
     try {
-      const result = await messageService.getConversation(conv._id || (conv as any).id);
-      const msgs = result?.data?.messages || result?.messages || [];
-      setMessages(Array.isArray(msgs) ? msgs : []);
-      // Mark as read
       const convId = conv._id || (conv as any).id;
+      const result = await messageService.getConversation(convId);
+      const msgs = result?.data?.messages || result?.messages || [];
+      // Reverse messages list because FlatList is inverted (newest at index 0, oldest at index N)
+      setMessages(Array.isArray(msgs) ? [...msgs].reverse() : []);
+
+      // Mark as read
       if (convId) {
         await messageService.markAsRead(convId).catch(() => {});
       }
-      // Update local unread count
+      // Reset local unread count
       setConversations(prev => prev.map(c =>
         c._id === convId || (c as any).id === convId ? { ...c, unreadCount: 0 } : c
       ));
-    } catch(e) {
+    } catch (e) {
       console.error("Failed to load messages", e);
     } finally {
       setMsgsLoading(false);
     }
   }, []);
 
-  const handlePickImage = useCallback(async () => {
-    try {
-      const permissionResult = await ImagePicker.requestMediaLibraryPermissionsAsync();
-      
-      if (!permissionResult.granted) {
-        Alert.alert("Permission Required", "Please allow access to your photo library to upload images.");
-        return;
-      }
+  const handleTyping = (text: string) => {
+    setInputText(text);
+    if (!selectedConv) return;
+    const convId = selectedConv._id || (selectedConv as any).id;
 
-      const result = await ImagePicker.launchImageLibraryAsync({
-        mediaTypes: ImagePicker.MediaTypeOptions.Images,
-        allowsEditing: true,
-        quality: 0.8,
-        base64: false,
-      });
-
-      if (!result.canceled && result.assets[0]) {
-        const asset = result.assets[0];
-        
-        // Check file size (approximate from dimensions if fileSize not available)
-        if (asset.fileSize && asset.fileSize > MAX_FILE_SIZE) {
-          setUploadError(`File size must be less than ${MAX_FILE_SIZE / (1024 * 1024)}MB`);
-          return;
-        }
-
-        setSelectedImage(asset);
-        setUploadError(null);
-      }
-    } catch (error) {
-      console.error("Error picking image:", error);
-      Alert.alert("Error", "Failed to pick image. Please try again.");
+    if (!isTypingRef.current) {
+      isTypingRef.current = true;
+      socketService.sendTypingStart(convId);
     }
-  }, []);
 
-  const clearImage = useCallback(() => {
-    setSelectedImage(null);
-    setUploadError(null);
-  }, []);
+    if (typingTimeoutRef.current) {
+      clearTimeout(typingTimeoutRef.current);
+    }
 
-  const handleEmojiSelect = useCallback((emoji: string) => {
-    setInputText(prev => prev + emoji);
-    setShowEmojiPicker(false);
-    // Focus back on input
-    setTimeout(() => inputRef.current?.focus(), 100);
-  }, []);
-
-  const formatFileSize = (bytes: number) => {
-    if (bytes === 0) return '0 Bytes';
-    const k = 1024;
-    const sizes = ['Bytes', 'KB', 'MB'];
-    const i = Math.floor(Math.log(bytes) / Math.log(k));
-    return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + ' ' + sizes[i];
+    typingTimeoutRef.current = setTimeout(() => {
+      isTypingRef.current = false;
+      socketService.sendTypingStop(convId);
+    }, 2000);
   };
 
   const handleSend = useCallback(async () => {
-    if ((!inputText.trim() && !selectedImage) || !selectedConv) return;
+    if ((!inputText.trim() && !selectedFile) || !selectedConv) return;
     const text = inputText.trim();
     setInputText("");
-    const imageToSend = selectedImage;
-    setSelectedImage(null);
+    const fileToSend = selectedFile;
+    setSelectedFile(null);
 
+    // Stop typing indicator on send
+    const convId = selectedConv._id || (selectedConv as any).id;
+    if (isTypingRef.current) {
+      isTypingRef.current = false;
+      socketService.sendTypingStop(convId);
+    }
+
+    // Create optimistic message
     const tempMsg: Message = {
       _id: `temp-${Date.now()}`,
       sender: currentUserId,
-      text: text || (imageToSend ? "📷 Image" : ""),
+      text: text || (fileToSend ? "📷 Attachment" : ""),
       createdAt: new Date().toISOString(),
       read: false,
       pending: true,
+      type: fileToSend?.isImage ? "image" : (fileToSend ? "file" : "text"),
     };
-    setMessages(prev => [...prev, tempMsg]);
-    // No need to scroll with inverted list - new messages appear at bottom automatically
 
+    if (fileToSend) {
+      if (fileToSend.isImage) {
+        tempMsg.image = fileToSend.uri;
+      } else {
+        tempMsg.file = {
+          originalName: fileToSend.fileName,
+          filename: fileToSend.fileName,
+          mimetype: fileToSend.mimeType,
+          size: fileToSend.fileSize,
+          url: fileToSend.uri,
+        };
+      }
+    }
+
+    // Prepend to messages since FlatList is inverted
+    setMessages(prev => [tempMsg, ...prev]);
     setSending(true);
+
     try {
-      const convId = selectedConv._id || (selectedConv as any).id;
-      // TODO: Update messageService to handle image uploads
-      const result = await messageService.sendMessage(convId, text);
+      const result = await messageService.sendMessage(convId, text, fileToSend);
       const realMsg = result?.data?.message || result?.message || result;
-      setMessages(prev => prev.map(m => m._id === tempMsg._id ? { ...realMsg, pending: false } : m));
+      setMessages(prev => {
+        // If the socket listener already inserted/replaced this message, remove the tempMsg
+        if (prev.some(m => m._id === realMsg._id)) {
+          return prev.filter(m => m._id !== tempMsg._id);
+        }
+        return prev.map(m => m._id === tempMsg._id ? { ...realMsg, pending: false } : m);
+      });
+
+      // Update last message preview in conversations list
       setConversations(prev => prev.map(c =>
         c._id === convId || (c as any).id === convId
-          ? { ...c, lastMessage: { text: text || "📷 Image", sender: currentUserId, createdAt: new Date().toISOString() }, lastActivityAt: new Date().toISOString() }
+          ? {
+              ...c,
+              lastMessage: {
+                text: text || (fileToSend ? "📎 Attachment" : ""),
+                sender: currentUserId,
+                createdAt: new Date().toISOString(),
+              },
+              lastActivityAt: new Date().toISOString(),
+            }
           : c
       ).sort((a, b) => new Date(b.lastActivityAt || 0).getTime() - new Date(a.lastActivityAt || 0).getTime()));
-    } catch(e) {
+    } catch (e) {
       setMessages(prev => prev.filter(m => m._id !== tempMsg._id));
       Alert.alert("Error", "Failed to send message. Please try again.");
     } finally {
       setSending(false);
     }
-  }, [inputText, selectedImage, selectedConv, currentUserId]);
+  }, [inputText, selectedFile, selectedConv, currentUserId]);
 
   const handleDeleteConversation = useCallback(async () => {
     if (!selectedConv) return;
@@ -260,7 +396,7 @@ export default function MessagesScreen() {
             setSelectedConv(null);
             setMessages([]);
             setView("list");
-          } catch(e) {
+          } catch (e) {
             Alert.alert("Error", "Failed to delete conversation.");
           }
         }
@@ -269,11 +405,15 @@ export default function MessagesScreen() {
   }, [selectedConv]);
 
   const getOtherParticipant = (conv: Conversation) => {
-    return conv.participants?.find(p => (p._id || p) !== currentUserId) || conv.participants?.[0];
+    if (!conv || !conv.participants) return null;
+    const currentIdStr = String(currentUserId).trim().toLowerCase();
+    const other = conv.participants.find(p => {
+      if (!p) return false;
+      const pId = typeof p === "object" ? (p._id || (p as any).id) : p;
+      return String(pId).trim().toLowerCase() !== currentIdStr;
+    });
+    return other || conv.participants[0];
   };
-
-  const getSenderId = (msg: Message) =>
-    typeof msg.sender === "object" ? msg.sender._id : msg.sender;
 
   const formatTime = (dateStr?: string) => {
     if (!dateStr) return "";
@@ -297,54 +437,10 @@ export default function MessagesScreen() {
     return uc;
   };
 
-  const renderConversationItem = ({ item }: { item: Conversation }) => {
-    const other = getOtherParticipant(item);
-    const unread = getUnreadCount(item);
-    const initial = (other?.name || "?")[0]?.toUpperCase();
-
-    return (
-      <TouchableOpacity style={styles.convItem} onPress={() => openConversation(item)} activeOpacity={0.7}>
-        <View style={[styles.avatar, { backgroundColor: unread > 0 ? colors.primary : colors.textSecondary }]}>
-          <Text style={styles.avatarText}>{initial}</Text>
-        </View>
-        <View style={styles.convBody}>
-          <View style={styles.convHeader}>
-            <Text style={[styles.convName, unread > 0 && { color: colors.textPrimary, fontWeight: '700' }]} numberOfLines={1}>
-              {other?.name || "Unknown User"}
-            </Text>
-            <Text style={styles.convTime}>{formatTime(item.lastActivityAt || item.lastMessage?.createdAt)}</Text>
-          </View>
-          {item.property?.title && (
-            <Text style={styles.convProperty} numberOfLines={1}>🏠 {item.property.title}</Text>
-          )}
-          <View style={styles.convFooter}>
-            <Text style={[styles.convLastMsg, unread > 0 && { color: colors.textPrimary, fontWeight: '600' }]} numberOfLines={1}>
-              {item.lastMessage?.text || "No messages yet"}
-            </Text>
-            {unread > 0 && (
-              <View style={[styles.badge, { backgroundColor: colors.primary }]}>
-                <Text style={styles.badgeText}>{unread}</Text>
-              </View>
-            )}
-          </View>
-        </View>
-      </TouchableOpacity>
-    );
-  };
-
-  const renderMessageItem = ({ item }: { item: Message }) => {
-    const isMine = getSenderId(item) === currentUserId;
-    return (
-      <View style={[styles.msgRow, isMine ? styles.msgRowMine : styles.msgRowOther]}>
-        <View style={[styles.msgBubble, isMine ? styles.msgBubbleMine : styles.msgBubbleOther, item.pending && { opacity: 0.6 }]}>
-          <Text style={[styles.msgText, { color: isMine ? "#fff" : colors.textPrimary }]}>{item.text}</Text>
-          <Text style={[styles.msgTime, { color: isMine ? "rgba(255,255,255,0.7)" : colors.textSecondary }]}>
-            {formatTime(item.createdAt)}{item.pending ? " ·· sending" : ""}
-          </Text>
-        </View>
-      </View>
-    );
-  };
+  const handleEmojiSelect = useCallback((emoji: string) => {
+    setInputText(prev => prev + emoji);
+    setShowEmojiPicker(false);
+  }, []);
 
   // ── LIST VIEW ──
   if (view === "list") {
@@ -355,48 +451,57 @@ export default function MessagesScreen() {
         message="Please sign in to access your messages"
       >
         <SafeAreaView style={[styles.safe, { backgroundColor: colors.background }]}>
-        {/* Header */}
-        <View style={styles.pageHeader}>
-          <TouchableOpacity onPress={() => navigation.goBack()} style={styles.backBtn}>
-            <ArrowLeft size={22} color={colors.textPrimary} />
-          </TouchableOpacity>
-          <View style={[styles.headerIcon, { backgroundColor: colors.primary }]}>
-            <MessageSquare size={22} color="#ffffff" />
+          {/* Header */}
+          <View style={styles.pageHeader}>
+            <TouchableOpacity onPress={() => navigation.goBack()} style={styles.backBtn}>
+              <ArrowLeft size={22} color={colors.textPrimary} />
+            </TouchableOpacity>
+            <View style={[styles.headerIcon, { backgroundColor: colors.primary }]}>
+              <MessageSquare size={22} color="#ffffff" />
+            </View>
+            <Text style={styles.pageTitle}>Messages</Text>
           </View>
-          <Text style={styles.pageTitle}>Messages</Text>
-        </View>
 
-        {convsLoading ? (
-          <View style={styles.center}>
-            <ActivityIndicator size="large" color={colors.primary} />
-            <Text style={[styles.loadingText, { color: colors.textSecondary }]}>Loading conversations...</Text>
-          </View>
-        ) : conversations.length === 0 ? (
-          <View style={styles.center}>
-            <MessageSquare size={56} color={colors.textSecondary} style={{ marginBottom: 16 }} />
-            <Text style={[styles.emptyTitle, { color: colors.textPrimary }]}>No conversations yet</Text>
-            <Text style={[styles.emptyText, { color: colors.textSecondary }]}>
-              Contact a property owner to start chatting
-            </Text>
-          </View>
-        ) : (
-          <FlatList
-            data={conversations}
-            renderItem={renderConversationItem}
-            keyExtractor={item => item._id || (item as any).id}
-            contentContainerStyle={{ paddingBottom: 32 }}
-            ItemSeparatorComponent={() => <View style={[styles.separator, { backgroundColor: colors.border }]} />}
-            refreshControl={
-              <RefreshControl
-                refreshing={refreshing}
-                onRefresh={() => { setRefreshing(true); loadConversations(); }}
-                colors={[colors.primary]}
-                tintColor={colors.primary}
-              />
-            }
-          />
-        )}
-      </SafeAreaView>
+          {convsLoading ? (
+            <View style={styles.center}>
+              <ActivityIndicator size="large" color={colors.primary} />
+              <Text style={[styles.loadingText, { color: colors.textSecondary }]}>Loading conversations...</Text>
+            </View>
+          ) : conversations.length === 0 ? (
+            <View style={styles.center}>
+              <MessageSquare size={56} color={colors.textSecondary} style={{ marginBottom: 16 }} />
+              <Text style={[styles.emptyTitle, { color: colors.textPrimary }]}>No conversations yet</Text>
+              <Text style={[styles.emptyText, { color: colors.textSecondary }]}>
+                Contact a property owner to start chatting
+              </Text>
+            </View>
+          ) : (
+            <FlatList
+              data={conversations}
+              renderItem={({ item }) => (
+                <ConversationListItem
+                  item={item}
+                  currentUserId={currentUserId}
+                  onPress={openConversation}
+                  getUnreadCount={getUnreadCount}
+                  formatTime={formatTime}
+                  getOtherParticipant={getOtherParticipant}
+                />
+              )}
+              keyExtractor={item => item._id || (item as any).id}
+              contentContainerStyle={{ paddingBottom: 32 }}
+              ItemSeparatorComponent={() => <View style={[styles.separator, { backgroundColor: colors.border }]} />}
+              refreshControl={
+                <RefreshControl
+                  refreshing={refreshing}
+                  onRefresh={() => { setRefreshing(true); loadConversations(); }}
+                  colors={[colors.primary]}
+                  tintColor={colors.primary}
+                />
+              }
+            />
+          )}
+        </SafeAreaView>
       </ProtectedScreen>
     );
   }
@@ -411,164 +516,120 @@ export default function MessagesScreen() {
       message="Please sign in to access your messages"
     >
       <SafeAreaView style={[styles.safe, { backgroundColor: colors.background }]}>
-      <KeyboardAvoidingView
-        style={{ flex: 1 }}
-        behavior={Platform.OS === "ios" ? "padding" : undefined}
-        keyboardVerticalOffset={Platform.OS === "ios" ? 0 : 0}
-      >
-        {/* Chat Header */}
-        <View style={[styles.chatHeader, { borderBottomColor: colors.border }]}>
-          <TouchableOpacity onPress={() => { setView("list"); setSelectedConv(null); setMessages([]); }} style={styles.backBtn}>
-            <ChevronLeft size={26} color={colors.textPrimary} />
-          </TouchableOpacity>
-          <View style={[styles.avatar, { backgroundColor: colors.primary, width: 36, height: 36, borderRadius: 18 }]}>
-            <Text style={styles.avatarText}>{(otherParticipant?.name || "?")[0]?.toUpperCase()}</Text>
-          </View>
-          <View style={{ flex: 1, marginLeft: 10 }}>
-            <Text style={[styles.chatTitle, { color: colors.textPrimary }]} numberOfLines={1}>
-              {otherParticipant?.name || "Unknown User"}
-            </Text>
-            {selectedConv?.property?.title && (
-              <Text style={[styles.chatSubtitle, { color: colors.textSecondary }]} numberOfLines={1}>
-                🏠 {selectedConv.property.title}
-              </Text>
-            )}
-          </View>
-          <TouchableOpacity onPress={handleDeleteConversation} style={{ padding: 8 }}>
-            <Trash2 size={18} color={colors.error} />
-          </TouchableOpacity>
-        </View>
-
-        {/* Messages */}
-        {msgsLoading ? (
-          <View style={styles.center}>
-            <ActivityIndicator size="large" color={colors.primary} />
-          </View>
-        ) : (
-          <FlatList
-            ref={flatRef}
-            data={messages}
-            renderItem={renderMessageItem}
-            keyExtractor={item => item._id || (item as any).id}
-            inverted
-            contentContainerStyle={styles.msgList}
-            style={{ flex: 1 }}
-            ListEmptyComponent={
-              <View style={styles.emptyMsgContainer}>
-                <Text style={{ color: colors.textSecondary }}>No messages yet. Say hello! 👋</Text>
-              </View>
-            }
-          />
-        )}
-
-        {/* Input Bar - Always at bottom */}
-        <View style={{ backgroundColor: colors.surface }}>
-          {/* Upload Error */}
-          {uploadError && (
-            <View style={[styles.errorBanner, { backgroundColor: colors.error + '20', borderColor: colors.error + '40' }]}>
-              <Text style={[styles.errorText, { color: colors.error }]}>{uploadError}</Text>
-              <TouchableOpacity onPress={() => setUploadError(null)}>
-                <Text style={[styles.errorDismiss, { color: colors.error }]}>✕</Text>
-              </TouchableOpacity>
-            </View>
-          )}
-
-          {/* Image Preview */}
-          {selectedImage && (
-            <View style={[styles.imagePreview, { backgroundColor: colors.input, borderColor: colors.border }]}>
-              <Image source={{ uri: selectedImage.uri }} style={styles.previewImage} />
-              <View style={styles.previewInfo}>
-                <Text style={[styles.previewName, { color: colors.textPrimary }]} numberOfLines={1}>
-                  {selectedImage.fileName || 'Image'}
-                </Text>
-                {selectedImage.fileSize && (
-                  <Text style={[styles.previewSize, { color: colors.textSecondary }]}>
-                    {formatFileSize(selectedImage.fileSize)}
-                  </Text>
-                )}
-              </View>
-              <TouchableOpacity onPress={clearImage} style={styles.previewClose}>
-                <X size={18} color={colors.textSecondary} />
-              </TouchableOpacity>
-            </View>
-          )}
-
-          <View style={[styles.inputBar, { borderTopColor: colors.border }]}>
-            <TouchableOpacity
-              onPress={handlePickImage}
-              disabled={sending}
-              style={styles.iconBtn}
-            >
-              <Paperclip size={20} color={colors.textSecondary} />
-            </TouchableOpacity>
-
-            <TextInput
-              ref={inputRef}
-              style={[styles.msgInput, { backgroundColor: colors.input, color: colors.textPrimary, borderColor: colors.border }]}
-              placeholder={selectedImage ? "Add a caption..." : "Type a message..."}
-              placeholderTextColor={colors.textSecondary}
-              value={inputText}
-              onChangeText={setInputText}
-              multiline
-              maxLength={2000}
-            />
-
-            <TouchableOpacity
-              onPress={() => setShowEmojiPicker(true)}
-              disabled={sending}
-              style={styles.iconBtn}
-            >
-              <Smile size={20} color={colors.textSecondary} />
-            </TouchableOpacity>
-
-            <TouchableOpacity
-              onPress={handleSend}
-              disabled={sending || (!inputText.trim() && !selectedImage)}
-              style={[styles.sendBtn, { backgroundColor: (!inputText.trim() && !selectedImage) ? colors.border : colors.primary }]}
-            >
-              {sending
-                ? <ActivityIndicator size="small" color="#fff" />
-                : <Send size={18} color="#fff" />
-              }
-            </TouchableOpacity>
-          </View>
-        </View>
-
-        {/* Emoji Picker Modal */}
-        <Modal
-          visible={showEmojiPicker}
-          transparent
-          animationType="slide"
-          onRequestClose={() => setShowEmojiPicker(false)}
+        <KeyboardAvoidingView
+          style={{ flex: 1 }}
+          behavior={Platform.OS === "ios" ? "padding" : undefined}
+          keyboardVerticalOffset={Platform.OS === "ios" ? 0 : 0}
         >
-          <TouchableOpacity
-            style={styles.emojiModalOverlay}
-            activeOpacity={1}
-            onPress={() => setShowEmojiPicker(false)}
-          >
-            <View style={[styles.emojiPicker, { backgroundColor: colors.surface }]}>
-              <View style={styles.emojiHeader}>
-                <Text style={[styles.emojiTitle, { color: colors.textPrimary }]}>Select Emoji</Text>
-                <TouchableOpacity onPress={() => setShowEmojiPicker(false)}>
-                  <X size={24} color={colors.textSecondary} />
-                </TouchableOpacity>
-              </View>
-              <ScrollView contentContainerStyle={styles.emojiGrid}>
-                {EMOJI_LIST.map((emoji, idx) => (
-                  <TouchableOpacity
-                    key={idx}
-                    onPress={() => handleEmojiSelect(emoji)}
-                    style={styles.emojiButton}
-                  >
-                    <Text style={styles.emojiText}>{emoji}</Text>
-                  </TouchableOpacity>
-                ))}
-              </ScrollView>
+          {/* Chat Header */}
+          <View style={[styles.chatHeader, { borderBottomColor: colors.border }]}>
+            <TouchableOpacity onPress={() => { setView("list"); setSelectedConv(null); setMessages([]); }} style={styles.backBtn}>
+              <ChevronLeft size={26} color={colors.textPrimary} />
+            </TouchableOpacity>
+            <View style={[styles.avatar, { backgroundColor: colors.primary, width: 36, height: 36, borderRadius: 18 }]}>
+              <Text style={styles.avatarText}>{(otherParticipant?.name || "?")[0]?.toUpperCase()}</Text>
             </View>
-          </TouchableOpacity>
-        </Modal>
-      </KeyboardAvoidingView>
-    </SafeAreaView>
+            <View style={{ flex: 1, marginLeft: 10 }}>
+              <View style={{ flexDirection: "row", alignItems: "center" }}>
+                <Text style={[styles.chatTitle, { color: colors.textPrimary }]} numberOfLines={1}>
+                  {otherParticipant?.name || "Unknown User"}
+                </Text>
+                {(otherParticipant as any)?.isVerified && <VerifiedBadge size={16} />}
+              </View>
+              {selectedConv?.property?.title && (
+                <Text style={[styles.chatSubtitle, { color: colors.textSecondary }]} numberOfLines={1}>
+                  🏠 {selectedConv.property.title}
+                </Text>
+              )}
+            </View>
+            <TouchableOpacity onPress={handleDeleteConversation} style={{ padding: 8 }}>
+              <Trash2 size={18} color={colors.error} />
+            </TouchableOpacity>
+          </View>
+
+          {/* Messages */}
+          {msgsLoading ? (
+            <View style={styles.center}>
+              <ActivityIndicator size="large" color={colors.primary} />
+            </View>
+          ) : (
+            <FlatList
+              ref={flatRef}
+              data={messages}
+              renderItem={({ item }) => (
+                <MessageBubble
+                  item={item}
+                  currentUserId={currentUserId}
+                  formatTime={formatTime}
+                />
+              )}
+              keyExtractor={item => item._id || (item as any).id}
+              inverted
+              contentContainerStyle={styles.msgList}
+              style={{ flex: 1 }}
+              ListEmptyComponent={
+                <View style={styles.emptyMsgContainer}>
+                  <Text style={{ color: colors.textSecondary }}>No messages yet. Say hello! 👋</Text>
+                </View>
+              }
+            />
+          )}
+
+          {/* Recipient Typing Indicator */}
+          {isRecipientTyping && (
+            <View style={[styles.typingContainer, { backgroundColor: colors.background }]}>
+              <Text style={[styles.typingText, { color: colors.textSecondary }]}>
+                {otherParticipant?.name || "Someone"} is typing...
+              </Text>
+            </View>
+          )}
+
+          {/* Message Composer */}
+          <MessageComposer
+            inputText={inputText}
+            setInputText={handleTyping}
+            selectedFile={selectedFile}
+            setSelectedFile={setSelectedFile}
+            sending={sending}
+            onSend={handleSend}
+            onEmojiPress={() => setShowEmojiPicker(true)}
+          />
+
+          {/* Emoji Picker Modal */}
+          <Modal
+            visible={showEmojiPicker}
+            transparent
+            animationType="slide"
+            onRequestClose={() => setShowEmojiPicker(false)}
+          >
+            <TouchableOpacity
+              style={styles.emojiModalOverlay}
+              activeOpacity={1}
+              onPress={() => setShowEmojiPicker(false)}
+            >
+              <View style={[styles.emojiPicker, { backgroundColor: colors.surface }]}>
+                <View style={styles.emojiHeader}>
+                  <Text style={[styles.emojiTitle, { color: colors.textPrimary }]}>Select Emoji</Text>
+                  <TouchableOpacity onPress={() => setShowEmojiPicker(false)}>
+                    <X size={24} color={colors.textSecondary} />
+                  </TouchableOpacity>
+                </View>
+                <ScrollView contentContainerStyle={styles.emojiGrid}>
+                  {EMOJI_LIST.map((emoji, idx) => (
+                    <TouchableOpacity
+                      key={idx}
+                      onPress={() => handleEmojiSelect(emoji)}
+                      style={styles.emojiButton}
+                    >
+                      <Text style={styles.emojiText}>{emoji}</Text>
+                    </TouchableOpacity>
+                  ))}
+                </ScrollView>
+              </View>
+            </TouchableOpacity>
+          </Modal>
+        </KeyboardAvoidingView>
+      </SafeAreaView>
     </ProtectedScreen>
   );
 }
@@ -614,14 +675,6 @@ const getStyles = (colors: any, isDark: boolean) => StyleSheet.create({
   emptyText: { fontSize: 14, textAlign: "center" },
   separator: { height: 1, marginHorizontal: 16 },
 
-  // Conversation list
-  convItem: {
-    flexDirection: "row",
-    alignItems: "center",
-    paddingHorizontal: 16,
-    paddingVertical: 14,
-    gap: 12,
-  },
   avatar: {
     width: 48,
     height: 48,
@@ -630,22 +683,6 @@ const getStyles = (colors: any, isDark: boolean) => StyleSheet.create({
     justifyContent: "center",
   },
   avatarText: { color: "#fff", fontWeight: "700", fontSize: 18 },
-  convBody: { flex: 1 },
-  convHeader: { flexDirection: "row", justifyContent: "space-between", alignItems: "center", marginBottom: 2 },
-  convName: { fontSize: 15, fontWeight: "600", color: colors.textPrimary, flex: 1, marginRight: 8 },
-  convTime: { fontSize: 12, color: colors.textSecondary },
-  convProperty: { fontSize: 12, color: colors.textSecondary, marginBottom: 2 },
-  convFooter: { flexDirection: "row", alignItems: "center", justifyContent: "space-between" },
-  convLastMsg: { fontSize: 13, color: colors.textSecondary, flex: 1, marginRight: 8 },
-  badge: {
-    minWidth: 20,
-    height: 20,
-    borderRadius: 10,
-    alignItems: "center",
-    justifyContent: "center",
-    paddingHorizontal: 5,
-  },
-  badgeText: { color: "#fff", fontSize: 11, fontWeight: "700" },
 
   // Chat
   chatHeader: {
@@ -667,90 +704,17 @@ const getStyles = (colors: any, isDark: boolean) => StyleSheet.create({
     flex: 1,
     alignItems: "center",
     justifyContent: "center",
-    transform: [{ scaleY: -1 }], // Flip back the empty state since list is inverted
+    transform: Platform.OS === "android" ? [{ rotate: "180deg" }] : [{ scaleY: -1 }],
   },
-  msgRow: { marginTop: 8 }, // Changed from marginBottom since list is inverted
-  msgRowMine: { alignItems: "flex-end" },
-  msgRowOther: { alignItems: "flex-start" },
-  msgBubble: {
-    maxWidth: "75%",
-    borderRadius: 18,
-    paddingHorizontal: 14,
-    paddingVertical: 10,
-  },
-  msgBubbleMine: {
-    backgroundColor: colors.primary,
-    borderBottomRightRadius: 4,
-  },
-  msgBubbleOther: {
-    backgroundColor: colors.surface,
-    borderBottomLeftRadius: 4,
-    borderWidth: 1,
-    borderColor: colors.border,
-  },
-  msgText: { fontSize: 15, lineHeight: 21 },
-  msgTime: { fontSize: 11, marginTop: 4, alignSelf: "flex-end" },
-
-  // Input bar
-  errorBanner: {
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "space-between",
-    paddingHorizontal: 12,
-    paddingVertical: 8,
-    borderBottomWidth: 1,
-  },
-  errorText: { fontSize: 12, flex: 1 },
-  errorDismiss: { fontSize: 16, fontWeight: "700", marginLeft: 8 },
-  imagePreview: {
-    flexDirection: "row",
-    alignItems: "center",
-    marginHorizontal: 12,
-    marginTop: 8,
-    padding: 8,
-    borderRadius: 12,
-    borderWidth: 1,
-    gap: 10,
-  },
-  previewImage: {
-    width: 50,
-    height: 50,
-    borderRadius: 8,
-  },
-  previewInfo: { flex: 1 },
-  previewName: { fontSize: 13, fontWeight: "600" },
-  previewSize: { fontSize: 11, marginTop: 2 },
-  previewClose: { padding: 4 },
-  inputBar: {
-    flexDirection: "row",
-    alignItems: "flex-end",
-    paddingHorizontal: 12,
-    paddingVertical: 10,
-    borderTopWidth: 1,
-    gap: 8,
-  },
-  iconBtn: {
-    width: 36,
-    height: 36,
-    alignItems: "center",
-    justifyContent: "center",
-  },
-  msgInput: {
-    flex: 1,
-    borderWidth: 1,
-    borderRadius: 22,
+  typingContainer: {
     paddingHorizontal: 16,
-    paddingVertical: 10,
-    fontSize: 15,
-    maxHeight: 120,
+    paddingVertical: 4,
   },
-  sendBtn: {
-    width: 44,
-    height: 44,
-    borderRadius: 22,
-    alignItems: "center",
-    justifyContent: "center",
+  typingText: {
+    fontSize: 12,
+    fontStyle: "italic",
   },
+
   // Emoji picker
   emojiModalOverlay: {
     flex: 1,

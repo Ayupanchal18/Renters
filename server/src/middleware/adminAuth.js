@@ -41,7 +41,10 @@ const extractToken = (req) => {
  * @throws {Error} - If token is invalid or expired
  */
 const verifyToken = (token) => {
-    const secret = process.env.JWT_SECRET || 'fallback-secret';
+    const secret = process.env.JWT_SECRET;
+    if (!secret) {
+        throw new Error('JWT_SECRET is not configured on the server');
+    }
     return jwt.verify(token, secret);
 };
 
@@ -85,19 +88,31 @@ const isUserDeleted = (user) => {
  */
 export const authenticateAdmin = async (req, res, next) => {
     try {
+        // Strip bypass headers in non-development environments
+        if (process.env.NODE_ENV !== 'development') {
+            if (req.headers['x-user-id'] || req.headers['x-user-role']) {
+                return res.status(400).json({
+                    success: false,
+                    error: ErrorCodes.AUTH_INVALID,
+                    message: "Invalid request headers"
+                });
+            }
+        }
+
         // Extract token from Authorization header
         const token = extractToken(req);
 
         // Development mode fallback for testing
-        if (!token && process.env.NODE_ENV === 'development') {
+        if (!token && process.env.NODE_ENV === 'development' && process.env.ALLOW_DEV_AUTH === 'true') {
             const userId = req.headers["x-user-id"];
             const userRole = req.headers["x-user-role"];
+            const adminRoles = ["admin", "super_admin", "ops_admin", "content_admin"];
 
-            if (userId && userRole === 'admin') {
+            if (userId && adminRoles.includes(userRole)) {
                 await connectDB();
                 const user = await User.findById(userId).lean();
 
-                if (user && user.role === 'admin') {
+                if (user && adminRoles.includes(user.role)) {
                     // Check if user is blocked or inactive
                     if (isUserBlocked(user)) {
                         return res.status(403).json({
@@ -133,7 +148,7 @@ export const authenticateAdmin = async (req, res, next) => {
                 await connectDB();
                 const user = await User.findById(userId).lean();
 
-                if (user && user.role === 'admin') {
+                if (user && adminRoles.includes(user.role)) {
                     req.user = user;
                     req.adminAuth = true;
                     return next();
@@ -248,8 +263,9 @@ export const authenticateAdmin = async (req, res, next) => {
 export const requireAdmin = async (req, res, next) => {
     // First authenticate the request
     await authenticateAdmin(req, res, async () => {
+        const adminRoles = ['admin', 'super_admin', 'ops_admin', 'content_admin'];
         // Check if user has admin role
-        if (!req.user || req.user.role !== 'admin') {
+        if (!req.user || !adminRoles.includes(req.user.role)) {
             return res.status(403).json({
                 success: false,
                 error: ErrorCodes.AUTH_FORBIDDEN,
@@ -309,9 +325,12 @@ export const requireAuth = async (req, res, next) => {
  * @returns {string} - JWT token
  */
 export const generateAdminToken = (user, options = {}) => {
+    const secret = options.secret || process.env.JWT_SECRET;
+    if (!secret) {
+        throw new Error('JWT_SECRET is not configured on the server');
+    }
     const {
-        expiresIn = '1h',
-        secret = process.env.JWT_SECRET || 'fallback-secret'
+        expiresIn = '1h'
     } = options;
 
     const payload = {

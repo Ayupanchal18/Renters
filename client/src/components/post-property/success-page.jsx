@@ -2,7 +2,9 @@ import { CheckCircle, Home, FileText, Share2 } from 'lucide-react';
 import { Button } from "../ui/button";
 import { Card } from "../ui/card";
 
-export default function SuccessPage() {
+const referenceNumber = `#LST-${Math.random().toString(36).substr(2, 9).toUpperCase()}`;
+
+export default function SuccessPage({ propertyId }) {
     return (
         <div className="min-h-screen bg-background py-12 px-4 sm:px-6 lg:px-8 flex items-center justify-center">
             <Card className="w-full max-w-2xl p-8 sm:p-12 shadow-xl border border-border bg-card">
@@ -67,6 +69,16 @@ export default function SuccessPage() {
                         Back to Home
                     </Button>
 
+                    {propertyId && (
+                        <Button
+                            variant="secondary"
+                            onClick={() => (window.location.href = `/property/${propertyId}`)}
+                            className="flex-1 py-3 rounded-lg font-semibold bg-primary/10 text-primary hover:bg-primary/20 border border-primary/20"
+                        >
+                            View Property
+                        </Button>
+                    )}
+
                     <Button
                         variant="outline"
                         onClick={() =>
@@ -85,7 +97,7 @@ export default function SuccessPage() {
                 <div className="mt-8 pt-8 border-t border-border text-center">
                     <p className="text-sm text-muted-foreground mb-1">Your Listing Reference</p>
                     <p className="text-2xl font-mono font-bold text-foreground">
-                        #LST-{Math.random().toString(36).substr(2, 9).toUpperCase()}
+                        {referenceNumber}
                     </p>
                 </div>
 

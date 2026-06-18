@@ -1,6 +1,6 @@
 import React, { useMemo } from 'react'
 import { ChevronDown, AlertCircle, DollarSign, Calculator, CreditCard, TrendingUp } from 'lucide-react'
-import { PropertyDataValidator } from '../../utils/PropertyDataValidator'
+import { PropertyDataValidator } from '@shared/validation/property'
 import { DataTransformationUtils } from '../../utils/DataTransformationUtils'
 
 export default function FinancialDetails({ property, isExpanded = true, onToggle }) {

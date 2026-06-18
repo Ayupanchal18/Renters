@@ -1,4 +1,5 @@
 import mongoose from "mongoose";
+import softDeletePlugin from "../src/plugins/softDeletePlugin.js";
 const { Schema } = mongoose;
 
 const CategorySchema = new Schema(
@@ -56,6 +57,8 @@ CategorySchema.pre('save', function (next) {
     }
     next();
 });
+
+CategorySchema.plugin(softDeletePlugin);
 
 export const Category =
     mongoose.models.Category || mongoose.model("Category", CategorySchema);

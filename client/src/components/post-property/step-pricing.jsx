@@ -1,6 +1,6 @@
 import { Input } from "../ui/input";
 import { Label } from "../ui/label";
-import { DollarSign, IndianRupee } from 'lucide-react';
+import { IndianRupee } from 'lucide-react';
 
 export default function StepPricing({ formData, setFormData, validationErrors }) {
     return (

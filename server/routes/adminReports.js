@@ -5,7 +5,7 @@ import { Property } from "../models/Property.js";
 import { AuditLog } from "../models/AuditLog.js";
 import { connectDB } from "../src/config/db.js";
 import { requireAdmin } from "../src/middleware/adminAuth.js";
-import { createAuditLog } from "../src/services/adminAuditService.js";
+import { createAuditLog, safeCreateAuditLog } from "../src/services/adminAuditService.js";
 
 const router = Router();
 
@@ -260,10 +260,10 @@ router.post("/users", requireAdmin, async (req, res) => {
         });
 
         // Create audit log
-        await createAuditLog({
+        await safeCreateAuditLog({
             adminId: req.user._id,
-            action: 'GENERATE_REPORT',
-            resourceType: 'user_report',
+            action: 'VIEW',
+            resourceType: 'report',
             changes: { filters: bodyResult.data, recordCount: users.length },
             req
         });
@@ -405,10 +405,10 @@ router.post("/properties", requireAdmin, async (req, res) => {
         }
 
         // Create audit log
-        await createAuditLog({
+        await safeCreateAuditLog({
             adminId: req.user._id,
-            action: 'GENERATE_REPORT',
-            resourceType: 'property_report',
+            action: 'VIEW',
+            resourceType: 'report',
             changes: { filters: bodyResult.data, recordCount: properties.length },
             req
         });
@@ -503,10 +503,10 @@ router.get("/users/export", requireAdmin, async (req, res) => {
         const formattedUsers = users.map(user => formatUserForExport(user));
 
         // Create audit log
-        await createAuditLog({
+        await safeCreateAuditLog({
             adminId: req.user._id,
-            action: 'EXPORT_DATA',
-            resourceType: 'user_export',
+            action: 'EXPORT',
+            resourceType: 'report',
             changes: { format, filters, recordCount: users.length },
             req
         });
@@ -616,10 +616,10 @@ router.get("/properties/export", requireAdmin, async (req, res) => {
         const formattedProperties = properties.map(prop => formatPropertyForExport(prop));
 
         // Create audit log
-        await createAuditLog({
+        await safeCreateAuditLog({
             adminId: req.user._id,
-            action: 'EXPORT_DATA',
-            resourceType: 'property_export',
+            action: 'EXPORT',
+            resourceType: 'report',
             changes: { format, filters, recordCount: properties.length },
             req
         });
@@ -723,10 +723,10 @@ router.get("/activity/export", requireAdmin, async (req, res) => {
         }));
 
         // Create audit log for this export
-        await createAuditLog({
+        await safeCreateAuditLog({
             adminId: req.user._id,
-            action: 'EXPORT_DATA',
-            resourceType: 'activity_export',
+            action: 'EXPORT',
+            resourceType: 'report',
             changes: { format, filters, recordCount: auditLogs.length },
             req
         });

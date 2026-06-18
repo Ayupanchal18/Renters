@@ -48,7 +48,12 @@ export default function LoginScreen({ navigation }: Props) {
         err?.response?.data?.message ??
         err?.message ??
         "Login failed. Please try again.";
-      setError(`${msg} (Debug: ${err?.name})`);
+      
+      if (msg.toLowerCase().includes("credential") || msg.toLowerCase().includes("unauthorized")) {
+        setError("Invalid email or password");
+      } else {
+        setError(msg);
+      }
     } finally {
       setLoading(false);
     }

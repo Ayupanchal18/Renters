@@ -7,7 +7,6 @@ import {
     AUTH_ERROR_CONTEXTS
 } from '../utils/authErrorLogger.js';
 import {
-    getVerificationErrorMessage,
     showVerificationErrorToast
 } from '../utils/verificationErrorMessages.js';
 import {
@@ -83,10 +82,18 @@ export async function authenticatedFetch(url, options = {}, navigate = null) {
             const newToken = await refreshAccessToken();
             if (newToken) {
                 token = newToken;
+                if (options.headers) {
+                    options.headers = {
+                        ...options.headers,
+                        ...getHeaders(newToken)
+                    };
+                } else {
+                    options.headers = getHeaders(newToken);
+                }
             } else {
                 throw new Error('Authentication token has expired and refresh failed');
             }
-        } catch (refreshError) {
+        } catch {
             const error = new Error('Authentication token has expired');
             
             logAuthenticationError(error, AUTH_ERROR_CONTEXTS.TOKEN_EXPIRY, {
@@ -95,21 +102,21 @@ export async function authenticatedFetch(url, options = {}, navigate = null) {
                 tokenExpired: true,
                 redirecting: !!navigate
             });
-        }
 
-        logTokenEvent('TOKEN_EXPIRED_CLEANUP', {
-            url,
-            hasToken: true,
-            tokenExpired: true
-        });
+            logTokenEvent('TOKEN_EXPIRED_CLEANUP', {
+                url,
+                hasToken: true,
+                tokenExpired: true
+            });
 
-        clearAuth();
-        if (navigate) {
-            navigate('/login', { replace: true });
-        } else if (typeof window !== 'undefined') {
-            window.location.href = '/login';
+            clearAuth();
+            if (navigate) {
+                navigate('/login', { replace: true });
+            } else if (typeof window !== 'undefined') {
+                window.location.href = '/login';
+            }
+            throw error;
         }
-        throw error;
     }
 
     // Log API request authentication details (development only)
@@ -160,7 +167,7 @@ export async function authenticatedFetch(url, options = {}, navigate = null) {
                     return response;
                 }
             }
-        } catch (e) {
+        } catch {
             // Ignore error and fall through to handleAuthError
         }
     }
@@ -238,25 +245,27 @@ export function getHeaders(authToken) {
    AUTH API
 ------------------------- */
 export const authAPI = {
-    register: async (data, navigate = null) => {
-        const response = await authenticatedFetch(`${API_BASE}/auth/register`, {
+    register: async (data) => {
+        const response = await fetch(`${API_BASE}/auth/register`, {
             method: "POST",
-            headers: getHeaders(),
+            headers: { "Content-Type": "application/json" },
+            credentials: "include",
             body: JSON.stringify(data),
-        }, navigate);
+        });
         return response.json();
     },
 
-    login: async (data, navigate = null) => {
-        const response = await authenticatedFetch(`${API_BASE}/auth/login`, {
+    login: async (data) => {
+        const response = await fetch(`${API_BASE}/auth/login`, {
             method: "POST",
-            headers: getHeaders(),
+            headers: { "Content-Type": "application/json" },
+            credentials: "include",
             body: JSON.stringify(data),
-        }, navigate);
+        });
         return response.json();
     },
 
-    googleLogin: async (credential, navigate = null) => {
+    googleLogin: async (credential) => {
         const response = await fetch(`${API_BASE}/auth/google`, {
             method: "POST",
             headers: { "Content-Type": "application/json" },
@@ -266,7 +275,7 @@ export const authAPI = {
         return response.json();
     },
 
-    facebookLogin: async (accessToken, navigate = null) => {
+    facebookLogin: async (accessToken) => {
         const response = await fetch(`${API_BASE}/auth/facebook`, {
             method: "POST",
             headers: { "Content-Type": "application/json" },

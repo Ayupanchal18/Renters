@@ -1,8 +1,8 @@
 import React from 'react';
 import { View, Text, StyleSheet, ViewStyle, TextStyle, StyleProp } from 'react-native';
-import { colors } from '../../theme/tokens';
+import { useTheme } from '../../theme/useTheme';
 
-export type BadgeVariant = 'default' | 'secondary' | 'outline' | 'destructive' | 'success';
+export type BadgeVariant = 'default' | 'secondary' | 'outline' | 'destructive' | 'success' | 'warning';
 
 export interface BadgeProps {
   children: React.ReactNode;
@@ -12,6 +12,8 @@ export interface BadgeProps {
 }
 
 export default function Badge({ children, variant = 'default', style, textStyle }: BadgeProps) {
+  const { colors, isDark } = useTheme();
+
   const getVariantStyle = (): ViewStyle => {
     switch (variant) {
       case 'secondary':
@@ -19,9 +21,23 @@ export default function Badge({ children, variant = 'default', style, textStyle 
       case 'outline':
         return { backgroundColor: 'transparent', borderWidth: 1, borderColor: colors.border };
       case 'destructive':
-        return { backgroundColor: '#fef2f2', borderWidth: 1, borderColor: '#fecaca' }; // Light red bg
+        return {
+          backgroundColor: isDark ? 'rgba(239, 68, 68, 0.15)' : '#fef2f2',
+          borderWidth: 1,
+          borderColor: isDark ? 'rgba(239, 68, 68, 0.3)' : '#fecaca',
+        };
       case 'success':
-        return { backgroundColor: '#ecfdf5', borderWidth: 1, borderColor: '#a7f3d0' }; // Light green bg
+        return {
+          backgroundColor: isDark ? 'rgba(16, 185, 129, 0.15)' : '#ecfdf5',
+          borderWidth: 1,
+          borderColor: isDark ? 'rgba(16, 185, 129, 0.3)' : '#a7f3d0',
+        };
+      case 'warning':
+        return {
+          backgroundColor: isDark ? 'rgba(245, 158, 11, 0.15)' : '#fffbeb',
+          borderWidth: 1,
+          borderColor: isDark ? 'rgba(245, 158, 11, 0.3)' : '#fde68a',
+        };
       case 'default':
       default:
         return { backgroundColor: colors.primary };
@@ -38,6 +54,8 @@ export default function Badge({ children, variant = 'default', style, textStyle 
         return { color: colors.error };
       case 'success':
         return { color: colors.success };
+      case 'warning':
+        return { color: colors.warning };
       case 'default':
       default:
         return { color: 'white' };

@@ -8,8 +8,14 @@ import { Property } from "../models/Property.js";
 import { User } from "../models/User.js";
 import mongoose from "mongoose";
 import { validatePropertyByListingType } from "../src/middleware/propertyValidation.js";
-import { propertyUpload, uploadPropertyPhotos } from "../src/middleware/cloudinaryUpload.js";
+import { propertyUpload, uploadPropertyPhotos, uploadPanoramaImages } from "../src/middleware/cloudinaryUpload.js";
 import { LISTING_TYPES } from "../../shared/propertyTypes.js";
+import fs from "fs";
+import path from "path";
+import { fileURLToPath } from "url";
+
+const __dirname = path.dirname(fileURLToPath(import.meta.url));
+const debugFile = path.join(__dirname, "../../debug.log");
 
 const router = Router();
 
@@ -77,7 +83,10 @@ function addUrlPathToProperty(property) {
  * POST /api/properties/buy
  * Create a new buy property
  */
-router.post("/", propertyUpload.array("photos", 10), validatePropertyByListingType, async (req, res) => {
+router.post("/", propertyUpload.fields([
+    { name: "photos", maxCount: 15 },
+    { name: "panoramaImages", maxCount: 10 }
+]), validatePropertyByListingType, async (req, res) => {
     try {
         const userId = req.headers["x-user-id"];
         if (!userId) {
@@ -133,12 +142,69 @@ router.post("/", propertyUpload.array("photos", 10), validatePropertyByListingTy
         const baseSlug = slugify(`${body.title}-${body.city || ""}`.slice(0, 120));
         const slug = await makeUniqueSlug(baseSlug);
         const listingNumber = makeListingNumber();
-        const photoPaths = await uploadPropertyPhotos(req.files);
+
+        // Process standard photos
+        const photos = req.files?.photos || [];
+        const photoPaths = await uploadPropertyPhotos(photos);
+
+        // Process panorama images
+        const panoramaFiles = req.files?.panoramaImages || [];
+        const panoramaPaths = await uploadPanoramaImages(panoramaFiles);
+
+        let panoramaImages = [];
+        if (panoramaFiles.length > 0) {
+            let labels = [];
+            if (body.panoramaLabels) {
+                try {
+                    labels = JSON.parse(body.panoramaLabels);
+                } catch (e) {
+                    labels = Array.isArray(body.panoramaLabels) ? body.panoramaLabels : [body.panoramaLabels];
+                }
+            }
+            panoramaImages = panoramaPaths.map((url, idx) => ({
+                url,
+                label: labels[idx] || ""
+            }));
+        }
+
+        // Validate URLs if present
+        if (body.virtualTourType === "matterport" && body.matterportUrl) {
+            try {
+                new URL(body.matterportUrl);
+            } catch (e) {
+                return res.status(400).json({
+                    success: false,
+                    error: "Validation failed",
+                    message: "Invalid Matterport URL format",
+                    field: "matterportUrl"
+                });
+            }
+        }
+        if (body.virtualTourType === "video" && body.videoUrl) {
+            try {
+                new URL(body.videoUrl);
+            } catch (e) {
+                return res.status(400).json({
+                    success: false,
+                    error: "Validation failed",
+                    message: "Invalid Video URL format",
+                    field: "videoUrl"
+                });
+            }
+        }
+
+        const virtualTour = {
+            type: body.virtualTourType || "none",
+            matterportUrl: body.matterportUrl || "",
+            panoramaImages,
+            videoUrl: body.videoUrl || ""
+        };
 
         const doc = new Property({
             ...body,
             listingType: LISTING_TYPES.BUY,
             photos: photoPaths,
+            virtualTour,
             ownerId: user._id,
             ownerName,
             ownerPhone,
@@ -238,17 +304,20 @@ router.get("/", async (req, res) => {
         else if (sortParam === "oldest") mongoSort = { createdAt: 1 };
         else if (sortParam === "featured") mongoSort = { featured: -1, createdAt: -1 };
 
-        let query = Property.find(filter).sort(mongoSort).skip(skip).limit(limit).lean();
+        let query = Property.find(filter).sort(mongoSort).skip(skip).limit(limit).populate("ownerId", "name email phone isVerified").lean();
 
         if (filter.$text) {
             query = Property.find(filter, { score: { $meta: "textScore" } })
                 .sort({ score: { $meta: "textScore" }, ...mongoSort })
                 .skip(skip)
                 .limit(limit)
+                .populate("ownerId", "name email phone isVerified")
                 .lean();
         }
 
+        fs.appendFileSync(debugFile, `[BUY DEBUG] Querying with filter: ${JSON.stringify(filter)}\n`);
         const [items, total] = await Promise.all([query.exec(), Property.countDocuments(filter)]);
+        fs.appendFileSync(debugFile, `[BUY DEBUG] Found ${items.length} items, total: ${total}\n`);
 
         res.json({
             success: true,
@@ -276,7 +345,7 @@ router.get("/:identifier", async (req, res) => {
                 listingType: LISTING_TYPES.BUY,
                 isDeleted: false,
                 status: "active"
-            }).lean();
+            }).populate("ownerId", "name email phone isVerified").lean();
         }
 
         if (!property) {
@@ -285,7 +354,7 @@ router.get("/:identifier", async (req, res) => {
                 listingType: LISTING_TYPES.BUY,
                 isDeleted: false,
                 status: "active"
-            }).lean();
+            }).populate("ownerId", "name email phone isVerified").lean();
         }
 
         if (!property) {
@@ -512,7 +581,8 @@ router.post("/search", async (req, res) => {
 
         const result = await Property.aggregate(pipeline);
 
-        const data = result[0].data;
+        let data = result[0].data;
+        data = await Property.populate(data, { path: "ownerId", select: "name email phone isVerified" });
         const total = result[0].metadata[0] ? result[0].metadata[0].total : 0;
 
         return res.json({

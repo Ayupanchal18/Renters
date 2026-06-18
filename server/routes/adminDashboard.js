@@ -75,17 +75,24 @@ router.get("/stats", requireAdmin, async (req, res) => {
 
         const startOfMonth = getStartOfMonth();
 
+        // 7-day sparkline helper
+        const sevenDaysAgo = new Date();
+        sevenDaysAgo.setDate(sevenDaysAgo.getDate() - 7);
+
         // Execute all aggregation queries in parallel for performance
         const [
             userCountsByRole,
             totalUsers,
             newUsersThisMonth,
+            newUsersToday,
             propertyCountsByStatus,
             propertyCountsByCategory,
             propertyCountsByCity,
             propertyCountsByListingType,
             totalProperties,
-            priceRangeDistribution
+            priceRangeDistribution,
+            userSparklineRaw,
+            propertySparklineRaw
         ] = await Promise.all([
             // User counts by role
             User.aggregate([
@@ -100,6 +107,12 @@ router.get("/stats", requireAdmin, async (req, res) => {
             User.countDocuments({
                 isDeleted: { $ne: true },
                 createdAt: { $gte: startOfMonth }
+            }),
+
+            // New users today
+            User.countDocuments({
+                isDeleted: { $ne: true },
+                createdAt: { $gte: new Date(new Date().setHours(0,0,0,0)) }
             }),
 
             // Property counts by status
@@ -142,6 +155,20 @@ router.get("/stats", requireAdmin, async (req, res) => {
                         output: { count: { $sum: 1 } }
                     }
                 }
+            ]),
+
+            // User 7-day sparkline
+            User.aggregate([
+                { $match: { isDeleted: { $ne: true }, createdAt: { $gte: sevenDaysAgo } } },
+                { $group: { _id: { $dateToString: { format: '%Y-%m-%d', date: '$createdAt' } }, count: { $sum: 1 } } },
+                { $sort: { _id: 1 } }
+            ]),
+
+            // Property 7-day sparkline
+            Property.aggregate([
+                { $match: { isDeleted: { $ne: true }, createdAt: { $gte: sevenDaysAgo } } },
+                { $group: { _id: { $dateToString: { format: '%Y-%m-%d', date: '$createdAt' } }, count: { $sum: 1 } } },
+                { $sort: { _id: 1 } }
             ])
         ]);
 
@@ -216,13 +243,19 @@ router.get("/stats", requireAdmin, async (req, res) => {
             }
         });
 
+        // Transform sparklines into simple arrays of counts (ordered by day)
+        const userSparkline = userSparklineRaw.map(d => d.count);
+        const propertySparkline = propertySparklineRaw.map(d => d.count);
+
         res.json({
             success: true,
             data: {
                 users: {
                     total: totalUsers,
                     byRole,
-                    newThisMonth: newUsersThisMonth
+                    newThisMonth: newUsersThisMonth,
+                    newToday: newUsersToday,
+                    sparkline: userSparkline
                 },
                 properties: {
                     total: totalProperties,
@@ -233,7 +266,8 @@ router.get("/stats", requireAdmin, async (req, res) => {
                     byCategory,
                     byCity,
                     byPriceRange,
-                    byListingType
+                    byListingType,
+                    sparkline: propertySparkline
                 }
             }
         });

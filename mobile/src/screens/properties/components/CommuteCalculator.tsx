@@ -1,8 +1,8 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useMemo } from "react";
 import { StyleSheet, Text, View, TextInput, Pressable, Linking, ScrollView } from "react-native";
 import { Car, Clock, MapPin, Navigation, Save, X } from "lucide-react-native";
 import * as SecureStore from "expo-secure-store";
-import { colors } from "../../../theme/tokens";
+import { useTheme } from "../../../theme/useTheme";
 import AppButton from "../../../components/ui/AppButton";
 
 const DEPARTURE_TIMES = [
@@ -22,6 +22,9 @@ interface Props {
 }
 
 export default function CommuteCalculator({ propertyCoords }: Props) {
+  const { colors, isDark } = useTheme();
+  const styles = useMemo(() => getStyles(colors, isDark), [colors, isDark]);
+
   const [destination, setDestination] = useState("");
   const [departureTime, setDepartureTime] = useState("09:00");
   const [hasSavedDestination, setHasSavedDestination] = useState(false);
@@ -103,7 +106,7 @@ export default function CommuteCalculator({ propertyCoords }: Props) {
               value={destination}
               onChangeText={setDestination}
               placeholder="Enter office or destination address..."
-              placeholderTextColor="#94a3b8"
+              placeholderTextColor={colors.textSecondary}
             />
             {hasSavedDestination && (
               <Pressable onPress={clearSavedDestination} style={styles.clearBtn}>
@@ -164,7 +167,7 @@ export default function CommuteCalculator({ propertyCoords }: Props) {
   );
 }
 
-const styles = StyleSheet.create({
+const getStyles = (colors: any, isDark: boolean) => StyleSheet.create({
   container: {
     marginTop: 20,
     paddingTop: 20,
@@ -195,7 +198,7 @@ const styles = StyleSheet.create({
   inputContainer: {
     flexDirection: "row",
     alignItems: "center",
-    backgroundColor: "#f8fafc",
+    backgroundColor: isDark ? "rgba(255,255,255,0.03)" : "#f8fafc",
     borderWidth: 1,
     borderColor: colors.border,
     borderRadius: 10,
@@ -237,7 +240,7 @@ const styles = StyleSheet.create({
     paddingHorizontal: 12,
     paddingVertical: 8,
     borderRadius: 20,
-    backgroundColor: "#f8fafc",
+    backgroundColor: isDark ? "rgba(255,255,255,0.03)" : "#f8fafc",
     borderWidth: 1,
     borderColor: colors.border,
   },

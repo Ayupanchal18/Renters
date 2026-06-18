@@ -1,22 +1,62 @@
-import { useState, useMemo, useCallback, useEffect, useRef } from "react";
-import { useLocation } from "react-router-dom";
-import { ConversationList } from "../components/chatComponents/ConversationList";
-import { ChatWindow } from "../components/chatComponents/ChatWindow.jsx";
-import { EmptyChatState } from "../components/chatComponents/EmptyChatState.jsx";
-import { ChevronLeft, AlertCircle, RefreshCw } from "lucide-react";
-import Navbar from './../components/Navbar';
+import { useMemo, useCallback, useEffect } from "react";
+import { useParams, useNavigate } from "react-router-dom";
+import { ConversationList } from "../components/messaging/ConversationList";
+import { ChatWindow } from "../components/messaging/ChatWindow";
+import { EmptyChatState } from "../components/messaging/EmptyChatState";
+import { AlertCircle, RefreshCw } from "lucide-react";
+import Navbar from "./../components/Navbar";
 import { useMessages } from "../hooks/useMessages";
 import { getUser } from "../utils/auth";
+import { cn } from "../lib/utils";
+
+// Loader skeleton for conversations
+function ConversationListSkeleton() {
+    return (
+        <div className="p-3 space-y-3">
+            {[1, 2, 3, 4, 5].map((i) => (
+                <div key={i} className="flex items-center gap-3 p-2 rounded-xl">
+                    <div className="w-10 h-10 bg-muted rounded-full flex-shrink-0 animate-pulse" />
+                    <div className="flex-1 space-y-2">
+                        <div className="h-3 bg-muted rounded w-1/3 animate-pulse" />
+                        <div className="h-2.5 bg-muted rounded w-2/3 animate-pulse" />
+                    </div>
+                </div>
+            ))}
+        </div>
+    );
+}
+
+// Loader skeleton for messages
+function MessageThreadSkeleton() {
+    return (
+        <div className="flex-1 p-4 space-y-4 overflow-y-auto">
+            {[1, 2, 3, 4].map((i) => {
+                const isRight = i % 2 === 0;
+                return (
+                    <div key={i} className={cn("flex w-full", isRight ? "justify-end" : "justify-start")}>
+                        <div className={cn(
+                            "max-w-[70%] px-4 py-3 rounded-2xl animate-pulse space-y-2",
+                            isRight ? "bg-primary/10 rounded-tr-none" : "bg-muted rounded-tl-none"
+                        )}>
+                            <div className="h-3 bg-muted-foreground/15 rounded w-24 sm:w-40" />
+                            <div className="h-2.5 bg-muted-foreground/10 rounded w-16" />
+                        </div>
+                    </div>
+                );
+            })}
+        </div>
+    );
+}
 
 export default function Messages() {
-    const [showMobileChat, setShowMobileChat] = useState(false);
-    const location = useLocation();
-    
-    // Get current user
+    const navigate = useNavigate();
+    const { conversationId } = useParams();
+
+    // Get current user info
     const user = getUser();
     const currentUserId = user?._id || user?.id || "current-user";
 
-    // Use the useMessages hook for real data and socket connection
+    // useMessages hook for logic and socket subscriptions
     const {
         conversations,
         selectedConversation,
@@ -30,142 +70,134 @@ export default function Messages() {
         markAsRead,
         deleteConversation,
         fetchConversations,
-        setError
-    } = useMessages({ autoConnect: true });
+        sendTypingIndicator,
+        isRecipientTyping,
+        setError,
+    } = useMessages({ autoFetch: true });
 
-    // Auto-select conversation if passed via navigation state
-    const hasAutoSelectedRef = useRef(false);
-    
+    // Mark messages as read when opening conversation or new messages arrive
     useEffect(() => {
-        const conversationId = location.state?.conversationId;
-        
-        // Only auto-select once per navigation, and only if we have conversations loaded
-        if (conversationId && conversations.length > 0 && !hasAutoSelectedRef.current) {
-            hasAutoSelectedRef.current = true;
-            
-            const targetConversation = conversations.find(
-                conv => (conv._id || conv.id) === conversationId
-            );
-            if (targetConversation) {
-                handleSelectConversation(targetConversation);
-            } else {
-                // If not in list yet, select by ID directly
-                selectConversation(conversationId);
-                setShowMobileChat(true);
-            }
-        }
-        
-        // Reset the ref when conversationId changes (new navigation)
-        if (!conversationId) {
-            hasAutoSelectedRef.current = false;
-        }
-    }, [location.state?.conversationId, conversations.length, selectConversation]);
-
-    // Handle selecting a conversation
-    const handleSelectConversation = async (conversation) => {
-        await selectConversation(conversation);
-        setShowMobileChat(true);
-        
-        // Mark messages as read when opening conversation
-        const conversationId = conversation._id || conversation.id;
         if (conversationId) {
-            await markAsRead(conversationId);
+            markAsRead(conversationId);
         }
+    }, [conversationId, messages.length, markAsRead]);
+
+    // Synchronize URL param with selected conversation state
+    useEffect(() => {
+        if (conversationId) {
+            const selectedId = selectedConversation?._id || selectedConversation?.id;
+            if (selectedId !== conversationId) {
+                const found = conversations.find(
+                    c => (c._id || c.id) === conversationId
+                );
+                if (found) {
+                    selectConversation(found);
+                } else {
+                    selectConversation(conversationId);
+                }
+            }
+        } else if (selectedConversation) {
+            // If URL does not have param, clear selected conversation
+            selectConversation(null);
+        }
+    }, [conversationId, conversations, selectConversation, selectedConversation]);
+
+    // Handle user selecting a conversation
+    const handleSelectConversation = (conversation) => {
+        const id = conversation._id || conversation.id;
+        navigate(`/messages/${id}`);
     };
 
-    // Handle sending a message
+    // Handle back action on mobile
+    const handleBackToList = () => {
+        navigate("/messages");
+    };
+
+    // Send a message in active thread
     const handleSendMessage = async (messageText, file = null) => {
-        if (!selectedConversation || (!messageText.trim() && !file)) return;
-        
+        if (!selectedConversation) return;
         const result = await sendMessage(messageText, file);
-        
-        if (!result.success) {
-            console.error("Failed to send message:", result.error);
-        }
-        
         return result;
     };
 
-    // Handle retry on error
+    // Retry fetching when failing
     const handleRetry = () => {
         setError(null);
         fetchConversations();
     };
 
-    // Handle delete conversation
+    // Soft delete conversation
     const handleDeleteConversation = async () => {
         if (!selectedConversation) return;
-        
-        const conversationId = selectedConversation._id || selectedConversation.id;
-        const result = await deleteConversation(conversationId);
-        
+        const id = selectedConversation._id || selectedConversation.id;
+        const result = await deleteConversation(id);
         if (result.success) {
-            setShowMobileChat(false);
+            navigate("/messages");
         } else {
-            setError(result.error || 'Failed to delete conversation');
+            setError(result.error || "Failed to delete conversation");
         }
     };
 
-    // Transform conversation data for components that expect the old format
+    // Typing activity trigger callback
+    const handleTypingChange = (isTyping) => {
+        sendTypingIndicator(isTyping);
+    };
+
+    // Normalize conversations for UI
     const transformConversationForUI = useCallback((conv) => {
         if (!conv) return null;
         
         const convId = conv._id || conv.id;
         
-        // Get participant info (the other user in the conversation)
+        // Filter out current user from participants list
         const participants = conv.participants?.map(p => {
-            // Handle both populated and non-populated participant data
-            if (typeof p === 'object') {
+            if (typeof p === "object") {
                 return {
                     id: p._id || p.id,
-                    name: p.name || p.fullName || 'Unknown User',
-                    email: p.email || '',
+                    name: p.name || p.fullName || "User",
+                    email: p.email || "",
                     phone: p.phone || p.phoneNumber || null,
-                    avatar: p.avatar || p.profileImage || null,
-                    isOnline: p.isOnline || false
+                    avatar: p.avatar || null,
+                    isOnline: p.isOnline || false,
+                    lastActivityAt: p.lastActivityAt || null
                 };
             }
-            // If participant is just an ID string
             return {
                 id: p,
-                name: 'User',
-                email: '',
-                avatar: null, // Remove external avatar service
-                isOnline: false
+                name: "User",
+                email: "",
+                avatar: null,
+                isOnline: false,
+                lastActivityAt: null
             };
         }).filter(p => p.id !== currentUserId) || [];
 
-        // Transform messages to expected format
-        // For selected conversation, use messages from hook state, otherwise use conv.messages
         const messagesToTransform = conv._id === selectedConversation?._id ? messages : (conv.messages || []);
         
         const transformedMessages = messagesToTransform.map(msg => {
-            // If message is already transformed (has all required fields), return as-is
             if (msg.text !== undefined && msg.senderId !== undefined && msg.id !== undefined) {
                 return msg;
             }
-            
-            // Otherwise, transform it
-            const transformed = {
+            return {
                 id: msg._id || msg.id,
                 senderId: msg.sender?._id || msg.sender?.id || msg.sender,
-                senderName: msg.sender?.name || (msg.sender === currentUserId ? 'You' : 'User'),
-                senderAvatar: msg.sender?.avatar || null, // Remove external avatar service
-                text: msg.text || msg.content || '',
+                senderName: msg.sender?.name || (msg.sender === currentUserId ? "You" : "User"),
+                senderAvatar: msg.sender?.avatar || null,
+                text: msg.text || msg.content || "",
                 image: msg.image,
+                attachment: msg.attachment,
+                file: msg.file,
                 timestamp: msg.createdAt || msg.timestamp,
                 read: msg.read || false,
                 pending: msg.pending || false
             };
-            return transformed;
         });
 
-        // Get unread count for current user
         let unreadCount = 0;
         if (conv.unreadCount) {
-            if (typeof conv.unreadCount === 'object') {
+            if (typeof conv.unreadCount === "object") {
                 unreadCount = conv.unreadCount[currentUserId] || 0;
-            } else if (typeof conv.unreadCount === 'number') {
+            } else if (typeof conv.unreadCount === "number") {
                 unreadCount = conv.unreadCount;
             }
         }
@@ -174,17 +206,18 @@ export default function Messages() {
             id: convId,
             _id: convId,
             participants: participants.length > 0 ? participants : [{
-                id: 'unknown',
-                name: 'Unknown User',
-                email: '',
-                avatar: null, // Remove external avatar service
-                isOnline: false
+                id: "unknown",
+                name: "User",
+                email: "",
+                avatar: null,
+                isOnline: false,
+                lastActivityAt: null
             }],
             lastMessage: conv.lastMessage ? {
                 id: conv.lastMessage._id || conv.lastMessage.id,
                 senderId: conv.lastMessage.sender?._id || conv.lastMessage.sender?.id || conv.lastMessage.sender,
-                senderName: conv.lastMessage.sender?.name || 'User',
-                text: conv.lastMessage.text || '',
+                senderName: conv.lastMessage.sender?.name || "User",
+                text: conv.lastMessage.text || "",
                 timestamp: conv.lastMessage.createdAt || conv.lastMessage.timestamp
             } : null,
             lastMessageTime: conv.lastActivityAt || conv.lastMessage?.createdAt || conv.updatedAt,
@@ -192,20 +225,18 @@ export default function Messages() {
             messages: transformedMessages,
             property: conv.property
         };
-    }, [currentUserId, selectedConversation, messages]); // Add dependencies to prevent infinite loops
+    }, [currentUserId, selectedConversation, messages]);
 
-    // Transform all conversations for the list
     const transformedConversations = useMemo(() => 
         conversations.map(transformConversationForUI).filter(Boolean),
         [conversations, transformConversationForUI]
     );
     
-    // Transform selected conversation
     const transformedSelectedConversation = useMemo(() => 
         selectedConversation 
             ? transformConversationForUI({
                 ...selectedConversation,
-                messages: messages // Use messages from hook state
+                messages: messages
             })
             : null,
         [selectedConversation, messages, transformConversationForUI]
@@ -215,64 +246,55 @@ export default function Messages() {
         <>
             <Navbar />
             <div className="h-[calc(100dvh-64px)] sm:h-[calc(100dvh-72px)] bg-background flex flex-col overflow-hidden">
-                {/* Mobile header - only show when in chat view */}
-                {showMobileChat && transformedSelectedConversation && (
-                    <div className="md:hidden bg-card border-b border-border px-4 py-3 flex items-center rounded-t-xl mx-4 mt-4">
-                        <button
-                            onClick={() => setShowMobileChat(false)}
-                            className="mr-3 p-1 text-foreground hover:text-primary transition-colors"
-                        >
-                            <ChevronLeft className="w-6 h-6" />
-                        </button>
-                        <h1 className="text-lg font-bold text-foreground">
-                            {transformedSelectedConversation.participants[0]?.name}
-                        </h1>
-                    </div>
-                )}
-
                 {/* Error Banner */}
                 {error && (
-                    <div className="mx-4 mt-2 p-3 bg-destructive/10 border border-destructive/20 rounded-lg flex items-center justify-between flex-shrink-0">
+                    <div className="mx-4 mt-2 p-3 bg-destructive/10 border border-destructive/20 rounded-xl flex items-center justify-between flex-shrink-0 animate-in fade-in slide-in-from-top-1">
                         <div className="flex items-center gap-2 text-destructive">
-                            <AlertCircle className="w-5 h-5" />
-                            <span className="text-sm">{error}</span>
+                            <AlertCircle className="w-5 h-5 flex-shrink-0" />
+                            <span className="text-xs font-semibold">{error}</span>
                         </div>
                         <button
                             onClick={handleRetry}
-                            className="flex items-center gap-1 text-sm text-destructive hover:text-destructive/80 transition-colors"
+                            className="flex items-center gap-1 text-xs text-destructive hover:opacity-80 transition-colors font-bold"
                         >
-                            <RefreshCw className="w-4 h-4" />
+                            <RefreshCw className="w-4.5 h-4.5" />
                             Retry
                         </button>
                     </div>
                 )}
 
-                {/* Layout */}
+                {/* Main responsive chat split layout */}
                 <div className="flex flex-1 overflow-hidden p-2 sm:p-4 md:p-5 gap-0 min-h-0">
-                    {/* Left panel - Conversation List */}
+                    {/* Left Pane - Conversations List */}
                     <div
-                        className={`w-full md:w-[380px] lg:w-[420px] md:rounded-l-xl bg-card border md:border-r-0 border-border flex flex-col rounded-xl md:rounded-r-none shadow-sm overflow-hidden ${showMobileChat ? "hidden md:flex" : "flex"
-                            }`}
+                        className={cn(
+                            "w-full md:w-[320px] lg:w-[360px] md:rounded-l-2xl border md:border-r-0 border-border flex flex-col bg-card shadow-sm overflow-hidden flex-shrink-0",
+                            conversationId ? "hidden md:flex" : "flex"
+                        )}
                     >
-                        <ConversationList
-                            conversations={transformedConversations}
-                            selectedConversationId={transformedSelectedConversation?.id}
-                            onSelectConversation={handleSelectConversation}
-                            loading={conversationsLoading}
-                        />
+                        {conversationsLoading ? (
+                            <ConversationListSkeleton />
+                        ) : (
+                            <ConversationList
+                                conversations={transformedConversations}
+                                selectedConversationId={transformedSelectedConversation?.id}
+                                onSelectConversation={handleSelectConversation}
+                            />
+                        )}
                     </div>
 
-                    {/* Right panel - Chat Window */}
+                    {/* Right Pane - Chat Window / Thread details */}
                     <div
-                        className={`flex-1 flex md:rounded-r-xl flex-col border md:border-l-0 border-border rounded-xl md:rounded-l-none shadow-sm overflow-hidden min-w-0 ${showMobileChat ? "flex" : "hidden md:flex"
-                            }`}
+                        className={cn(
+                            "flex-1 flex md:rounded-r-2xl flex-col border border-border bg-card shadow-sm overflow-hidden min-w-0",
+                            conversationId ? "flex" : "hidden md:flex"
+                        )}
                     >
                         {messagesLoading ? (
-                            <div className="flex-1 flex items-center justify-center bg-card rounded-r-xl">
-                                <div className="text-center text-muted-foreground">
-                                    <div className="animate-spin w-8 h-8 border-2 border-primary border-t-transparent rounded-full mx-auto mb-3"></div>
-                                    <p>Loading messages...</p>
-                                </div>
+                            <div className="flex flex-col h-full">
+                                <div className="h-14 border-b border-border bg-card animate-pulse" />
+                                <MessageThreadSkeleton />
+                                <div className="h-16 border-t border-border bg-card animate-pulse" />
                             </div>
                         ) : transformedSelectedConversation ? (
                             <ChatWindow
@@ -280,6 +302,9 @@ export default function Messages() {
                                 currentUserId={currentUserId}
                                 onSendMessage={handleSendMessage}
                                 onDeleteConversation={handleDeleteConversation}
+                                onBackToList={handleBackToList}
+                                isRecipientTyping={isRecipientTyping}
+                                onTypingChange={handleTypingChange}
                                 sending={sending}
                             />
                         ) : (

@@ -14,42 +14,55 @@ class EmailService {
     }
 
     /**
-     * Initialize the email transporter based on environment configuration
+     * Initialize the email transporter based on environment configuration.
+     * Priority: Gmail (GMAIL_USER + GMAIL_APP_PASSWORD) → Generic SMTP → Test mode
      */
     initializeTransporter() {
-        // Always start as configured and in test mode
-        // This ensures the service is always available
         this.isConfigured = true;
         this.testMode = true;
 
         try {
-            // Check if email configuration is provided
-            const emailConfig = {
-                host: process.env.SMTP_HOST,
-                port: parseInt(process.env.SMTP_PORT) || 587,
-                secure: process.env.SMTP_SECURE === 'true', // true for 465, false for other ports
-                auth: {
-                    user: process.env.SMTP_USER,
-                    pass: process.env.SMTP_PASS
-                }
-            };
+            const gmailUser = process.env.GMAIL_USER;
+            const gmailPass = process.env.GMAIL_APP_PASSWORD;
 
-            // If no SMTP config, stay in test mode
-            if (!emailConfig.host || !emailConfig.auth.user) {
-                console.log('Email service initialized in TEST MODE (no SMTP config)');
+            // ── Option 1: Gmail SMTP (recommended, simplest) ──────────────────
+            if (gmailUser && gmailPass) {
+                this.transporter = createTransport({
+                    service: 'gmail',          // nodemailer knows Gmail's host/port/TLS
+                    auth: {
+                        user: gmailUser,
+                        pass: gmailPass        // Use an App Password, NOT your Google login password
+                    }
+                });
+                this.fromAddress = process.env.SMTP_FROM || gmailUser;
+                this.testMode = false;
+                console.log(`✅ Email service initialized with Gmail SMTP (${gmailUser})`);
                 return;
             }
 
-            this.transporter = createTransport(emailConfig);
+            // ── Option 2: Generic SMTP (Mailtrap, SendGrid, etc.) ─────────────
+            const host = process.env.SMTP_HOST;
+            const user = process.env.SMTP_USER;
+            const pass = process.env.SMTP_PASS;
 
-            // Don't verify on startup - it wastes email quota
-            // Verification will happen on first actual email send
-            this.testMode = false;
-            console.log('Email service initialized with SMTP config (will verify on first send)');
+            if (host && user) {
+                this.transporter = createTransport({
+                    host,
+                    port: parseInt(process.env.SMTP_PORT) || 587,
+                    secure: process.env.SMTP_SECURE === 'true',
+                    auth: { user, pass }
+                });
+                this.fromAddress = process.env.SMTP_FROM || user;
+                this.testMode = false;
+                console.log(`✅ Email service initialized with SMTP host: ${host}`);
+                return;
+            }
+
+            // ── Option 3: Test mode (no config found) ─────────────────────────
+            console.log('📧 Email service initialized in TEST MODE (no SMTP/Gmail config). OTPs will be logged to console.');
 
         } catch (error) {
-            console.error('Failed to initialize SMTP, using test mode:', error.message);
-            // Stay in test mode
+            console.error('Failed to initialize email transporter, using test mode:', error.message);
         }
     }
 
@@ -77,7 +90,7 @@ class EmailService {
             }
 
             const mailOptions = {
-                from: process.env.SMTP_FROM || process.env.SMTP_USER,
+                from: this.fromAddress || process.env.SMTP_FROM || process.env.SMTP_USER,
                 to: email,
                 subject: 'Email Verification - Your OTP Code',
                 html: this.generateOTPEmailTemplate(otp, userName),
@@ -118,7 +131,7 @@ class EmailService {
             }
 
             const mailOptions = {
-                from: process.env.SMTP_FROM || process.env.SMTP_USER,
+                from: this.fromAddress || process.env.SMTP_FROM || process.env.SMTP_USER,
                 to: email,
                 subject: 'Password Changed - Security Notification',
                 html: this.generatePasswordChangeTemplate(userName),
@@ -164,7 +177,7 @@ class EmailService {
             }
 
             const mailOptions = {
-                from: process.env.SMTP_FROM || process.env.SMTP_USER,
+                from: this.fromAddress || process.env.SMTP_FROM || process.env.SMTP_USER,
                 to: email,
                 subject: 'Password Reset Request',
                 html: this.generatePasswordResetTemplate(userName, resetToken),
@@ -205,7 +218,7 @@ class EmailService {
             }
 
             const mailOptions = {
-                from: process.env.SMTP_FROM || process.env.SMTP_USER,
+                from: this.fromAddress || process.env.SMTP_FROM || process.env.SMTP_USER,
                 to: email,
                 subject: 'Account Deleted - Confirmation',
                 html: this.generateAccountDeletionTemplate(userName),
@@ -515,7 +528,7 @@ This is an automated confirmation. Please do not reply to this email.
             }
 
             const mailOptions = {
-                from: process.env.SMTP_FROM || process.env.SMTP_USER,
+                from: this.fromAddress || process.env.SMTP_FROM || process.env.SMTP_USER,
                 to: email,
                 subject: 'Phone Number Updated - Security Notification',
                 html: this.generatePhoneUpdateTemplate(userName, newPhone),
@@ -557,7 +570,7 @@ This is an automated confirmation. Please do not reply to this email.
             }
 
             const mailOptions = {
-                from: process.env.SMTP_FROM || process.env.SMTP_USER,
+                from: this.fromAddress || process.env.SMTP_FROM || process.env.SMTP_USER,
                 to: email,
                 subject: 'New Device Login - Security Alert',
                 html: this.generateNewDeviceLoginTemplate(userName, context),
@@ -599,7 +612,7 @@ This is an automated confirmation. Please do not reply to this email.
             }
 
             const mailOptions = {
-                from: process.env.SMTP_FROM || process.env.SMTP_USER,
+                from: this.fromAddress || process.env.SMTP_FROM || process.env.SMTP_USER,
                 to: email,
                 subject: 'Failed Login Attempts - Security Alert',
                 html: this.generateFailedLoginTemplate(userName, context),
@@ -968,7 +981,7 @@ This is an automated security alert. Please do not reply to this email.
             }
 
             const mailOptions = {
-                from: `"OTP System Alerts" <${process.env.SMTP_FROM || process.env.SMTP_USER}>`,
+                from: `"OTP System Alerts" <${this.fromAddress || process.env.SMTP_FROM || process.env.SMTP_USER}>`,
                 to: email,
                 subject: subject,
                 html: htmlContent,

@@ -7,7 +7,7 @@
  */
 
 // Import all utility classes and instances
-import { PropertyDataValidator, propertyDataValidator } from './PropertyDataValidator.js';
+import { PropertyDataValidator, propertyDataValidator } from '@shared/validation/property';
 import { EnhancedErrorHandler, enhancedErrorHandler } from './EnhancedErrorHandler.js';
 import { FallbackDataGenerator, fallbackDataGenerator } from './FallbackDataGenerator.js';
 import { DataTransformationUtils, dataTransformationUtils } from './DataTransformationUtils.js';

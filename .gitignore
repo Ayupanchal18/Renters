@@ -69,3 +69,8 @@ package-lock.json
 # OS files
 .DS_Store
 *.pem
+
+# Firebase / GCP credentials
+renters-dae24-firebase-adminsdk-fbsvc-d00c5f9a2c.json
+*-firebase-adminsdk-*.json
+*.json.key

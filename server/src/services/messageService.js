@@ -50,7 +50,7 @@ class MessageService {
             let conversation = await Conversation.findOne({
                 participants: { $all: sortedParticipants, $size: 2 },
                 property: propertyObjectId
-            }).populate('participants', 'name email avatar phone')
+            }).populate('participants', 'name email avatar phone lastActivityAt')
                 .populate('property', 'title images');
 
             if (conversation) {
@@ -83,7 +83,7 @@ class MessageService {
 
             // Populate the newly created conversation
             conversation = await Conversation.findById(newConversation._id)
-                .populate('participants', 'name email avatar phone')
+                .populate('participants', 'name email avatar phone lastActivityAt')
                 .populate('property', 'title images');
 
             return {
@@ -289,6 +289,13 @@ class MessageService {
                     mimetype: fileData.mimetype,
                     size: fileData.size,
                     url: fileData.url
+                };
+
+                message.attachment = {
+                    url: fileData.url,
+                    filename: fileData.originalName,
+                    mimeType: fileData.mimetype,
+                    size: fileData.size
                 };
 
                 // For images, also set the image field for backward compatibility
@@ -502,7 +509,7 @@ class MessageService {
                 .sort({ lastActivityAt: -1 })
                 .skip(skip)
                 .limit(limit)
-                .populate('participants', 'name email avatar phone')
+                .populate('participants', 'name email avatar phone lastActivityAt')
                 .populate('property', 'title images price')
                 .select('-messages'); // Exclude full messages array for performance
 

@@ -1,6 +1,6 @@
-import React, { createContext, useContext, useState, useEffect, useCallback } from 'react';
+import React, { createContext, useContext, useState, useCallback } from 'react';
 import { useColorScheme } from 'react-native';
-import { palettes } from './tokens';
+import { palettes, shadows } from '@shared/theme/tokens';
 
 type ThemeMode = 'light' | 'dark' | 'system';
 
@@ -8,6 +8,7 @@ interface ThemeContextType {
   mode: ThemeMode;
   setMode: (mode: ThemeMode) => void;
   colors: typeof palettes.light;
+  shadows: typeof shadows.light;
   isDark: boolean;
   toggleTheme: () => void;
 }
@@ -23,13 +24,14 @@ export const ThemeProvider: React.FC<{ children: React.ReactNode }> = ({ childre
     : mode === 'dark';
 
   const colors = isDark ? palettes.dark : palettes.light;
+  const currentShadows = isDark ? shadows.dark : shadows.light;
 
   const toggleTheme = useCallback(() => {
     setMode(prev => prev === 'light' ? 'dark' : 'light');
   }, []);
 
   return (
-    <ThemeContext.Provider value={{ mode, setMode, colors, isDark, toggleTheme }}>
+    <ThemeContext.Provider value={{ mode, setMode, colors, shadows: currentShadows, isDark, toggleTheme }}>
       {children}
     </ThemeContext.Provider>
   );

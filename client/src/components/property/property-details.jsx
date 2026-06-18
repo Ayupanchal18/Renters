@@ -1,6 +1,6 @@
 import React, { useState, useMemo } from 'react'
 import { ChevronDown, AlertCircle, CheckCircle } from 'lucide-react'
-import { PropertyDataValidator } from '../../utils/PropertyDataValidator'
+import { PropertyDataValidator } from '@shared/validation/property'
 import { DataTransformationUtils } from '../../utils/DataTransformationUtils'
 
 export default function PropertyDetails({ property }) {

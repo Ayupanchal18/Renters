@@ -1,5 +1,5 @@
 import { defineConfig } from "vite";
-// Forced restart at 2026-02-03T16:20:00Z
+// Forced restart at 2026-05-02T14:55:00Z
 import react from "@vitejs/plugin-react-swc";
 import path from "path";
 import { fileURLToPath } from "url";
@@ -53,7 +53,9 @@ export default defineConfig({
   cacheDir: "node_modules/.vite",
 
   plugins: [
-    react(),
+    react({
+      include: /\.(js|jsx|ts|tsx)$/,
+    }),
     expressPlugin(),
     {
       name: 'force-full-reload',
@@ -87,8 +89,9 @@ export default defineConfig({
     },
   },
   esbuild: {
-    jsx: 'automatic',
-    include: /client\/src\/.*\.[jt]sx?$/,
+    loader: "jsx",
+    include: /src\/.*\.[jt]sx?$/,
+    exclude: [],
   },
 
   define: {
@@ -102,13 +105,24 @@ function expressPlugin() {
     apply: "serve",
 
     async configureServer(server) {
+      const fs = await import("fs");
+      const path = await import("path");
+      const debugFile = path.join(process.cwd(), "debug.log");
+      fs.appendFileSync(debugFile, `[VITE.CONFIG] configureServer running at ${new Date().toISOString()}\n`);
       try {
         // MUST be dynamic import
         const { default: createServer } = await import("./server/index.js");
+        const { setupSocket } = await import("./server/socket.js");
 
         const app = await createServer(true);
 
         server.middlewares.use(app);
+        
+        // Attach Socket.IO to Vite's http server
+        if (server.httpServer) {
+          setupSocket(server.httpServer);
+          console.log("✅ Socket.IO attached to Vite server");
+        }
       } catch (err) {
         console.error("Express setup error:", err);
       }

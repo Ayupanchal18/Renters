@@ -1,4 +1,4 @@
-import React, { useState, useMemo, useCallback } from "react";
+import React, { useState, useMemo, useCallback, useRef, useEffect } from "react";
 import {
   View,
   Text,
@@ -12,18 +12,25 @@ import {
   KeyboardAvoidingView,
   Platform,
   Modal,
+  Image,
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { useNavigation } from "@react-navigation/native";
 import {
   ArrowLeft, ArrowRight, Check, ShoppingBag, Home, Building2, MapPin,
-  DollarSign, Camera, User, AlertCircle, CheckCircle, Key
+  DollarSign, Camera, User, AlertCircle, CheckCircle, Key, Trash2, ChevronLeft, ChevronRight, Star,
+  DoorOpen, Bed, Hotel, Store, Layers, Copy, Crown, Square, Sofa,
+  Users, Heart, Hammer, RefreshCw, Wifi, Wind, Car, Dumbbell, Waves, Shield, Zap, ArrowUpDown, Leaf, Phone, Video, Flame, CloudRain,
+  ClipboardCheck
 } from "lucide-react-native";
 import { useTheme } from "../../theme/useTheme";
 import { useAuth } from "../../features/auth/AuthContext";
 import ProtectedScreen from "../../components/auth/ProtectedScreen";
 import { apiClient } from "../../api/client";
 import * as ImagePicker from "expo-image-picker";
+import { WebView } from "react-native-webview";
+import * as Location from "expo-location";
+import AsyncStorage from "@react-native-async-storage/async-storage";
 
 // ─── Types ───────────────────────────────────────────────────
 type FormData = {
@@ -60,6 +67,8 @@ type FormData = {
   ownerPhone: string;
   ownerEmail: string;
   ownerType: string;
+  lat?: number;
+  lng?: number;
 };
 
 // ─── Constants ─────────────────────────────────────────────────
@@ -73,6 +82,7 @@ const STEPS = [
   { id: 7, name: "Amenities", icon: Check },
   { id: 8, name: "Photos", icon: Camera },
   { id: 9, name: "Owner", icon: User },
+  { id: 10, name: "Review", icon: ClipboardCheck },
 ];
 
 const LISTING_TYPES = [
@@ -81,6 +91,60 @@ const LISTING_TYPES = [
 ];
 
 const CATEGORIES = ["flat", "house", "room", "pg", "hostel", "commercial"];
+
+const CATEGORY_ICONS: Record<string, React.ComponentType<any>> = {
+  flat: Building2,
+  house: Home,
+  room: DoorOpen,
+  pg: Bed,
+  hostel: Hotel,
+  commercial: Store,
+};
+
+const PROPERTY_TYPE_ICONS: Record<string, React.ComponentType<any>> = {
+  "Apartment": Building2,
+  "Independent House": Home,
+  "Builder Floor": Layers,
+  "Studio": DoorOpen,
+  "Duplex": Copy,
+  "Penthouse": Crown,
+};
+
+const FURNISHING_ICONS: Record<string, React.ComponentType<any>> = {
+  unfurnished: Square,
+  semi: Bed,
+  fully: Sofa,
+};
+
+const PREFERRED_TENANT_ICONS: Record<string, React.ComponentType<any>> = {
+  any: Users,
+  family: Heart,
+  bachelor: User,
+};
+
+const POSSESSION_STATUS_ICONS: Record<string, React.ComponentType<any>> = {
+  ready: CheckCircle,
+  under_construction: Hammer,
+  resale: RefreshCw,
+};
+
+const AMENITY_ICONS: Record<string, React.ComponentType<any>> = {
+  "WiFi": Wifi,
+  "AC": Wind,
+  "Parking": Car,
+  "Gym": Dumbbell,
+  "Swimming Pool": Waves,
+  "Security": Shield,
+  "Power Backup": Zap,
+  "Lift": ArrowUpDown,
+  "Garden": Leaf,
+  "Club House": Users,
+  "Intercom": Phone,
+  "CCTV": Video,
+  "Gas Pipeline": Flame,
+  "Rainwater Harvesting": CloudRain,
+  "Waste Disposal": Trash2,
+};
 
 const PROPERTY_TYPES = ["Apartment", "Independent House", "Builder Floor", "Studio", "Duplex", "Penthouse"];
 
@@ -123,8 +187,8 @@ const INDIAN_CITIES = [
 
 // ─── Helper: SelectOption component ───────────────────────────
 function SelectOption({
-  label, selected, onPress, colors, isDark
-}: { label: string; selected: boolean; onPress: () => void; colors: any; isDark: boolean }) {
+  label, selected, onPress, colors, isDark, icon: Icon
+}: { label: string; selected: boolean; onPress: () => void; colors: any; isDark: boolean; icon?: React.ComponentType<any> }) {
   return (
     <TouchableOpacity
       onPress={onPress}
@@ -146,16 +210,23 @@ function SelectOption({
         elevation: selected ? 2 : 0,
       }}
     >
-      <View style={{
-        width: 16,
-        height: 16,
-        borderRadius: 8,
-        backgroundColor: selected ? colors.primary : colors.input,
-        alignItems: 'center',
-        justifyContent: 'center',
-      }}>
-        {selected && <Check size={10} color="#ffffff" />}
-      </View>
+      {Icon ? (
+        <Icon 
+          size={16} 
+          color={selected ? colors.primary : colors.textSecondary} 
+        />
+      ) : (
+        <View style={{
+          width: 16,
+          height: 16,
+          borderRadius: 8,
+          backgroundColor: selected ? colors.primary : colors.input,
+          alignItems: 'center',
+          justifyContent: 'center',
+        }}>
+          {selected && <Check size={10} color="#ffffff" />}
+        </View>
+      )}
       <Text style={{ color: selected ? colors.primary : colors.textPrimary, fontWeight: selected ? "700" : "500", fontSize: 13 }}>
         {label}
       </Text>
@@ -165,14 +236,14 @@ function SelectOption({
 
 // ─── Helper: FloatingInput ─────────────────────────────────────
 function FloatingInput({
-  label, value, onChange, placeholder, keyboardType, colors, isDark, multiline
+  label, value, onChange, placeholder, keyboardType, colors, isDark, multiline, error
 }: {
   label: string; value: string; onChange: (v: string) => void;
-  placeholder?: string; keyboardType?: any; colors: any; isDark: boolean; multiline?: boolean
+  placeholder?: string; keyboardType?: any; colors: any; isDark: boolean; multiline?: boolean; error?: string
 }) {
   return (
     <View style={{ marginBottom: 16 }}>
-      <Text style={{ fontSize: 12, fontWeight: "700", color: colors.textSecondary, marginBottom: 6, textTransform: "uppercase", letterSpacing: 0.5 }}>
+      <Text style={{ fontSize: 12, fontWeight: "700", color: error ? colors.error : colors.textSecondary, marginBottom: 6, textTransform: "uppercase", letterSpacing: 0.5 }}>
         {label}
       </Text>
       <TextInput
@@ -184,7 +255,7 @@ function FloatingInput({
         multiline={multiline}
         style={{
           borderWidth: 1,
-          borderColor: colors.border,
+          borderColor: error ? colors.error : colors.border,
           borderRadius: 12,
           backgroundColor: colors.input,
           paddingHorizontal: 14,
@@ -195,9 +266,144 @@ function FloatingInput({
           textAlignVertical: multiline ? "top" : "center",
         }}
       />
+      {error ? (
+        <Text style={{ color: colors.error, fontSize: 12, marginTop: 4, fontWeight: "600" }}>{error}</Text>
+      ) : null}
     </View>
   );
 }
+
+const generatePickerHTML = (lat: number | undefined, lng: number | undefined, primaryHex: string, dark: boolean) => {
+  const initialLat = lat || 28.6139;
+  const initialLng = lng || 77.2090;
+  const hasInitialMarker = !!(lat && lng);
+
+  return `
+<!DOCTYPE html>
+<html>
+<head>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
+  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+  <style>
+    html, body, #map {
+      height: 100%;
+      margin: 0;
+      padding: 0;
+      background-color: ${dark ? '#0f172a' : '#f8fafc'};
+    }
+    .leaflet-bar {
+      border: none !important;
+      box-shadow: 0 4px 12px rgba(0,0,0,0.15) !important;
+    }
+    .leaflet-bar a {
+      background-color: ${dark ? '#1e293b' : '#ffffff'} !important;
+      color: ${dark ? '#f8fafc' : '#0f172a'} !important;
+      border-bottom: 1px solid ${dark ? '#334155' : '#e2e8f0'} !important;
+    }
+    ${dark ? `
+    .leaflet-tile-container {
+      filter: invert(100%) hue-rotate(180deg) brightness(95%) contrast(90%);
+    }
+    ` : ''}
+    .picker-marker-css {
+      width: 36px;
+      height: 36px;
+      border-radius: 50%;
+      background-color: ${primaryHex};
+      border: 3px solid #ffffff;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      box-shadow: 0 4px 12px rgba(0,0,0,0.3);
+      transform: translate(-18px, -18px);
+    }
+  </style>
+  <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+</head>
+<body>
+  <div id="map"></div>
+  <script>
+    const map = L.map('map', {
+      zoomControl: true,
+      attributionControl: false
+    }).setView([${initialLat}, ${initialLng}], ${hasInitialMarker ? 15 : 5});
+
+    L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+      maxZoom: 19
+    }).addTo(map);
+
+    let marker = null;
+
+    const markerIcon = L.divIcon({
+      className: '',
+      html: \`<div class="picker-marker-css"><svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M20 10c0 6-8 12-8 12s-8-6-8-12a8 8 0 0 1 16 0Z"/><circle cx="12" cy="10" r="3"/></svg></div>\`,
+      iconAnchor: [18, 18]
+    });
+
+    function sendLocation(lat, lng) {
+      window.ReactNativeWebView.postMessage(JSON.stringify({
+        event: 'locationSelect',
+        lat: lat,
+        lng: lng
+      }));
+    }
+
+    function setLocation(lat, lng, pan = true) {
+      if (marker) {
+        marker.setLatLng([lat, lng]);
+      } else {
+        marker = L.marker([lat, lng], {
+          icon: markerIcon,
+          draggable: true
+        }).addTo(map);
+
+        marker.on('dragend', function() {
+          const pos = marker.getLatLng();
+          sendLocation(pos.lat, pos.lng);
+        });
+      }
+      if (pan) {
+        map.setView([lat, lng], 15, { animate: true });
+      }
+    }
+
+    if (${hasInitialMarker}) {
+      setLocation(${initialLat}, ${initialLng}, false);
+    }
+
+    map.on('click', function(e) {
+      setLocation(e.latlng.lat, e.latlng.lng, false);
+      sendLocation(e.latlng.lat, e.latlng.lng);
+    });
+
+    function handleNativeMessage(dataStr) {
+      try {
+        const data = JSON.parse(dataStr);
+        if (data.action === 'setLocation') {
+          if (marker) {
+            const currentPos = marker.getLatLng();
+            if (Math.abs(currentPos.lat - data.lat) < 0.00001 && Math.abs(currentPos.lng - data.lng) < 0.00001) {
+              return;
+            }
+          }
+          setLocation(data.lat, data.lng, true);
+        }
+      } catch (err) {
+        console.error(err);
+      }
+    }
+
+    document.addEventListener('message', function(event) {
+      handleNativeMessage(event.data);
+    });
+    window.addEventListener('message', function(event) {
+      handleNativeMessage(event.data);
+    });
+  </script>
+</body>
+</html>
+  `;
+};
 
 // ───────────────────────────────────────────────────────────────
 // Main Component
@@ -208,12 +414,7 @@ export default function PostPropertyScreen() {
   const navigation = useNavigation<any>();
   const { user, logout } = useAuth();
 
-  const [step, setStep] = useState(1);
-  const [isSubmitting, setIsSubmitting] = useState(false);
-  const [submitted, setSubmitted] = useState(false);
-  const [errors, setErrors] = useState<Record<string, string>>({});
-  const [cityPickerVisible, setCityPickerVisible] = useState(false);
-
+  const scrollViewRef = useRef<ScrollView>(null);
   const [form, setForm] = useState<FormData>({
     listingType: "",
     category: "",
@@ -248,12 +449,109 @@ export default function PostPropertyScreen() {
     ownerPhone: "",
     ownerEmail: (user as any)?.email || "",
     ownerType: "",
+    lat: undefined,
+    lng: undefined,
   });
+
+  const [step, setStep] = useState(1);
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [submitted, setSubmitted] = useState(false);
+  const [errors, setErrors] = useState<Record<string, string>>({});
+  const [cityPickerVisible, setCityPickerVisible] = useState(false);
+  const [draftLoaded, setDraftLoaded] = useState(false);
+  const [isLocating, setIsLocating] = useState(false);
+  const [createdProperty, setCreatedProperty] = useState<{ id: string; type: 'rent' | 'buy' } | null>(null);
+
+  const mapWebViewRef = useRef<WebView>(null);
+
+  // Generate WebView picker HTML once to avoid page refresh during coords dragging
+  const pickerHTML = useMemo(() => {
+    return generatePickerHTML(form.lat, form.lng, colors.primary, isDark);
+  }, [colors.primary, isDark]);
+
+  // Sync form coordinates with WebView map picker
+  useEffect(() => {
+    if (form.lat && form.lng && mapWebViewRef.current) {
+      mapWebViewRef.current.postMessage(
+        JSON.stringify({
+          action: "setLocation",
+          lat: form.lat,
+          lng: form.lng,
+        })
+      );
+    }
+  }, [form.lat, form.lng]);
 
   const update = useCallback((key: keyof FormData, val: any) => {
     setForm(prev => ({ ...prev, [key]: val }));
     setErrors(prev => { const e = { ...prev }; delete e[key]; return e; });
   }, []);
+
+  // Scroll to top on step transitions
+  useEffect(() => {
+    scrollViewRef.current?.scrollTo({ y: 0, animated: false });
+  }, [step]);
+
+  // Scroll to top when validation errors occur to expose error banner
+  useEffect(() => {
+    if (Object.keys(errors).length > 0) {
+      scrollViewRef.current?.scrollTo({ y: 0, animated: true });
+    }
+  }, [errors]);
+
+  // Check and restore draft on mount
+  useEffect(() => {
+    if (!user || draftLoaded) return;
+    const checkDraft = async () => {
+      try {
+        const key = `draft_property_wizard:${(user as any).email || 'guest'}`;
+        const saved = await AsyncStorage.getItem(key);
+        if (saved) {
+          const parsed = JSON.parse(saved);
+          Alert.alert(
+            "Resume Draft",
+            "You have an unfinished property listing draft. Would you like to resume editing?",
+            [
+              {
+                text: "Resume",
+                onPress: () => {
+                  setForm(parsed);
+                  setDraftLoaded(true);
+                }
+              },
+              {
+                text: "Start Fresh",
+                onPress: async () => {
+                  await AsyncStorage.removeItem(key);
+                  setDraftLoaded(true);
+                }
+              }
+            ]
+          );
+        } else {
+          setDraftLoaded(true);
+        }
+      } catch (err) {
+        console.error("Failed to load draft:", err);
+        setDraftLoaded(true);
+      }
+    };
+    checkDraft();
+  }, [user, draftLoaded]);
+
+  // Auto-save draft whenever form changes
+  useEffect(() => {
+    if (submitted || !user || !draftLoaded) return;
+    const saveDraft = async () => {
+      try {
+        const key = `draft_property_wizard:${(user as any).email || 'guest'}`;
+        await AsyncStorage.setItem(key, JSON.stringify(form));
+      } catch (err) {
+        console.error("Failed to save draft:", err);
+      }
+    };
+    saveDraft();
+  }, [form, user, submitted, draftLoaded]);
 
   const validate = (s: number) => {
     const e: Record<string, string> = {};
@@ -271,6 +569,21 @@ export default function PostPropertyScreen() {
     if (s === 5) {
       if (form.listingType === "rent" && !form.monthlyRent) e.monthlyRent = "Monthly rent is required";
       if (form.listingType === "buy" && !form.sellingPrice) e.sellingPrice = "Selling price is required";
+    }
+    if (s === 6) {
+      const isFlat = form.category === "flat";
+      const isHouse = form.category === "house";
+      const isCommercial = form.category === "commercial";
+      if (isFlat || isHouse || isCommercial) {
+        if (!form.builtUpArea?.trim() && !form.carpetArea?.trim()) {
+          e.builtUpArea = "Built-up or carpet area is required";
+        }
+      }
+    }
+    if (s === 8) {
+      if (form.photos.length === 0) {
+        e.photos = "Please upload at least 1 photo";
+      }
     }
     if (s === 9) {
       if (!form.ownerName?.trim()) e.ownerName = "Owner name is required";
@@ -326,6 +639,18 @@ export default function PostPropertyScreen() {
       
       const response = await apiClient.post(endpoint, fd);
       console.log("Submission successful:", response.data);
+      
+      const data = response.data;
+      const newPropertyId = data?._id || data?.property?._id || data?.data?._id || data?.data?.property?._id;
+      if (newPropertyId) {
+        setCreatedProperty({
+          id: newPropertyId,
+          type: form.listingType as 'rent' | 'buy'
+        });
+      }
+
+      const key = `draft_property_wizard:${(user as any).email || 'guest'}`;
+      await AsyncStorage.removeItem(key);
       setSubmitted(true);
     } catch (e: any) {
       console.error("Submission error:", e);
@@ -343,16 +668,53 @@ export default function PostPropertyScreen() {
     }
   };
 
-  const pickPhoto = async () => {
-    const result = await ImagePicker.launchImageLibraryAsync({
-      mediaTypes: ['images'],
-      allowsMultipleSelection: true,
-      quality: 0.8,
-    });
-    if (!result.canceled && result.assets.length > 0) {
-      const uris = result.assets.map((a: { uri: string }) => a.uri);
-      update("photos", [...form.photos, ...uris].slice(0, 10));
-    }
+  const pickPhoto = () => {
+    Alert.alert(
+      "Add Property Photo",
+      "Choose an option to upload photos of your property:",
+      [
+        {
+          text: "Take Photo (Camera)",
+          onPress: async () => {
+            const permission = await ImagePicker.requestCameraPermissionsAsync();
+            if (!permission.granted) {
+              Alert.alert("Permission Denied", "Camera permission is required to take photos.");
+              return;
+            }
+            const result = await ImagePicker.launchCameraAsync({
+              quality: 0.8,
+            });
+            if (!result.canceled && result.assets.length > 0) {
+              const uris = result.assets.map(a => a.uri);
+              update("photos", [...form.photos, ...uris].slice(0, 10));
+            }
+          }
+        },
+        {
+          text: "Choose from Library",
+          onPress: async () => {
+            const permission = await ImagePicker.requestMediaLibraryPermissionsAsync();
+            if (!permission.granted) {
+              Alert.alert("Permission Denied", "Media library permission is required to choose photos.");
+              return;
+            }
+            const result = await ImagePicker.launchImageLibraryAsync({
+              mediaTypes: ['images'],
+              allowsMultipleSelection: true,
+              quality: 0.8,
+            });
+            if (!result.canceled && result.assets.length > 0) {
+              const uris = result.assets.map(a => a.uri);
+              update("photos", [...form.photos, ...uris].slice(0, 10));
+            }
+          }
+        },
+        {
+          text: "Cancel",
+          style: "cancel"
+        }
+      ]
+    );
   };
 
   const toggleAmenity = (a: string) => {
@@ -382,7 +744,8 @@ export default function PostPropertyScreen() {
           {/* Timeline */}
           <View style={styles.timeline}>
             <View style={[styles.timelineItem, { backgroundColor: colors.surface, borderColor: colors.border }]}>
-              <View style={[styles.timelineIconBg, { backgroundColor: `${colors.primary}20` }]}>
+              <View style={styles.timelineIconBg}>
+                <View style={[StyleSheet.absoluteFillObject, { backgroundColor: colors.primary, opacity: 0.15, borderRadius: 24 }]} />
                 <Building2 size={24} color={colors.primary} />
               </View>
               <View style={styles.timelineContent}>
@@ -394,7 +757,8 @@ export default function PostPropertyScreen() {
             </View>
 
             <View style={[styles.timelineItem, { backgroundColor: colors.surface, borderColor: colors.border }]}>
-              <View style={[styles.timelineIconBg, { backgroundColor: `${colors.success}20` }]}>
+              <View style={styles.timelineIconBg}>
+                <View style={[StyleSheet.absoluteFillObject, { backgroundColor: colors.success, opacity: 0.15, borderRadius: 24 }]} />
                 <Home size={24} color={colors.success} />
               </View>
               <View style={styles.timelineContent}>
@@ -408,6 +772,14 @@ export default function PostPropertyScreen() {
 
           {/* Buttons */}
           <View style={styles.successButtons}>
+            {createdProperty && (
+              <TouchableOpacity
+                onPress={() => navigation.navigate('PropertyDetail', { identifier: createdProperty.id, type: createdProperty.type })}
+                style={[styles.successSecondaryBtn, { borderColor: colors.primary, borderWidth: 1.5, marginBottom: 12 }]}
+              >
+                <Text style={[styles.successSecondaryBtnText, { color: colors.primary }]}>View Uploaded Property</Text>
+              </TouchableOpacity>
+            )}
             <TouchableOpacity
               onPress={() => navigation.navigate('MainTabs')}
               style={[styles.successPrimaryBtn, { backgroundColor: colors.primary }]}
@@ -427,6 +799,258 @@ export default function PostPropertyScreen() {
       </SafeAreaView>
     );
   }
+
+  const renderReviewStep = () => {
+    const formatPriceText = (priceStr: string) => {
+      const price = parseFloat(priceStr);
+      if (isNaN(price)) return 'N/A';
+      return `₹${price.toLocaleString()}`;
+    };
+
+    return (
+      <View style={styles.reviewContainer}>
+        <Text style={styles.stepHeading}>Review Details</Text>
+        <Text style={[styles.stepSub, { color: colors.textSecondary, marginBottom: 16 }]}>
+          Please check the details of your property listing before submitting.
+        </Text>
+
+        {/* Basic Info & Details Section */}
+        <View style={[styles.reviewSection, { borderColor: colors.border }]}>
+          <View style={styles.reviewHeaderRow}>
+            <Text style={[styles.reviewSectionTitle, { color: colors.primary }]}>Basic Information</Text>
+            <TouchableOpacity onPress={() => setStep(3)} style={styles.reviewEditBtn}>
+              <Text style={[styles.reviewEditText, { color: colors.primary }]}>Edit</Text>
+            </TouchableOpacity>
+          </View>
+          <View style={styles.reviewDataGrid}>
+            <View style={styles.reviewDataRow}>
+              <Text style={[styles.reviewDataLabel, { color: colors.textSecondary }]}>Title</Text>
+              <Text style={[styles.reviewDataVal, { color: colors.textPrimary }]}>{form.title || 'N/A'}</Text>
+            </View>
+            <View style={styles.reviewDataRow}>
+              <Text style={[styles.reviewDataLabel, { color: colors.textSecondary }]}>Listing Type</Text>
+              <Text style={[styles.reviewDataVal, { color: colors.textPrimary, textTransform: 'capitalize' }]}>{form.listingType || 'N/A'}</Text>
+            </View>
+            <View style={styles.reviewDataRow}>
+              <Text style={[styles.reviewDataLabel, { color: colors.textSecondary }]}>Category</Text>
+              <Text style={[styles.reviewDataVal, { color: colors.textPrimary, textTransform: 'capitalize' }]}>{form.category || 'N/A'}</Text>
+            </View>
+            <View style={styles.reviewDataRow}>
+              <Text style={[styles.reviewDataLabel, { color: colors.textSecondary }]}>Property Type</Text>
+              <Text style={[styles.reviewDataVal, { color: colors.textPrimary }]}>{form.propertyType || 'N/A'}</Text>
+            </View>
+            <View style={styles.reviewDataRow}>
+              <Text style={[styles.reviewDataLabel, { color: colors.textSecondary }]}>Furnishing</Text>
+              <Text style={[styles.reviewDataVal, { color: colors.textPrimary, textTransform: 'capitalize' }]}>{form.furnishing || 'N/A'}</Text>
+            </View>
+            <View style={styles.reviewDataRow}>
+              <Text style={[styles.reviewDataLabel, { color: colors.textSecondary }]}>Available From</Text>
+              <Text style={[styles.reviewDataVal, { color: colors.textPrimary }]}>{form.availableFrom || 'N/A'}</Text>
+            </View>
+          </View>
+        </View>
+
+        {/* Location Section */}
+        <View style={[styles.reviewSection, { borderColor: colors.border }]}>
+          <View style={styles.reviewHeaderRow}>
+            <Text style={[styles.reviewSectionTitle, { color: colors.primary }]}>Location Details</Text>
+            <TouchableOpacity onPress={() => setStep(4)} style={styles.reviewEditBtn}>
+              <Text style={[styles.reviewEditText, { color: colors.primary }]}>Edit</Text>
+            </TouchableOpacity>
+          </View>
+          <View style={styles.reviewDataGrid}>
+            <View style={styles.reviewDataRow}>
+              <Text style={[styles.reviewDataLabel, { color: colors.textSecondary }]}>City</Text>
+              <Text style={[styles.reviewDataVal, { color: colors.textPrimary }]}>{form.city || 'N/A'}</Text>
+            </View>
+            <View style={styles.reviewDataRow}>
+              <Text style={[styles.reviewDataLabel, { color: colors.textSecondary }]}>Full Address</Text>
+              <Text style={[styles.reviewDataVal, { color: colors.textPrimary }]}>{form.address || 'N/A'}</Text>
+            </View>
+            <View style={styles.reviewDataRow}>
+              <Text style={[styles.reviewDataLabel, { color: colors.textSecondary }]}>Coordinates</Text>
+              <Text style={[styles.reviewDataVal, { color: colors.textPrimary }]}>
+                {form.lat && form.lng ? `${form.lat.toFixed(5)}, ${form.lng.toFixed(5)}` : 'No Geotag Set'}
+              </Text>
+            </View>
+          </View>
+        </View>
+
+        {/* Pricing Section */}
+        <View style={[styles.reviewSection, { borderColor: colors.border }]}>
+          <View style={styles.reviewHeaderRow}>
+            <Text style={[styles.reviewSectionTitle, { color: colors.primary }]}>Pricing & Lease Details</Text>
+            <TouchableOpacity onPress={() => setStep(5)} style={styles.reviewEditBtn}>
+              <Text style={[styles.reviewEditText, { color: colors.primary }]}>Edit</Text>
+            </TouchableOpacity>
+          </View>
+          <View style={styles.reviewDataGrid}>
+            {form.listingType === 'rent' ? (
+              <>
+                <View style={styles.reviewDataRow}>
+                  <Text style={[styles.reviewDataLabel, { color: colors.textSecondary }]}>Monthly Rent</Text>
+                  <Text style={[styles.reviewDataVal, { color: colors.primary, fontWeight: '700' }]}>{formatPriceText(form.monthlyRent)}/month</Text>
+                </View>
+                <View style={styles.reviewDataRow}>
+                  <Text style={[styles.reviewDataLabel, { color: colors.textSecondary }]}>Security Deposit</Text>
+                  <Text style={[styles.reviewDataVal, { color: colors.textPrimary }]}>{formatPriceText(form.securityDeposit)}</Text>
+                </View>
+                <View style={styles.reviewDataRow}>
+                  <Text style={[styles.reviewDataLabel, { color: colors.textSecondary }]}>Maintenance</Text>
+                  <Text style={[styles.reviewDataVal, { color: colors.textPrimary }]}>{formatPriceText(form.maintenanceCharge)}</Text>
+                </View>
+                <View style={styles.reviewDataRow}>
+                  <Text style={[styles.reviewDataLabel, { color: colors.textSecondary }]}>Negotiable</Text>
+                  <Text style={[styles.reviewDataVal, { color: colors.textPrimary }]}>{form.rentNegotiable ? 'Yes' : 'No'}</Text>
+                </View>
+                <View style={styles.reviewDataRow}>
+                  <Text style={[styles.reviewDataLabel, { color: colors.textSecondary }]}>Tenants Preferred</Text>
+                  <Text style={[styles.reviewDataVal, { color: colors.textPrimary, textTransform: 'capitalize' }]}>{form.preferredTenants || 'N/A'}</Text>
+                </View>
+                <View style={styles.reviewDataRow}>
+                  <Text style={[styles.reviewDataLabel, { color: colors.textSecondary }]}>Lease Duration</Text>
+                  <Text style={[styles.reviewDataVal, { color: colors.textPrimary }]}>{form.leaseDuration || 'N/A'}</Text>
+                </View>
+              </>
+            ) : (
+              <>
+                <View style={styles.reviewDataRow}>
+                  <Text style={[styles.reviewDataLabel, { color: colors.textSecondary }]}>Selling Price</Text>
+                  <Text style={[styles.reviewDataVal, { color: colors.primary, fontWeight: '700' }]}>{formatPriceText(form.sellingPrice)}</Text>
+                </View>
+                <View style={styles.reviewDataRow}>
+                  <Text style={[styles.reviewDataLabel, { color: colors.textSecondary }]}>Price per Sqft</Text>
+                  <Text style={[styles.reviewDataVal, { color: colors.textPrimary }]}>{formatPriceText(form.pricePerSqft)}/sqft</Text>
+                </View>
+                <View style={styles.reviewDataRow}>
+                  <Text style={[styles.reviewDataLabel, { color: colors.textSecondary }]}>Booking Amount</Text>
+                  <Text style={[styles.reviewDataVal, { color: colors.textPrimary }]}>{formatPriceText(form.bookingAmount)}</Text>
+                </View>
+                <View style={styles.reviewDataRow}>
+                  <Text style={[styles.reviewDataLabel, { color: colors.textSecondary }]}>Possession Status</Text>
+                  <Text style={[styles.reviewDataVal, { color: colors.textPrimary, textTransform: 'capitalize' }]}>{form.possessionStatus?.replace('_', ' ') || 'N/A'}</Text>
+                </View>
+                <View style={styles.reviewDataRow}>
+                  <Text style={[styles.reviewDataLabel, { color: colors.textSecondary }]}>Bank Loan Available</Text>
+                  <Text style={[styles.reviewDataVal, { color: colors.textPrimary }]}>{form.loanAvailable ? 'Yes' : 'No'}</Text>
+                </View>
+              </>
+            )}
+          </View>
+        </View>
+
+        {/* Specs Section */}
+        <View style={[styles.reviewSection, { borderColor: colors.border }]}>
+          <View style={styles.reviewHeaderRow}>
+            <Text style={[styles.reviewSectionTitle, { color: colors.primary }]}>Specifications</Text>
+            <TouchableOpacity onPress={() => setStep(6)} style={styles.reviewEditBtn}>
+              <Text style={[styles.reviewEditText, { color: colors.primary }]}>Edit</Text>
+            </TouchableOpacity>
+          </View>
+          <View style={styles.reviewDataGrid}>
+            <View style={styles.reviewDataRow}>
+              <Text style={[styles.reviewDataLabel, { color: colors.textSecondary }]}>Bedrooms</Text>
+              <Text style={[styles.reviewDataVal, { color: colors.textPrimary }]}>{form.bedrooms || '0'}</Text>
+            </View>
+            <View style={styles.reviewDataRow}>
+              <Text style={[styles.reviewDataLabel, { color: colors.textSecondary }]}>Bathrooms</Text>
+              <Text style={[styles.reviewDataVal, { color: colors.textPrimary }]}>{form.bathrooms || '0'}</Text>
+            </View>
+            <View style={styles.reviewDataRow}>
+              <Text style={[styles.reviewDataLabel, { color: colors.textSecondary }]}>Balconies</Text>
+              <Text style={[styles.reviewDataVal, { color: colors.textPrimary }]}>{form.balconies || '0'}</Text>
+            </View>
+            <View style={styles.reviewDataRow}>
+              <Text style={[styles.reviewDataLabel, { color: colors.textSecondary }]}>Parking</Text>
+              <Text style={[styles.reviewDataVal, { color: colors.textPrimary }]}>{form.parking || '0'}</Text>
+            </View>
+            <View style={styles.reviewDataRow}>
+              <Text style={[styles.reviewDataLabel, { color: colors.textSecondary }]}>Built-up Area</Text>
+              <Text style={[styles.reviewDataVal, { color: colors.textPrimary }]}>{form.builtUpArea ? `${form.builtUpArea} sqft` : 'N/A'}</Text>
+            </View>
+            <View style={styles.reviewDataRow}>
+              <Text style={[styles.reviewDataLabel, { color: colors.textSecondary }]}>Floor Level</Text>
+              <Text style={[styles.reviewDataVal, { color: colors.textPrimary }]}>
+                {form.floorNumber && form.totalFloors ? `${form.floorNumber} of ${form.totalFloors}` : 'N/A'}
+              </Text>
+            </View>
+          </View>
+        </View>
+
+        {/* Amenities Section */}
+        <View style={[styles.reviewSection, { borderColor: colors.border }]}>
+          <View style={styles.reviewHeaderRow}>
+            <Text style={[styles.reviewSectionTitle, { color: colors.primary }]}>Amenities</Text>
+            <TouchableOpacity onPress={() => setStep(7)} style={styles.reviewEditBtn}>
+              <Text style={[styles.reviewEditText, { color: colors.primary }]}>Edit</Text>
+            </TouchableOpacity>
+          </View>
+          {form.amenities.length > 0 ? (
+            <View style={styles.reviewAmenitiesList}>
+              {form.amenities.map((amenity, i) => {
+                const AmenityIconComponent = AMENITY_ICONS[amenity] || Check;
+                return (
+                  <View key={i} style={[styles.reviewAmenityTag, { backgroundColor: colors.input, borderColor: colors.border }]}>
+                    <AmenityIconComponent size={14} color={colors.primary} />
+                    <Text style={[styles.reviewAmenityText, { color: colors.textPrimary }]}>{amenity}</Text>
+                  </View>
+                );
+              })}
+            </View>
+          ) : (
+            <Text style={{ color: colors.textSecondary, fontSize: 13 }}>No amenities selected.</Text>
+          )}
+        </View>
+
+        {/* Photos Section */}
+        <View style={[styles.reviewSection, { borderColor: colors.border }]}>
+          <View style={styles.reviewHeaderRow}>
+            <Text style={[styles.reviewSectionTitle, { color: colors.primary }]}>Photos</Text>
+            <TouchableOpacity onPress={() => setStep(8)} style={styles.reviewEditBtn}>
+              <Text style={[styles.reviewEditText, { color: colors.primary }]}>Edit</Text>
+            </TouchableOpacity>
+          </View>
+          {form.photos.length > 0 ? (
+            <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.reviewPhotosScroll}>
+              {form.photos.map((uri, idx) => (
+                <Image key={idx} source={{ uri }} style={styles.reviewPhotoThumbnail} />
+              ))}
+            </ScrollView>
+          ) : (
+            <Text style={{ color: colors.textSecondary, fontSize: 13 }}>No photos uploaded.</Text>
+          )}
+        </View>
+
+        {/* Owner Details Section */}
+        <View style={[styles.reviewSection, { borderColor: colors.border, borderBottomWidth: 0, paddingBottom: 0 }]}>
+          <View style={styles.reviewHeaderRow}>
+            <Text style={[styles.reviewSectionTitle, { color: colors.primary }]}>Owner / Contact Information</Text>
+            <TouchableOpacity onPress={() => setStep(9)} style={styles.reviewEditBtn}>
+              <Text style={[styles.reviewEditText, { color: colors.primary }]}>Edit</Text>
+            </TouchableOpacity>
+          </View>
+          <View style={styles.reviewDataGrid}>
+            <View style={styles.reviewDataRow}>
+              <Text style={[styles.reviewDataLabel, { color: colors.textSecondary }]}>Contact Name</Text>
+              <Text style={[styles.reviewDataVal, { color: colors.textPrimary }]}>{form.ownerName || 'N/A'}</Text>
+            </View>
+            <View style={styles.reviewDataRow}>
+              <Text style={[styles.reviewDataLabel, { color: colors.textSecondary }]}>Contact Phone</Text>
+              <Text style={[styles.reviewDataVal, { color: colors.textPrimary }]}>{form.ownerPhone || 'N/A'}</Text>
+            </View>
+            <View style={styles.reviewDataRow}>
+              <Text style={[styles.reviewDataLabel, { color: colors.textSecondary }]}>Contact Email</Text>
+              <Text style={[styles.reviewDataVal, { color: colors.textPrimary }]}>{form.ownerEmail || 'N/A'}</Text>
+            </View>
+            <View style={styles.reviewDataRow}>
+              <Text style={[styles.reviewDataLabel, { color: colors.textSecondary }]}>Account Role</Text>
+              <Text style={[styles.reviewDataVal, { color: colors.textPrimary, textTransform: 'capitalize' }]}>{form.ownerType || 'N/A'}</Text>
+            </View>
+          </View>
+        </View>
+      </View>
+    );
+  };
 
   // ── Render step content ───────────────────────────────────────
   const renderStep = () => {
@@ -454,7 +1078,8 @@ export default function PostPropertyScreen() {
                       shadowOpacity: 0.1,
                       shadowRadius: 8,
                       elevation: 4,
-                    }
+                    },
+                    errors.listingType && { borderColor: colors.error }
                   ]}
                 >
                   <View style={{
@@ -480,6 +1105,9 @@ export default function PostPropertyScreen() {
                 </TouchableOpacity>
               );
             })}
+            {errors.listingType ? (
+              <Text style={{ color: colors.error, fontSize: 13, marginBottom: 12, fontWeight: "600", textAlign: "center" }}>{errors.listingType}</Text>
+            ) : null}
           </View>
         );
 
@@ -498,9 +1126,13 @@ export default function PostPropertyScreen() {
                   onPress={() => update("category", c)}
                   colors={colors}
                   isDark={isDark}
+                  icon={CATEGORY_ICONS[c]}
                 />
               ))}
             </View>
+            {errors.category ? (
+              <Text style={{ color: colors.error, fontSize: 13, marginBottom: 12, fontWeight: "600" }}>{errors.category}</Text>
+            ) : null}
           </View>
         );
 
@@ -510,21 +1142,31 @@ export default function PostPropertyScreen() {
           <View>
             <Text style={styles.stepHeading}>Basic Details</Text>
             <FloatingInput label="Property Title" value={form.title} onChange={v => update("title", v)}
-              placeholder="e.g. 2BHK Flat in Andheri West" colors={colors} isDark={isDark} />
+              placeholder="e.g. 2BHK Flat in Andheri West" colors={colors} isDark={isDark} error={errors.title} />
             <Text style={styles.fieldLabel}>Property Type</Text>
             <View style={styles.chipWrap}>
               {PROPERTY_TYPES.map(t => (
                 <SelectOption key={t} label={t} selected={form.propertyType === t}
-                  onPress={() => update("propertyType", t)} colors={colors} isDark={isDark} />
+                  onPress={() => update("propertyType", t)} colors={colors} isDark={isDark}
+                  icon={PROPERTY_TYPE_ICONS[t]}
+                />
               ))}
             </View>
+            {errors.propertyType ? (
+              <Text style={{ color: colors.error, fontSize: 12, marginTop: -4, marginBottom: 12, fontWeight: "600" }}>{errors.propertyType}</Text>
+            ) : null}
             <Text style={[styles.fieldLabel, { marginTop: 8 }]}>Furnishing Status</Text>
             <View style={styles.chipWrap}>
               {FURNISHING.map(f => (
                 <SelectOption key={f.key} label={f.label} selected={form.furnishing === f.key}
-                  onPress={() => update("furnishing", f.key)} colors={colors} isDark={isDark} />
+                  onPress={() => update("furnishing", f.key)} colors={colors} isDark={isDark}
+                  icon={FURNISHING_ICONS[f.key]}
+                />
               ))}
             </View>
+            {errors.furnishing ? (
+              <Text style={{ color: colors.error, fontSize: 12, marginTop: -4, marginBottom: 12, fontWeight: "600" }}>{errors.furnishing}</Text>
+            ) : null}
           </View>
         );
 
@@ -536,15 +1178,99 @@ export default function PostPropertyScreen() {
             <Text style={[styles.fieldLabel, { marginBottom: 6 }]}>City</Text>
             <TouchableOpacity
               onPress={() => setCityPickerVisible(true)}
-              style={[styles.pickerBtn, { borderColor: colors.border, backgroundColor: colors.input }]}
+              style={[styles.pickerBtn, { borderColor: errors.city ? colors.error : colors.border, backgroundColor: colors.input }]}
             >
               <Text style={{ color: form.city ? colors.textPrimary : colors.textSecondary, fontSize: 15 }}>
                 {form.city || "Select City"}
               </Text>
               <MapPin size={16} color={colors.textSecondary} />
             </TouchableOpacity>
+            {errors.city ? (
+              <Text style={{ color: colors.error, fontSize: 12, marginTop: -12, marginBottom: 12, fontWeight: "600" }}>{errors.city}</Text>
+            ) : null}
             <FloatingInput label="Full Address" value={form.address} onChange={v => update("address", v)}
-              placeholder="Building, Street, Area" colors={colors} isDark={isDark} multiline />
+              placeholder="Building, Street, Area" colors={colors} isDark={isDark} multiline error={errors.address} />
+
+            {/* Map Geotag Picker */}
+            <View style={{ marginTop: 8, marginBottom: 16 }}>
+              <Text style={styles.fieldLabel}>Map Geotag Pin</Text>
+              <View style={styles.mapContainer}>
+                <WebView
+                  ref={mapWebViewRef}
+                  style={styles.locationMap}
+                  originWhitelist={["*"]}
+                  source={{ html: pickerHTML }}
+                  onMessage={(event) => {
+                    try {
+                      const data = JSON.parse(event.nativeEvent.data);
+                      if (data.event === "locationSelect") {
+                        update("lat", data.lat);
+                        update("lng", data.lng);
+                      }
+                    } catch (err) {
+                      console.error("WebView message error:", err);
+                    }
+                  }}
+                  javaScriptEnabled={true}
+                  domStorageEnabled={true}
+                />
+                <TouchableOpacity
+                  disabled={isLocating}
+                  onPress={async () => {
+                    setIsLocating(true);
+                    try {
+                      const { status } = await Location.requestForegroundPermissionsAsync();
+                      if (status !== 'granted') {
+                        Alert.alert('Permission Denied', 'Please enable location permissions to locate the property.');
+                        setIsLocating(false);
+                        return;
+                      }
+                      
+                      let loc = null;
+                      try {
+                        loc = await Location.getCurrentPositionAsync({
+                          accuracy: Location.Accuracy.Balanced,
+                        });
+                      } catch (gpsErr) {
+                        console.warn("getCurrentPositionAsync failed, trying getLastKnownPositionAsync:", gpsErr);
+                        loc = await Location.getLastKnownPositionAsync({});
+                      }
+
+                      if (loc && loc.coords) {
+                        update("lat", loc.coords.latitude);
+                        update("lng", loc.coords.longitude);
+                      } else {
+                        throw new Error("Unable to obtain coordinates.");
+                      }
+                    } catch (err) {
+                      console.error("GPS error:", err);
+                      Alert.alert("Location Error", "Could not fetch your current location. Please verify that your device location services are enabled, or select the location by tapping directly on the map.");
+                    } finally {
+                      setIsLocating(false);
+                    }
+                  }}
+                  style={[styles.useCurrentLocationBtn, { backgroundColor: colors.primary, opacity: isLocating ? 0.7 : 1 }]}
+                >
+                  {isLocating ? (
+                    <ActivityIndicator size="small" color="#fff" />
+                  ) : (
+                    <MapPin size={16} color="#fff" />
+                  )}
+                  <Text style={{ color: '#fff', fontWeight: '700', fontSize: 13 }}>
+                    {isLocating ? "Locating..." : "Use Current Location"}
+                  </Text>
+                </TouchableOpacity>
+              </View>
+              {form.lat && form.lng ? (
+                <Text style={{ fontSize: 12, color: colors.textSecondary, marginTop: 6 }}>
+                  Geotag: {form.lat.toFixed(6)}, {form.lng.toFixed(6)}
+                </Text>
+              ) : (
+                <Text style={{ fontSize: 12, color: colors.textSecondary, marginTop: 6 }}>
+                  No geotag set. Pin on map or tap "Use Current Location" (Optional but recommended).
+                </Text>
+              )}
+            </View>
 
             {/* City Picker Modal */}
             <Modal visible={cityPickerVisible} transparent animationType="slide">
@@ -578,16 +1304,18 @@ export default function PostPropertyScreen() {
             <View>
               <Text style={styles.stepHeading}>Pricing (Sale)</Text>
               <FloatingInput label="Selling Price (₹)" value={form.sellingPrice} onChange={v => update("sellingPrice", v)}
-                placeholder="e.g. 5000000" keyboardType="numeric" colors={colors} isDark={isDark} />
+                placeholder="e.g. 5000000" keyboardType="numeric" colors={colors} isDark={isDark} error={errors.sellingPrice} />
               <FloatingInput label="Price per Sqft (₹)" value={form.pricePerSqft} onChange={v => update("pricePerSqft", v)}
-                placeholder="e.g. 6500" keyboardType="numeric" colors={colors} isDark={isDark} />
+                placeholder="e.g. 6500" keyboardType="numeric" colors={colors} isDark={isDark} error={errors.pricePerSqft} />
               <FloatingInput label="Booking Amount (₹)" value={form.bookingAmount} onChange={v => update("bookingAmount", v)}
-                placeholder="e.g. 100000" keyboardType="numeric" colors={colors} isDark={isDark} />
+                placeholder="e.g. 100000" keyboardType="numeric" colors={colors} isDark={isDark} error={errors.bookingAmount} />
               <Text style={styles.fieldLabel}>Possession Status</Text>
               <View style={styles.chipWrap}>
                 {POSSESSION_STATUS.map(p => (
                   <SelectOption key={p.key} label={p.label} selected={form.possessionStatus === p.key}
-                    onPress={() => update("possessionStatus", p.key)} colors={colors} isDark={isDark} />
+                    onPress={() => update("possessionStatus", p.key)} colors={colors} isDark={isDark}
+                    icon={POSSESSION_STATUS_ICONS[p.key]}
+                  />
                 ))}
               </View>
               <View style={styles.switchRow}>
@@ -605,13 +1333,13 @@ export default function PostPropertyScreen() {
           <View>
             <Text style={styles.stepHeading}>Pricing (Rent)</Text>
             <FloatingInput label="Monthly Rent (₹)" value={form.monthlyRent} onChange={v => update("monthlyRent", v)}
-              placeholder="e.g. 25000" keyboardType="numeric" colors={colors} isDark={isDark} />
+              placeholder="e.g. 25000" keyboardType="numeric" colors={colors} isDark={isDark} error={errors.monthlyRent} />
             <FloatingInput label="Security Deposit (₹)" value={form.securityDeposit} onChange={v => update("securityDeposit", v)}
-              placeholder="e.g. 75000" keyboardType="numeric" colors={colors} isDark={isDark} />
+              placeholder="e.g. 75000" keyboardType="numeric" colors={colors} isDark={isDark} error={errors.securityDeposit} />
             <FloatingInput label="Maintenance Charge (₹)" value={form.maintenanceCharge} onChange={v => update("maintenanceCharge", v)}
-              placeholder="e.g. 2000" keyboardType="numeric" colors={colors} isDark={isDark} />
+              placeholder="e.g. 2000" keyboardType="numeric" colors={colors} isDark={isDark} error={errors.maintenanceCharge} />
             <FloatingInput label="Lease Duration" value={form.leaseDuration} onChange={v => update("leaseDuration", v)}
-              placeholder="e.g. 11 months" colors={colors} isDark={isDark} />
+              placeholder="e.g. 11 months" colors={colors} isDark={isDark} error={errors.leaseDuration} />
             <View style={styles.switchRow}>
               <Text style={{ color: colors.textPrimary, fontSize: 15 }}>Rent Negotiable</Text>
               <Switch value={form.rentNegotiable}
@@ -624,7 +1352,9 @@ export default function PostPropertyScreen() {
             <View style={styles.chipWrap}>
               {PREFERRED_TENANTS.map(t => (
                 <SelectOption key={t.key} label={t.label} selected={form.preferredTenants === t.key}
-                  onPress={() => update("preferredTenants", t.key)} colors={colors} isDark={isDark} />
+                  onPress={() => update("preferredTenants", t.key)} colors={colors} isDark={isDark}
+                  icon={PREFERRED_TENANT_ICONS[t.key]}
+                />
               ))}
             </View>
           </View>
@@ -638,41 +1368,41 @@ export default function PostPropertyScreen() {
             <View style={styles.row}>
               <View style={{ flex: 1, marginRight: 8 }}>
                 <FloatingInput label="Bedrooms" value={form.bedrooms} onChange={v => update("bedrooms", v)}
-                  keyboardType="numeric" colors={colors} isDark={isDark} />
+                  keyboardType="numeric" colors={colors} isDark={isDark} error={errors.bedrooms} />
               </View>
               <View style={{ flex: 1 }}>
                 <FloatingInput label="Bathrooms" value={form.bathrooms} onChange={v => update("bathrooms", v)}
-                  keyboardType="numeric" colors={colors} isDark={isDark} />
+                  keyboardType="numeric" colors={colors} isDark={isDark} error={errors.bathrooms} />
               </View>
             </View>
             <View style={styles.row}>
               <View style={{ flex: 1, marginRight: 8 }}>
                 <FloatingInput label="Balconies" value={form.balconies} onChange={v => update("balconies", v)}
-                  keyboardType="numeric" colors={colors} isDark={isDark} />
+                  keyboardType="numeric" colors={colors} isDark={isDark} error={errors.balconies} />
               </View>
               <View style={{ flex: 1 }}>
                 <FloatingInput label="Parking" value={form.parking} onChange={v => update("parking", v)}
-                  keyboardType="numeric" colors={colors} isDark={isDark} />
+                  keyboardType="numeric" colors={colors} isDark={isDark} error={errors.parking} />
               </View>
             </View>
             <View style={styles.row}>
               <View style={{ flex: 1, marginRight: 8 }}>
                 <FloatingInput label="Built-up Area (sqft)" value={form.builtUpArea} onChange={v => update("builtUpArea", v)}
-                  keyboardType="numeric" colors={colors} isDark={isDark} />
+                  keyboardType="numeric" colors={colors} isDark={isDark} error={errors.builtUpArea} />
               </View>
               <View style={{ flex: 1 }}>
                 <FloatingInput label="Carpet Area (sqft)" value={form.carpetArea} onChange={v => update("carpetArea", v)}
-                  keyboardType="numeric" colors={colors} isDark={isDark} />
+                  keyboardType="numeric" colors={colors} isDark={isDark} error={errors.carpetArea} />
               </View>
             </View>
             <View style={styles.row}>
               <View style={{ flex: 1, marginRight: 8 }}>
                 <FloatingInput label="Floor" value={form.floorNumber} onChange={v => update("floorNumber", v)}
-                  keyboardType="numeric" colors={colors} isDark={isDark} />
+                  keyboardType="numeric" colors={colors} isDark={isDark} error={errors.floorNumber} />
               </View>
               <View style={{ flex: 1 }}>
                 <FloatingInput label="Total Floors" value={form.totalFloors} onChange={v => update("totalFloors", v)}
-                  keyboardType="numeric" colors={colors} isDark={isDark} />
+                  keyboardType="numeric" colors={colors} isDark={isDark} error={errors.totalFloors} />
               </View>
             </View>
           </View>
@@ -687,7 +1417,9 @@ export default function PostPropertyScreen() {
             <View style={styles.chipWrap}>
               {AMENITIES_LIST.map(a => (
                 <SelectOption key={a} label={a} selected={form.amenities.includes(a)}
-                  onPress={() => toggleAmenity(a)} colors={colors} isDark={isDark} />
+                  onPress={() => toggleAmenity(a)} colors={colors} isDark={isDark}
+                  icon={AMENITY_ICONS[a]}
+                />
               ))}
             </View>
           </View>
@@ -703,23 +1435,90 @@ export default function PostPropertyScreen() {
             </Text>
             <TouchableOpacity
               onPress={pickPhoto}
-              style={[styles.photoPickerBtn, { borderColor: colors.border, backgroundColor: colors.input }]}
+              style={[styles.photoPickerBtn, { borderColor: errors.photos ? colors.error : colors.border, backgroundColor: colors.input }]}
             >
               <Camera size={32} color={colors.primary} />
               <Text style={{ color: colors.primary, fontWeight: "700", fontSize: 15, marginTop: 8 }}>
                 {form.photos.length > 0 ? `${form.photos.length} photo(s) selected` : "Add Photos"}
               </Text>
               <Text style={{ color: colors.textSecondary, fontSize: 12, marginTop: 4 }}>
-                Tap to select from gallery (max 10)
+                Tap to add from camera or library (max 10)
               </Text>
             </TouchableOpacity>
+            {errors.photos ? (
+              <Text style={{ color: colors.error, fontSize: 13, marginTop: 8, fontWeight: "600", textAlign: "center" }}>{errors.photos}</Text>
+            ) : null}
+
             {form.photos.length > 0 && (
-              <View style={{ marginTop: 12 }}>
-                <Text style={{ color: colors.textSecondary, fontSize: 13 }}>
-                  {form.photos.length} photo(s) ready to upload
-                </Text>
-                <TouchableOpacity onPress={() => update("photos", [])} style={{ marginTop: 8 }}>
-                  <Text style={{ color: colors.error, fontSize: 13 }}>Remove all photos</Text>
+              <View style={styles.photosGridContainer}>
+                {form.photos.map((uri, index) => {
+                  const isCover = index === 0;
+                  return (
+                    <View key={uri} style={[styles.photoCardWrapper, { borderColor: colors.border, backgroundColor: colors.input }]}>
+                      <Image source={{ uri }} style={styles.photoThumbnail} />
+                      {isCover && (
+                        <View style={[styles.coverBadge, { backgroundColor: colors.success }]}>
+                          <Text style={styles.coverBadgeText}>Cover</Text>
+                        </View>
+                      )}
+                      <View style={styles.photoActionBar}>
+                        <TouchableOpacity
+                          disabled={index === 0}
+                          onPress={() => {
+                            const newPhotos = [...form.photos];
+                            const temp = newPhotos[index];
+                            newPhotos[index] = newPhotos[index - 1];
+                            newPhotos[index - 1] = temp;
+                            update("photos", newPhotos);
+                          }}
+                          style={[styles.photoActionBtn, index === 0 && { opacity: 0.3 }]}
+                        >
+                          <ChevronLeft size={16} color={colors.textPrimary} />
+                        </TouchableOpacity>
+                        <TouchableOpacity
+                          disabled={index === form.photos.length - 1}
+                          onPress={() => {
+                            const newPhotos = [...form.photos];
+                            const temp = newPhotos[index];
+                            newPhotos[index] = newPhotos[index + 1];
+                            newPhotos[index + 1] = temp;
+                            update("photos", newPhotos);
+                          }}
+                          style={[styles.photoActionBtn, index === form.photos.length - 1 && { opacity: 0.3 }]}
+                        >
+                          <ChevronRight size={16} color={colors.textPrimary} />
+                        </TouchableOpacity>
+                        <TouchableOpacity
+                          disabled={isCover}
+                          onPress={() => {
+                            const newPhotos = [...form.photos];
+                            const picked = newPhotos.splice(index, 1)[0];
+                            newPhotos.unshift(picked);
+                            update("photos", newPhotos);
+                          }}
+                          style={[styles.photoActionBtn, isCover && { opacity: 0.3 }]}
+                        >
+                          <Star size={16} color={isCover ? colors.success : colors.textPrimary} fill={isCover ? colors.success : "transparent"} />
+                        </TouchableOpacity>
+                        <TouchableOpacity
+                          onPress={() => {
+                            update("photos", form.photos.filter((_, i) => i !== index));
+                          }}
+                          style={styles.photoActionBtn}
+                        >
+                          <Trash2 size={16} color={colors.error} />
+                        </TouchableOpacity>
+                      </View>
+                    </View>
+                  );
+                })}
+              </View>
+            )}
+
+            {form.photos.length > 0 && (
+              <View style={{ marginTop: 24, alignItems: "center" }}>
+                <TouchableOpacity onPress={() => update("photos", [])}>
+                  <Text style={{ color: colors.error, fontSize: 13, fontWeight: "600" }}>Remove all photos</Text>
                 </TouchableOpacity>
               </View>
             )}
@@ -732,11 +1531,11 @@ export default function PostPropertyScreen() {
           <View>
             <Text style={styles.stepHeading}>Owner / Contact Details</Text>
             <FloatingInput label="Full Name" value={form.ownerName} onChange={v => update("ownerName", v)}
-              colors={colors} isDark={isDark} />
+              colors={colors} isDark={isDark} error={errors.ownerName} />
             <FloatingInput label="Phone Number" value={form.ownerPhone} onChange={v => update("ownerPhone", v)}
-              keyboardType="phone-pad" colors={colors} isDark={isDark} />
+              keyboardType="phone-pad" colors={colors} isDark={isDark} error={errors.ownerPhone} />
             <FloatingInput label="Email" value={form.ownerEmail} onChange={v => update("ownerEmail", v)}
-              keyboardType="email-address" colors={colors} isDark={isDark} />
+              keyboardType="email-address" colors={colors} isDark={isDark} error={errors.ownerEmail} />
             <Text style={styles.fieldLabel}>You are a:</Text>
             <View style={styles.chipWrap}>
               {OWNER_TYPES.map(t => (
@@ -744,8 +1543,14 @@ export default function PostPropertyScreen() {
                   onPress={() => update("ownerType", t.key)} colors={colors} isDark={isDark} />
               ))}
             </View>
+            {errors.ownerType ? (
+              <Text style={{ color: colors.error, fontSize: 12, marginTop: -4, marginBottom: 12, fontWeight: "600" }}>{errors.ownerType}</Text>
+            ) : null}
           </View>
         );
+
+      case 10:
+        return renderReviewStep();
 
       default:
         return null;
@@ -832,6 +1637,7 @@ export default function PostPropertyScreen() {
       {/* Step content */}
       <KeyboardAvoidingView style={{ flex: 1 }} behavior={Platform.OS === "ios" ? "padding" : undefined}>
         <ScrollView
+          ref={scrollViewRef}
           style={styles.body}
           contentContainerStyle={styles.bodyContent}
           keyboardShouldPersistTaps="handled"
@@ -928,6 +1734,78 @@ const getStyles = (colors: any, isDark: boolean) => StyleSheet.create({
   pickerTitle: { fontSize: 18, fontWeight: "800", marginBottom: 16 },
   pickerRow: { flexDirection: "row", justifyContent: "space-between", alignItems: "center", paddingVertical: 14, borderBottomWidth: 1 },
   photoPickerBtn: { borderWidth: 2, borderStyle: "dashed", borderRadius: 16, padding: 32, alignItems: "center", justifyContent: "center" },
+  mapContainer: {
+    height: 200,
+    borderRadius: 16,
+    overflow: 'hidden',
+    position: 'relative',
+    borderWidth: 1,
+    borderColor: colors.border,
+  },
+  locationMap: {
+    ...StyleSheet.absoluteFillObject,
+  },
+  useCurrentLocationBtn: {
+    position: 'absolute',
+    bottom: 12,
+    right: 12,
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+    paddingHorizontal: 12,
+    paddingVertical: 8,
+    borderRadius: 20,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.2,
+    shadowRadius: 4,
+    elevation: 4,
+  },
+  photosGridContainer: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: 12,
+    marginTop: 16,
+    justifyContent: 'space-between',
+  },
+  photoCardWrapper: {
+    width: '48%',
+    aspectRatio: 1,
+    borderRadius: 12,
+    borderWidth: 1,
+    overflow: 'hidden',
+    position: 'relative',
+    marginBottom: 4,
+  },
+  photoThumbnail: {
+    width: '100%',
+    height: '75%',
+    resizeMode: 'cover',
+  },
+  coverBadge: {
+    position: 'absolute',
+    top: 8,
+    left: 8,
+    paddingHorizontal: 8,
+    paddingVertical: 4,
+    borderRadius: 6,
+  },
+  coverBadgeText: {
+    color: '#fff',
+    fontSize: 10,
+    fontWeight: '800',
+  },
+  photoActionBar: {
+    height: '25%',
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-around',
+    borderTopWidth: 1,
+    borderTopColor: 'rgba(0,0,0,0.05)',
+  },
+  photoActionBtn: {
+    padding: 6,
+  },
   errorBanner: { flexDirection: "row", gap: 10, marginHorizontal: 16, marginTop: 8, marginBottom: 8, padding: 12, borderRadius: 12, borderWidth: 1, alignItems: "flex-start", zIndex: 5 },
   navRow: { flexDirection: "row", gap: 12, padding: 16, borderTopWidth: 1 },
   prevBtn: { flexDirection: "row", alignItems: "center", gap: 8, flex: 1, paddingVertical: 14, borderRadius: 14, borderWidth: 1, justifyContent: "center" },
@@ -947,6 +1825,8 @@ const getStyles = (colors: any, isDark: boolean) => StyleSheet.create({
   successButtons: { width: "100%", gap: 12, marginBottom: 32 },
   successPrimaryBtn: { paddingVertical: 16, borderRadius: 12, alignItems: "center" },
   successPrimaryBtnText: { color: "#fff", fontWeight: "700", fontSize: 16 },
+  successSecondaryBtn: { paddingVertical: 16, borderRadius: 12, alignItems: "center", justifyContent: "center" },
+  successSecondaryBtnText: { fontWeight: "700", fontSize: 16 },
   referenceBox: { width: "100%", paddingTop: 24, borderTopWidth: 1, alignItems: "center" },
   referenceLabel: { fontSize: 13, marginBottom: 8 },
   referenceNumber: { fontSize: 24, fontWeight: "700", fontFamily: "monospace" },
@@ -955,4 +1835,79 @@ const getStyles = (colors: any, isDark: boolean) => StyleSheet.create({
   emptyText: { fontSize: 14, textAlign: "center", lineHeight: 20 },
   primaryBtn: { marginTop: 20, paddingHorizontal: 32, paddingVertical: 14, borderRadius: 14 },
   primaryBtnText: { color: "#fff", fontWeight: "700", fontSize: 16 },
+  reviewContainer: {
+    gap: 16,
+  },
+  reviewSection: {
+    borderBottomWidth: 1.5,
+    paddingBottom: 20,
+    gap: 10,
+  },
+  reviewHeaderRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: 4,
+  },
+  reviewSectionTitle: {
+    fontSize: 15,
+    fontWeight: '800',
+    textTransform: 'uppercase',
+    letterSpacing: 0.5,
+  },
+  reviewEditBtn: {
+    paddingHorizontal: 8,
+    paddingVertical: 4,
+  },
+  reviewEditText: {
+    fontSize: 13,
+    fontWeight: '700',
+  },
+  reviewDataGrid: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: 12,
+  },
+  reviewDataRow: {
+    width: '47%',
+    marginBottom: 4,
+  },
+  reviewDataLabel: {
+    fontSize: 11,
+    fontWeight: '600',
+    textTransform: 'uppercase',
+    letterSpacing: 0.2,
+    marginBottom: 2,
+  },
+  reviewDataVal: {
+    fontSize: 14,
+    fontWeight: '700',
+  },
+  reviewAmenitiesList: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: 8,
+  },
+  reviewAmenityTag: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+    paddingHorizontal: 10,
+    paddingVertical: 6,
+    borderRadius: 8,
+    borderWidth: 1,
+  },
+  reviewAmenityText: {
+    fontSize: 12,
+    fontWeight: '600',
+  },
+  reviewPhotosScroll: {
+    gap: 10,
+  },
+  reviewPhotoThumbnail: {
+    width: 80,
+    height: 80,
+    borderRadius: 8,
+    resizeMode: 'cover',
+  },
 });

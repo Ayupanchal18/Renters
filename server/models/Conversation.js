@@ -14,11 +14,26 @@ const MessageSchema = new Schema(
             size: Number,
             url: String
         },
+        attachment: {
+            url: String,
+            filename: String,
+            mimeType: String,
+            size: Number
+        },
         image: String, // For backward compatibility with existing image messages
         type: {
             type: String,
-            enum: ["text", "image", "file", "system"],
+            enum: ["text", "image", "file", "system", "booking_request", "booking_update"],
             default: "text"
+        },
+        booking: {
+            bookingId: { type: Schema.Types.ObjectId, ref: "VisitBooking" },
+            propertyTitle: String,
+            propertyThumbnail: String,
+            slotStart: Date,
+            slotEnd: Date,
+            status: String,
+            notes: String
         },
         read: { type: Boolean, default: false },
         readAt: { type: Date },

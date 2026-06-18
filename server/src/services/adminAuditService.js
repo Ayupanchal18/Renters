@@ -11,12 +11,17 @@ import { connectDB } from "../config/db.js";
 export const VALID_ACTIONS = [
     'CREATE', 'UPDATE', 'DELETE', 'BLOCK', 'UNBLOCK',
     'ACTIVATE', 'DEACTIVATE', 'ROLE_CHANGE', 'PASSWORD_RESET',
-    'LOGIN', 'LOGOUT', 'APPROVE', 'REJECT', 'EXPORT', 'VIEW'
+    'LOGIN', 'LOGOUT', 'APPROVE', 'REJECT', 'EXPORT', 'VIEW',
+    'BULK_STATUS_CHANGE', 'BULK_DELETE', 'REVOKE_SESSIONS',
+    'BULK_BLOCK', 'BULK_UNBLOCK', 'BULK_DEACTIVATE', 'BULK_ACTIVATE',
+    'PUBLISH', 'UNPUBLISH', 'ARCHIVE', 'RESTORE', 'FLAG', 'UNFLAG',
+    'SEND', 'BROADCAST', 'REVOKE', 'RESET', 'IMPORT',
+    'ESCALATE', 'RESOLVE', 'WARN', 'DELETE_DISABLED'
 ];
 
 export const VALID_RESOURCE_TYPES = [
     'user', 'property', 'location', 'category',
-    'content', 'review', 'notification', 'settings', 'report', 'conversation'
+    'content', 'review', 'notification', 'settings', 'report', 'conversation', 'verification', 'role'
 ];
 
 /* ---------------------- HELPER FUNCTIONS ---------------------- */
@@ -60,6 +65,40 @@ const extractClientInfo = (req) => {
 };
 
 /* ---------------------- CORE FUNCTIONS ---------------------- */
+
+const SENSITIVE_FIELDS = ['password', 'passwordHash', 'phone', 'address', 'email', 'avatar', 'token'];
+
+/**
+ * Recursively redacts sensitive fields from log objects
+ */
+export const redactPII = (data) => {
+    if (!data) return data;
+    if (typeof data !== 'object') return data;
+
+    if (data instanceof Date || data instanceof RegExp) {
+        return data;
+    }
+
+    if (typeof data.toObject === 'function') {
+        data = data.toObject();
+    }
+
+    if (Array.isArray(data)) {
+        return data.map(redactPII);
+    }
+
+    const redacted = {};
+    for (const [key, value] of Object.entries(data)) {
+        if (SENSITIVE_FIELDS.includes(key)) {
+            redacted[key] = '[REDACTED]';
+        } else if (typeof value === 'object') {
+            redacted[key] = redactPII(value);
+        } else {
+            redacted[key] = value;
+        }
+    }
+    return redacted;
+};
 
 /**
  * Create an audit log entry
@@ -119,11 +158,11 @@ export const createAuditLog = async ({
             action,
             resourceType,
             resourceId,
-            changes,
-            previousValues,
+            changes: redactPII(changes),
+            previousValues: redactPII(previousValues),
             ipAddress,
             userAgent,
-            metadata,
+            metadata: redactPII(metadata),
             timestamp: new Date()
         });
 
@@ -133,6 +172,29 @@ export const createAuditLog = async ({
     } catch (error) {
         console.error('Error creating audit log:', error);
         throw error;
+    }
+};
+
+/**
+ * Safe wrapper for createAuditLog that never throws errors
+ * Use this in API endpoints to ensure audit log failures don't break the main operation
+ * 
+ * @param {Object} params - Same parameters as createAuditLog
+ * @returns {Promise<Object|null>} - Created audit log or null if failed
+ */
+export const safeCreateAuditLog = async (params) => {
+    try {
+        return await createAuditLog(params);
+    } catch (error) {
+        console.error('Audit log creation failed (non-fatal):', {
+            error: error.message,
+            action: params?.action,
+            resourceType: params?.resourceType,
+            resourceId: params?.resourceId,
+            adminId: params?.adminId
+        });
+        // Return null but don't throw - audit log failures should never break the main operation
+        return null;
     }
 };
 

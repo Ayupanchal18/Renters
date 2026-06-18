@@ -29,7 +29,8 @@ import {
   Eye,
   EyeOff,
   Globe,
-  Settings
+  Settings,
+  Calendar
 } from 'lucide-react';
 import BannerEditor from '../../components/admin/BannerEditor';
 import PageEditor from '../../components/admin/PageEditor';
@@ -427,9 +428,20 @@ const ContentManagement = () => {
             </div>
             
             {/* Status */}
-            <Badge variant={page.isPublished ? 'default' : 'secondary'}>
-              {page.isPublished ? (
+            <Badge 
+              variant={
+                page.status === 'published' ? 'default' : 
+                page.status === 'scheduled' ? 'outline' : 
+                page.status === 'archived' ? 'destructive' : 'secondary'
+              }
+              className={page.status === 'scheduled' ? 'border-amber-500 text-amber-500 bg-amber-50 dark:bg-amber-950/20' : ''}
+            >
+              {page.status === 'published' || (!page.status && page.isPublished) ? (
                 <><Eye className="h-3 w-3 mr-1" /> Published</>
+              ) : page.status === 'scheduled' ? (
+                <><Calendar className="h-3 w-3 mr-1" /> Scheduled</>
+              ) : page.status === 'archived' ? (
+                <><EyeOff className="h-3 w-3 mr-1" /> Archived</>
               ) : (
                 <><EyeOff className="h-3 w-3 mr-1" /> Draft</>
               )}

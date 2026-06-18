@@ -1,7 +1,6 @@
 import React, { useRef, useEffect, useState, memo, useMemo } from 'react';
-import { StyleSheet, View, Text, Image, Pressable, Dimensions, FlatList, ActivityIndicator } from 'react-native';
-import MapView, { Marker, PROVIDER_GOOGLE, UrlTile } from 'react-native-maps';
-import Svg, { Path, G, Circle } from 'react-native-svg';
+import { StyleSheet, View, Text, Image, Pressable, Dimensions, FlatList, Platform, Modal } from 'react-native';
+import { WebView } from 'react-native-webview';
 import { MapPin, Navigation, Bed, Bath, ArrowRight, X } from 'lucide-react-native';
 import { useTheme } from '../../../theme/useTheme';
 import type { Property } from '../../../types/types';
@@ -15,16 +14,15 @@ interface PropertyMapViewProps {
 const PropertyMapView = ({ properties, onPropertyPress, type }: PropertyMapViewProps) => {
   const { colors, isDark } = useTheme();
   const styles = useMemo(() => getStyles(colors, isDark), [colors, isDark]);
-  const mapRef = useRef<MapView>(null);
+  const webViewRef = useRef<WebView>(null);
   const listRef = useRef<FlatList>(null);
-  
+  const isTappingMarker = useRef(false);
+
   const [selectedPropertyId, setSelectedPropertyId] = useState<string | null>(null);
   const [showOverlay, setShowOverlay] = useState(false);
-  const [tracksViewChanges, setTracksViewChanges] = useState(true);
 
   const themeColor = type === 'buy' ? colors.success : colors.primary;
 
-  // 1. Helper Functions
   const getCoords = (p: Property) => {
     if (p.location?.coordinates && Array.isArray(p.location.coordinates) && p.location.coordinates.length === 2) {
       return { latitude: Number(p.location.coordinates[1]), longitude: Number(p.location.coordinates[0]) };
@@ -49,207 +47,423 @@ const PropertyMapView = ({ properties, onPropertyPress, type }: PropertyMapViewP
   const formatPrice = (p: Property) => {
     const price = type === 'buy' ? p.sellingPrice : p.monthlyRent;
     if (!price) return 'N/A';
-    if (price >= 10000000) return `${(price/10000000).toFixed(1)}Cr`;
-    if (price >= 100000) return `${(price/100000).toFixed(1)}L`;
+    if (price >= 10000000) return `${(price / 10000000).toFixed(1)}Cr`;
+    if (price >= 100000) return `${(price / 100000).toFixed(1)}L`;
     return `₹${price.toLocaleString()}`;
   };
 
-  // 2. Effects
-  useEffect(() => {
-    if (validProperties.length > 0) {
-      setTracksViewChanges(true);
-      const timer = setTimeout(() => setTracksViewChanges(false), 3000);
-      return () => clearTimeout(timer);
-    }
-  }, [validProperties.length]);
+  // Generate Leaflet HTML
+  const generateLeafletHTML = (
+    propsList: Property[],
+    themeHex: string,
+    dark: boolean
+  ) => {
+    const markers = propsList.map(p => {
+      const coords = getCoords(p);
+      return {
+        id: p._id,
+        lat: coords?.latitude,
+        lng: coords?.longitude,
+        label: formatPrice(p),
+        selected: selectedPropertyId === p._id
+      };
+    }).filter(m => m.lat !== undefined && m.lng !== undefined);
 
-  useEffect(() => {
-    if (validProperties.length > 0 && mapRef.current) {
-      const coords = validProperties.map(p => getCoords(p)).filter(c => c !== null) as {latitude: number, longitude: number}[];
-      if (coords.length > 0) {
-        mapRef.current.fitToCoordinates(coords, {
-          edgePadding: { top: 50, right: 50, bottom: 250, left: 50 },
-          animated: true,
+    let initialLat = 20.5937;
+    let initialLng = 78.9629;
+    let initialZoom = 5;
+
+    const selectedCoords = selectedPropertyId ? getCoords(propsList.find(p => p._id === selectedPropertyId) || propsList[0]) : null;
+    if (selectedCoords) {
+      initialLat = selectedCoords.latitude;
+      initialLng = selectedCoords.longitude;
+      initialZoom = 13;
+    } else if (markers.length > 0) {
+      const sum = markers.reduce((acc, curr) => ({ lat: acc.lat + curr.lat!, lng: acc.lng + curr.lng! }), { lat: 0, lng: 0 });
+      initialLat = sum.lat / markers.length;
+      initialLng = sum.lng / markers.length;
+      initialZoom = 10;
+    }
+
+    return `
+<!DOCTYPE html>
+<html>
+<head>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
+  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+  <style>
+    html, body, #map {
+      height: 100%;
+      margin: 0;
+      padding: 0;
+      background-color: ${dark ? '#0f172a' : '#f8fafc'};
+    }
+    .leaflet-bar {
+      border: none !important;
+      box-shadow: 0 4px 12px rgba(0,0,0,0.15) !important;
+    }
+    .leaflet-bar a {
+      background-color: ${dark ? '#1e293b' : '#ffffff'} !important;
+      color: ${dark ? '#f8fafc' : '#0f172a'} !important;
+      border-bottom: 1px solid ${dark ? '#334155' : '#e2e8f0'} !important;
+    }
+    ${dark ? `
+    .leaflet-tile-container {
+      filter: invert(100%) hue-rotate(180deg) brightness(95%) contrast(90%);
+    }
+    ` : ''}
+    .leaflet-top.leaflet-left {
+      margin-top: 80px !important;
+    }
+    .price-tag-container {
+      width: max-content !important;
+      height: auto !important;
+    }
+    .price-tag-marker {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      background-color: ${dark ? '#1e293b' : '#ffffff'};
+      border: 1.5px solid ${themeHex};
+      border-radius: 8px;
+      padding: 5px 9px;
+      font-weight: 800;
+      font-size: 11px;
+      color: ${dark ? '#f8fafc' : '#0f172a'};
+      box-shadow: 0 2px 6px rgba(0,0,0,0.15);
+      white-space: nowrap;
+      position: relative;
+      transition: all 0.2s ease;
+      transform: translate(-50%, -100%);
+      margin-top: -5px;
+    }
+    .price-tag-marker.selected {
+      background-color: ${themeHex};
+      border-color: ${themeHex};
+      color: #ffffff !important;
+      z-index: 99999 !important;
+      box-shadow: 0 4px 12px rgba(0,0,0,0.3);
+      transform: translate(-50%, -100%) scale(1.12);
+    }
+    .price-tag-marker:after {
+      content: '';
+      position: absolute;
+      bottom: -5px;
+      left: 50%;
+      width: 8px;
+      height: 8px;
+      background-color: inherit;
+      border-right: 1.5px solid;
+      border-bottom: 1.5px solid;
+      border-color: inherit;
+      transform: translateX(-50%) rotate(45deg);
+    }
+  </style>
+  <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+</head>
+<body>
+  <div id="map"></div>
+  <script>
+    const map = L.map('map', {
+      zoomControl: true,
+      attributionControl: false
+    }).setView([${initialLat}, ${initialLng}], ${initialZoom});
+
+    L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+      maxZoom: 19
+    }).addTo(map);
+
+    const markersMap = new Map();
+
+    function setMarkers(markersList) {
+      for (const m of markersMap.values()) {
+        map.removeLayer(m);
+      }
+      markersMap.clear();
+
+      markersList.forEach(m => {
+        const isSelected = m.selected ? 'selected' : '';
+        const markerIcon = L.divIcon({
+          className: 'price-tag-container',
+          html: \`<div class="price-tag-marker \${isSelected}">\${m.label}</div>\`,
+          iconSize: null,
+          iconAnchor: [0, 0]
         });
+
+        const marker = L.marker([m.lat, m.lng], { icon: markerIcon }).addTo(map);
+        
+        marker.on('click', () => {
+          window.ReactNativeWebView.postMessage(JSON.stringify({
+            event: 'markerClick',
+            id: m.id
+          }));
+        });
+
+        markersMap.set(m.id, marker);
+      });
+    }
+
+    const initialMarkers = ${JSON.stringify(markers)};
+    setMarkers(initialMarkers);
+
+    if (initialMarkers.length > 0 && !${selectedPropertyId !== null}) {
+      const latlngs = initialMarkers.map(m => [m.lat, m.lng]);
+      map.fitBounds(latlngs, { padding: [50, 50] });
+    }
+
+    function handleNativeMessage(dataStr) {
+      try {
+        const data = JSON.parse(dataStr);
+        if (data.action === 'setMarkers') {
+          setMarkers(data.markers);
+        } else if (data.action === 'panTo') {
+          map.setView([data.lat, data.lng], data.zoom || map.getZoom(), { animate: true });
+        } else if (data.action === 'fitBounds') {
+          map.fitBounds(data.coords, { padding: [50, 50] });
+        }
+      } catch (err) {
+        console.error(err);
+      }
+    }
+
+    document.addEventListener('message', function(event) {
+      handleNativeMessage(event.data);
+    });
+    window.addEventListener('message', function(event) {
+      handleNativeMessage(event.data);
+    });
+  </script>
+</body>
+</html>
+`;
+  };
+
+  const leafletHTML = useMemo(() => {
+    return generateLeafletHTML(validProperties, themeColor, isDark);
+  }, [validProperties, themeColor, isDark]);
+
+  // Update selection/markers on changes
+  useEffect(() => {
+    if (webViewRef.current && validProperties.length > 0) {
+      const markers = validProperties.map(p => {
+        const coords = getCoords(p);
+        return {
+          id: p._id,
+          lat: coords?.latitude,
+          lng: coords?.longitude,
+          label: formatPrice(p),
+          selected: selectedPropertyId === p._id
+        };
+      }).filter(m => m.lat !== undefined && m.lng !== undefined);
+
+      webViewRef.current.postMessage(JSON.stringify({
+        action: 'setMarkers',
+        markers
+      }));
+    }
+  }, [selectedPropertyId, validProperties]);
+
+  // Adjust zoom bounds when properties change
+  useEffect(() => {
+    if (validProperties.length > 0 && webViewRef.current) {
+      const coords = validProperties.map(p => getCoords(p)).filter(c => c !== null) as { latitude: number, longitude: number }[];
+      if (coords.length > 0) {
+        webViewRef.current.postMessage(JSON.stringify({
+          action: 'fitBounds',
+          coords: coords.map(c => [c.latitude, c.longitude])
+        }));
       }
     }
   }, [validProperties.length]);
 
   const handleMarkerPress = (property: Property) => {
+    isTappingMarker.current = true;
     setSelectedPropertyId(property._id);
     setShowOverlay(true);
-    
+
     const coords = getCoords(property);
-    if (coords && mapRef.current) {
-      mapRef.current.animateToRegion({
-        ...coords,
-        latitudeDelta: 0.01,
-        longitudeDelta: 0.01,
-      }, 600);
+    if (coords && webViewRef.current) {
+      webViewRef.current.postMessage(JSON.stringify({
+        action: 'panTo',
+        lat: coords.latitude,
+        lng: coords.longitude,
+        zoom: 14
+      }));
     }
 
     const index = validProperties.findIndex(p => p._id === property._id);
     if (index !== -1 && listRef.current) {
       listRef.current.scrollToIndex({ index, animated: true, viewPosition: 0.5 });
     }
+
+    setTimeout(() => {
+      isTappingMarker.current = false;
+    }, 850);
+  };
+
+  const handleScrollEnd = (event: any) => {
+    if (isTappingMarker.current) return;
+
+    const contentOffsetX = event.nativeEvent.contentOffset.x;
+    const itemWidth = 180 + 12; // card width + gap
+    const index = Math.round(contentOffsetX / itemWidth);
+
+    if (index >= 0 && index < validProperties.length) {
+      const activeProperty = validProperties[index];
+      if (activeProperty && activeProperty._id !== selectedPropertyId) {
+        setSelectedPropertyId(activeProperty._id);
+        const coords = getCoords(activeProperty);
+        if (coords && webViewRef.current) {
+          webViewRef.current.postMessage(JSON.stringify({
+            action: 'panTo',
+            lat: coords.latitude,
+            lng: coords.longitude,
+            zoom: 14
+          }));
+        }
+      }
+    }
+  };
+
+  const handleWebViewMessage = (event: any) => {
+    try {
+      const data = JSON.parse(event.nativeEvent.data);
+      if (data.event === 'markerClick') {
+        const prop = validProperties.find(p => p._id === data.id);
+        if (prop) {
+          handleMarkerPress(prop);
+        }
+      }
+    } catch (err) {
+      console.error('WebView message error:', err);
+    }
   };
 
   return (
     <View style={styles.container}>
-      <MapView
-        ref={mapRef}
-        style={styles.map}
-        showsUserLocation={true}
-        showsMyLocationButton={true}
-        provider={PROVIDER_GOOGLE}
-        userInterfaceStyle={isDark ? 'dark' : 'light'}
-        initialRegion={{
-            latitude: 20.5937,
-            longitude: 78.9629,
-            latitudeDelta: 15,
-            longitudeDelta: 15,
-        }}
-      >
-        {!isDark && (
-          <UrlTile 
-            urlTemplate="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
-            maximumZ={19}
-          />
-        )}
-        {validProperties.map((p) => {
-          const coords = getCoords(p);
-          if (!coords) return null;
-          const isSelected = selectedPropertyId === p._id;
-
-          return (
-            <Marker
-              key={p._id}
-              coordinate={coords}
-              onPress={() => handleMarkerPress(p)}
-              tracksViewChanges={tracksViewChanges}
-              anchor={{ x: 0.5, y: 1 }}
-              zIndex={isSelected ? 999 : 100}
-            >
-              <View style={styles.svgMarkerContainer}>
-                <View style={[
-                  styles.markerPriceBubble, 
-                  { backgroundColor: isSelected ? themeColor : (isDark ? colors.surface : 'rgba(255,255,255,0.95)'), borderColor: themeColor }
-                ]}>
-                   <Text style={[styles.markerPriceText, { color: isSelected ? '#fff' : themeColor }]}>
-                     {formatPrice(p)}
-                   </Text>
-                </View>
-
-                <G opacity={isSelected ? 1 : 0.9}>
-                  <View style={[styles.pinShadow, isSelected && styles.pinShadowSelected]}>
-                    <Svg width={isSelected ? 40 : 32} height={isSelected ? 52 : 42} viewBox="0 0 384 512">
-                      <Path
-                        d="M172.268 501.67C26.97 291.031 0 269.413 0 192 0 85.961 85.961 0 192 0s192 85.961 192 192c0 77.413-26.97 99.031-172.268 309.67-9.535 13.774-29.93 13.773-39.464 0z"
-                        fill={themeColor}
-                      />
-                      <Circle cx="192" cy="192" r="100" fill={isDark ? colors.background : "white"} />
-                      <Circle cx="192" cy="192" r="60" fill={themeColor} />
-                    </Svg>
-                  </View>
-                </G>
-              </View>
-            </Marker>
-          );
-        })}
-      </MapView>
+      <WebView
+        ref={webViewRef}
+        style={[styles.map, Platform.OS === 'android' && { opacity: 0.99 }]}
+        androidLayerType="software"
+        originWhitelist={['*']}
+        source={{ html: leafletHTML }}
+        onMessage={handleWebViewMessage}
+        javaScriptEnabled={true}
+        domStorageEnabled={true}
+      />
 
       {selectedProperty && showOverlay && (
-        <View style={styles.webOverlayCard}>
-           <Pressable style={styles.closeOverlay} onPress={() => setShowOverlay(false)}>
-             <X size={16} color="#fff" />
-           </Pressable>
-           
-           <View style={styles.overlayImageContainer}>
-             <Image 
-               source={{ uri: selectedProperty.photos?.[0] || 'https://images.unsplash.com/photo-1560518883-ce09059eeffa?w=400' }} 
-               style={styles.overlayImage} 
-             />
-             <View style={styles.overlayGradient} />
-             <View style={styles.overlayTextContent}>
-                <Text style={styles.overlayTitle} numberOfLines={1}>{selectedProperty.title}</Text>
-                <View style={styles.overlayLocRow}>
-                   <MapPin size={10} color="rgba(255,255,255,0.8)" />
-                   <Text style={styles.overlayLoc} numberOfLines={1}>{selectedProperty.address || selectedProperty.city}</Text>
-                </View>
-             </View>
-           </View>
+        <Modal
+          visible={showOverlay}
+          transparent={true}
+          animationType="fade"
+          hardwareAccelerated={true}
+          onRequestClose={() => setShowOverlay(false)}
+        >
+          <Pressable
+            style={{ flex: 1, backgroundColor: 'transparent' }}
+            onPress={() => setShowOverlay(false)}
+          >
+            <Pressable style={styles.webOverlayCard} onPress={() => { /* Consume press to prevent closing */ }}>
+              <Pressable style={styles.closeOverlay} onPress={() => setShowOverlay(false)}>
+                <X size={16} color="#fff" />
+              </Pressable>
 
-           <View style={styles.overlayDetailsContent}>
-              <View style={styles.overlaySpecs}>
-                 <View style={styles.specItem}>
-                    <Bed size={14} color={themeColor} />
-                    <Text style={styles.specText}>{selectedProperty.bedrooms} Bed</Text>
-                 </View>
-                 <View style={styles.specItem}>
-                    <Bath size={14} color={themeColor} />
-                    <Text style={styles.specText}>{selectedProperty.bathrooms} Bath</Text>
-                 </View>
+              <View style={styles.overlayImageContainer}>
+                <Image
+                  source={{ uri: selectedProperty.photos?.[0] || 'https://images.unsplash.com/photo-1560518883-ce09059eeffa?w=400' }}
+                  style={styles.overlayImage}
+                />
+                <View style={styles.overlayGradient} />
+                <View style={styles.overlayTextContent}>
+                  <Text style={styles.overlayTitle} numberOfLines={1}>{selectedProperty.title}</Text>
+                  <View style={styles.overlayLocRow}>
+                    <MapPin size={10} color="rgba(255,255,255,0.8)" />
+                    <Text style={styles.overlayLoc} numberOfLines={1}>{selectedProperty.address || selectedProperty.city}</Text>
+                  </View>
+                </View>
               </View>
 
-              <View style={styles.overlayBottomRow}>
-                 <View>
+              <View style={styles.overlayDetailsContent}>
+                <View style={styles.overlaySpecs}>
+                  <View style={styles.specItem}>
+                    <Bed size={14} color={themeColor} />
+                    <Text style={styles.specText}>{selectedProperty.bedrooms} Bed</Text>
+                  </View>
+                  <View style={styles.specItem}>
+                    <Bath size={14} color={themeColor} />
+                    <Text style={styles.specText}>{selectedProperty.bathrooms} Bath</Text>
+                  </View>
+                </View>
+
+                <View style={styles.overlayBottomRow}>
+                  <View>
                     <Text style={styles.priceLabelWeb}>{type === 'buy' ? 'Selling Price' : 'Monthly Rent'}</Text>
                     <Text style={[styles.priceValWeb, { color: themeColor }]}>
                       ₹{formatPrice(selectedProperty)}{type === 'rent' ? '/mo' : ''}
                     </Text>
-                 </View>
-                 <Pressable 
-                   style={[styles.viewDetailsBtn, { backgroundColor: themeColor }]}
-                   onPress={() => onPropertyPress(selectedProperty)}
-                 >
+                  </View>
+                  <Pressable
+                    style={[styles.viewDetailsBtn, { backgroundColor: themeColor }]}
+                    onPress={() => {
+                      setShowOverlay(false);
+                      onPropertyPress(selectedProperty);
+                    }}
+                  >
                     <Text style={styles.viewDetailsText}>View Details</Text>
                     <ArrowRight size={14} color="#fff" />
-                 </Pressable>
+                  </Pressable>
+                </View>
               </View>
-           </View>
-        </View>
+            </Pressable>
+          </Pressable>
+        </Modal>
       )}
 
       <View style={styles.bottomListContainer}>
-         <View style={styles.listHeader}>
-            <Text style={styles.listHeaderText}>Properties ({validProperties.length})</Text>
-         </View>
-         <FlatList
-            ref={listRef}
-            data={validProperties}
-            horizontal
-            showsHorizontalScrollIndicator={false}
-            keyExtractor={(item) => item._id}
-            contentContainerStyle={styles.hListContent}
-            renderItem={({ item }) => {
-              const isSelected = selectedPropertyId === item._id;
-              return (
-                <Pressable 
-                  onPress={() => handleMarkerPress(item)}
-                  style={[
-                    styles.hCard, 
-                    isSelected && { borderColor: themeColor, backgroundColor: themeColor + '20' }
-                  ]}
-                >
-                  <Image source={{ uri: item.photos?.[0] }} style={styles.hCardImage} />
-                  <View style={styles.hCardInfo}>
-                    <Text style={styles.hCardTitle} numberOfLines={1}>{item.title}</Text>
-                    <Text style={[styles.hCardPrice, { color: themeColor }]}>{formatPrice(item)}</Text>
-                  </View>
-                </Pressable>
-              );
-            }}
-         />
+        <View style={styles.listHeader}>
+          <Text style={styles.listHeaderText}>Properties ({validProperties.length})</Text>
+        </View>
+        <FlatList
+          ref={listRef}
+          data={validProperties}
+          horizontal
+          showsHorizontalScrollIndicator={false}
+          keyExtractor={(item) => item._id}
+          contentContainerStyle={styles.hListContent}
+          snapToInterval={180 + 12}
+          snapToAlignment="center"
+          decelerationRate="fast"
+          onMomentumScrollEnd={handleScrollEnd}
+          renderItem={({ item }) => {
+            const isSelected = selectedPropertyId === item._id;
+            return (
+              <Pressable
+                onPress={() => handleMarkerPress(item)}
+                style={[
+                  styles.hCard,
+                  isSelected && { borderColor: themeColor, backgroundColor: themeColor + '20' }
+                ]}
+              >
+                <Image source={{ uri: item.photos?.[0] }} style={styles.hCardImage} />
+                <View style={styles.hCardInfo}>
+                  <Text style={styles.hCardTitle} numberOfLines={1}>{item.title}</Text>
+                  <Text style={[styles.hCardPrice, { color: themeColor }]}>{formatPrice(item)}</Text>
+                </View>
+              </Pressable>
+            );
+          }}
+        />
       </View>
 
       {validProperties.length === 0 && (
-         <View style={styles.noLocContainer}>
-            <View style={styles.noLocCard}>
-               <MapPin size={40} color={colors.textSecondary} style={{ opacity: 0.3 }} />
-               <Text style={styles.noLocTitle}>No locations available</Text>
-               <Text style={styles.noLocSub}>Map requires coordinates which are missing for these listings.</Text>
-            </View>
-         </View>
+        <View style={styles.noLocContainer}>
+          <View style={styles.noLocCard}>
+            <MapPin size={40} color={colors.textSecondary} style={{ opacity: 0.3 }} />
+            <Text style={styles.noLocTitle}>No locations available</Text>
+            <Text style={styles.noLocSub}>Map requires coordinates which are missing for these listings.</Text>
+          </View>
+        </View>
       )}
     </View>
   );
@@ -259,48 +473,32 @@ const getStyles = (colors: any, isDark: boolean) => StyleSheet.create({
   container: {
     flex: 1,
     backgroundColor: colors.background,
+    ...Platform.select({
+      android: {
+        opacity: 0.99,
+      },
+    }),
   },
   map: {
     flex: 1,
   },
-  svgMarkerContainer: {
-    alignItems: 'center',
-    justifyContent: 'flex-end',
-    width: 70, // Reduced from 100 to 70 to match smaller pins
-    height: 80, // Reduced from 120 to 80 to match smaller pins
-    backgroundColor: 'transparent',
-  },
-  markerPriceBubble: {
-    paddingHorizontal: 8, // Reduced from 12 to 8 for smaller bubble
-    paddingVertical: 4, // Reduced from 6 to 4 for smaller bubble
-    borderRadius: 16, // Reduced from 20 to 16 to match smaller padding
-    borderWidth: 1.5,
-    marginBottom: 4,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.15,
-    shadowRadius: 10,
-    elevation: 6,
+  priceTagMarker: {
+    paddingHorizontal: 10,
+    paddingVertical: 6,
+    borderRadius: 20,
+    borderWidth: 2,
     alignItems: 'center',
     justifyContent: 'center',
-  },
-  markerPriceText: {
-    fontSize: 10, // Reduced from 13 to 10 for better proportion with smaller markers
-    fontWeight: '800', // Reduced from 900 to 800 for slightly less bold appearance
-    letterSpacing: -0.1, // Reduced from -0.2 to -0.1
-    textAlign: 'center',
-  },
-  pinShadow: {
     shadowColor: '#000',
-    shadowOffset: { width: 0, height: 8 },
-    shadowOpacity: 0.3,
-    shadowRadius: 10,
-    backgroundColor: 'transparent',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.2,
+    shadowRadius: 4,
+    elevation: 4,
   },
-  pinShadowSelected: {
-    shadowOpacity: 0.5,
-    shadowRadius: 15,
-    transform: [{ scale: 1.15 }],
+  priceTagText: {
+    fontSize: 12,
+    fontWeight: '800',
+    textAlign: 'center',
   },
   webOverlayCard: {
     position: 'absolute',
@@ -313,7 +511,7 @@ const getStyles = (colors: any, isDark: boolean) => StyleSheet.create({
     shadowOffset: { width: 0, height: 20 },
     shadowOpacity: 0.2,
     shadowRadius: 30,
-    elevation: 15,
+    elevation: 30,
     borderWidth: 1,
     borderColor: colors.border,
     overflow: 'hidden',
@@ -415,7 +613,7 @@ const getStyles = (colors: any, isDark: boolean) => StyleSheet.create({
   },
   bottomListContainer: {
     position: 'absolute',
-    bottom: 80, // Reduced from 100 to 80 to minimize gap while still clearing tab bar
+    bottom: 80,
     left: 0,
     right: 0,
     zIndex: 500,

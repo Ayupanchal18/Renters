@@ -11,42 +11,42 @@ const FALLBACK_AMENITIES = {
     commercial: ["Lift", "Security", "Parking", "CCTV", "Washroom", "Power Backup", "Conference Room", "Pantry", "Reception"],
 };
 
-export default function StepAmenities({ formData, setFormData, validationErrors }) {
+export default function StepAmenities({ formData, setFormData }) {
     const [amenitiesList, setAmenitiesList] = useState([]);
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState(null);
 
     useEffect(() => {
-        fetchAmenities();
-    }, []);
-
-    const fetchAmenities = async () => {
-        try {
-            setLoading(true);
-            setError(null);
-            
-            const response = await fetch('/api/categories/amenities');
-            const data = await response.json();
-            
-            if (data.success && data.data?.amenities?.length > 0) {
-                // Extract just the names from the API response
-                const amenityNames = data.data.amenities.map(a => a.name);
-                setAmenitiesList(amenityNames);
-            } else {
-                // Use fallback based on category
+        const fetchAmenities = async () => {
+            try {
+                setLoading(true);
+                setError(null);
+                
+                const response = await fetch('/api/categories/amenities');
+                const data = await response.json();
+                
+                if (data.success && data.data?.amenities?.length > 0) {
+                    // Extract just the names from the API response
+                    const amenityNames = data.data.amenities.map(a => a.name);
+                    setAmenitiesList(amenityNames);
+                } else {
+                    // Use fallback based on category
+                    const fallback = FALLBACK_AMENITIES[formData.category] || FALLBACK_AMENITIES.flat;
+                    setAmenitiesList(fallback);
+                }
+            } catch (err) {
+                console.error('Error fetching amenities:', err);
+                setError('Failed to load amenities');
+                // Use fallback
                 const fallback = FALLBACK_AMENITIES[formData.category] || FALLBACK_AMENITIES.flat;
                 setAmenitiesList(fallback);
+            } finally {
+                setLoading(false);
             }
-        } catch (err) {
-            console.error('Error fetching amenities:', err);
-            setError('Failed to load amenities');
-            // Use fallback
-            const fallback = FALLBACK_AMENITIES[formData.category] || FALLBACK_AMENITIES.flat;
-            setAmenitiesList(fallback);
-        } finally {
-            setLoading(false);
-        }
-    };
+        };
+
+        fetchAmenities();
+    }, [formData.category]);
 
     const toggleAmenity = (amenity) => {
         setFormData({

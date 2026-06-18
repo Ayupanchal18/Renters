@@ -1,4 +1,5 @@
 import mongoose from "mongoose";
+import softDeletePlugin from "../src/plugins/softDeletePlugin.js";
 const { Schema } = mongoose;
 
 const LocationSchema = new Schema(
@@ -58,6 +59,8 @@ LocationSchema.pre('save', function (next) {
     }
     next();
 });
+
+LocationSchema.plugin(softDeletePlugin);
 
 export const Location =
     mongoose.models.Location || mongoose.model("Location", LocationSchema);

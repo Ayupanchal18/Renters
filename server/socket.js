@@ -92,6 +92,13 @@ export function setupSocket(httpServer) {
             // Join user's personal room for direct notifications
             socket.join(`user:${socket.userId}`);
 
+            // Join admin-room if user has admin privileges
+            const adminRoles = ["admin", "super_admin", "ops_admin", "content_admin"];
+            if (adminRoles.includes(user.role)) {
+                socket.join("admin-room");
+                console.log(`Admin user ${socket.userId} joined admin-room`);
+            }
+
             next();
         } catch (error) {
             console.error('Socket authentication error:', error);
@@ -311,12 +318,19 @@ export function setupSocket(httpServer) {
         });
 
         // Disconnect handler
-        socket.on("disconnect", () => {
+        socket.on("disconnect", async () => {
             console.log(`User ${socket.userId} disconnected`);
+            const now = new Date();
             io.emit("user.offline", {
                 userId: socket.userId,
-                timestamp: Date.now(),
+                timestamp: now.getTime(),
             });
+            try {
+                await connectDB();
+                await User.findByIdAndUpdate(socket.userId, { lastActivityAt: now });
+            } catch (err) {
+                console.error("Failed to update user lastActivityAt on disconnect:", err);
+            }
         });
     });
 
@@ -391,4 +405,20 @@ export function emitMessage(io, conversationId, message) {
  */
 export async function emitUnreadUpdate(io, userId) {
     await broadcastUnreadCounts(io, userId);
+}
+
+/**
+ * Emit live dashboard update to admin room
+ * @param {string} eventType - Type of dashboard update (e.g., 'user', 'property', 'review')
+ * @param {object} payload - Action details and changes
+ */
+export function emitDashboardUpdate(eventType, payload) {
+    if (ioInstance) {
+        ioInstance.to("admin-room").emit("dashboard:update", {
+            type: eventType,
+            payload
+        });
+        return true;
+    }
+    return false;
 }

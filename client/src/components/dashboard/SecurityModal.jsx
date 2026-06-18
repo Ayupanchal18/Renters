@@ -381,7 +381,7 @@ const SecurityModal = React.memo(function SecurityModal({ isOpen, onClose, type,
             onCancel={onClose}
         >
             <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4 overflow-y-auto">
-                <div className="bg-background rounded-lg max-w-md w-full shadow-xl border border-border max-h-[90vh] overflow-y-auto my-auto">
+                <div className={`bg-background rounded-lg ${type === 'delete' ? 'max-w-2xl' : 'max-w-md'} w-full shadow-xl border border-border max-h-[90vh] overflow-y-auto my-auto`}>
                 {/* Header */}
                 <div
                     className={`border-b border-border p-6 flex items-center justify-between ${content.dangerous ? "bg-red-50 dark:bg-red-950/30" : "bg-muted/50"}`}
@@ -448,7 +448,7 @@ const SecurityModal = React.memo(function SecurityModal({ isOpen, onClose, type,
                                             disabled:bg-muted disabled:text-muted-foreground ${
                                                 errors[field.key] 
                                                     ? 'border-red-300 dark:border-red-700 focus:border-red-500 focus:ring-red-500' 
-                                                    : 'border-input'
+                                                    : 'border-border'
                                             }`}
                                         onChange={(e) =>
                                             setFormData({ ...formData, [field.key]: e.target.value })
@@ -488,7 +488,7 @@ const SecurityModal = React.memo(function SecurityModal({ isOpen, onClose, type,
                                             focus:outline-none focus:ring-2 focus:ring-primary/50 
                                             ${errors.otp 
                                                 ? 'border-red-300 dark:border-red-700 focus:border-red-500 focus:ring-red-500' 
-                                                : 'border-input'
+                                                : 'border-border'
                                             }`}
                                         onChange={(e) => {
                                             const value = e.target.value.replace(/\D/g, '');
@@ -571,7 +571,7 @@ const SecurityModal = React.memo(function SecurityModal({ isOpen, onClose, type,
                                             }
                                         }}
                                         className={`mt-1 h-4 w-4 text-red-600 focus:ring-red-500 rounded ${
-                                            errors.deleteConfirmCheckbox ? 'border-red-300 dark:border-red-700' : 'border-input'
+                                            errors.deleteConfirmCheckbox ? 'border-red-300 dark:border-red-700' : 'border-border'
                                         }`}
                                     />
                                     <label htmlFor="deleteConfirmCheckbox" className="text-sm text-yellow-800 dark:text-yellow-200">

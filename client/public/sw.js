@@ -111,8 +111,8 @@ function isStaticAsset(request) {
 
 // Check if request is for API
 function isApiRequest(request) {
-    const url = new URL(request.url);
-    return url.pathname.startsWith('/api/');
+    // Disable API caching for debugging
+    return false;
 }
 
 // Check if request is for images (local only - skip external like map tiles)

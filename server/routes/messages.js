@@ -10,6 +10,7 @@ import {
     sendSuccess
 } from "../src/middleware/security.js";
 import { messageUpload, uploadMessageFile } from "../src/middleware/cloudinaryUpload.js";
+import { getIO } from "../socket.js";
 
 const router = Router();
 
@@ -204,7 +205,7 @@ router.get("/conversations/:id",
 
             // Get conversation details
             const conversation = await Conversation.findById(conversationId)
-                .populate('participants', 'name email avatar phone')
+                .populate('participants', 'name email avatar phone lastActivityAt')
                 .populate('property', 'title images price')
                 .select('-messages');
 
@@ -323,6 +324,27 @@ router.post("/conversations/:id/messages",
                 }
             }
 
+            // Broadcast via Socket.IO so other participant sees it in real time
+            try {
+                const io = getIO();
+                if (io) {
+                    const messageWithSender = {
+                        ...(result.message.toObject ? result.message.toObject() : result.message),
+                        sender: {
+                            _id: userId,
+                            name: req.user.name || 'User',
+                            avatar: req.user.avatar
+                        }
+                    };
+                    io.to(`conv:${conversationId}`).emit("message.new", {
+                        conversationId,
+                        message: messageWithSender
+                    });
+                }
+            } catch (sockErr) {
+                console.error("Socket broadcast error:", sockErr);
+            }
+
             sendSuccess(res, {
                 message: result.message,
                 conversation: result.conversation
@@ -351,6 +373,67 @@ router.post("/conversations/:id/messages",
                 success: false,
                 error: "INTERNAL_ERROR",
                 message: "Failed to send message"
+            });
+        }
+    }
+);
+
+/**
+ * POST /conversations/:id/attachments
+ * Upload a chat attachment (image/document) to Cloudinary and return details
+ */
+router.post("/conversations/:id/attachments",
+    authenticateToken,
+    checkBlockedUser,
+    messageUpload.single('file'),
+    async (req, res) => {
+        try {
+            await connectDB();
+
+            const file = req.file;
+            if (!file) {
+                return res.status(400).json({
+                    success: false,
+                    error: "NO_FILE",
+                    message: "No file provided"
+                });
+            }
+
+            // Upload file to Cloudinary
+            const fileData = await uploadMessageFile(file);
+
+            res.json({
+                success: true,
+                attachment: {
+                    url: fileData.url,
+                    filename: fileData.originalName,
+                    mimeType: file.mimetype,
+                    size: file.size
+                }
+            });
+        } catch (error) {
+            console.error('Upload chat attachment error:', error);
+            
+            if (error.code === 'LIMIT_FILE_SIZE') {
+                return res.status(400).json({
+                    success: false,
+                    error: "FILE_TOO_LARGE",
+                    message: "File size exceeds 10MB limit"
+                });
+            }
+
+            if (error.message === 'File type not supported') {
+                return res.status(400).json({
+                    success: false,
+                    error: "INVALID_FILE_TYPE",
+                    message: "File type not supported"
+                });
+            }
+
+            res.status(500).json({
+                success: false,
+                error: "INTERNAL_ERROR",
+                message: "Failed to upload attachment"
             });
         }
     }

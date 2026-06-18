@@ -92,6 +92,39 @@ module.exports = {
           border: "hsl(var(--sidebar-border))",
           ring: "hsl(var(--sidebar-ring))",
         },
+
+        // RT-SYS Design Token Colors (opacity-modifier safe)
+        "rt-primary": {
+          DEFAULT: "hsl(var(--rt-sys-color-primary))",
+          fg: "hsl(var(--rt-sys-color-primary-fg))",
+        },
+        "rt-secondary": {
+          DEFAULT: "hsl(var(--rt-sys-color-secondary))",
+          fg: "hsl(var(--rt-sys-color-secondary-fg))",
+        },
+        "rt-tertiary": {
+          DEFAULT: "hsl(var(--rt-sys-color-tertiary))",
+          fg: "hsl(var(--rt-sys-color-tertiary-fg))",
+        },
+        "rt-success": {
+          DEFAULT: "hsl(var(--rt-sys-color-success))",
+          fg: "hsl(var(--rt-sys-color-success-fg))",
+        },
+        "rt-destructive": {
+          DEFAULT: "hsl(var(--rt-sys-color-destructive))",
+          fg: "hsl(var(--rt-sys-color-destructive-fg))",
+        },
+        "rt-warning": {
+          DEFAULT: "hsl(var(--rt-sys-color-warning))",
+          fg: "hsl(var(--rt-sys-color-warning-fg))",
+        },
+        "rt-background": "hsl(var(--rt-sys-color-background))",
+        "rt-surface": "hsl(var(--rt-sys-color-surface))",
+        "rt-border": "hsl(var(--rt-sys-color-border))",
+        "rt-muted": {
+          DEFAULT: "hsl(var(--rt-sys-color-muted))",
+          fg: "hsl(var(--rt-sys-color-muted-fg))",
+        },
       },
 
       // Custom spacing scale (4/8/12/16/24/32px)
@@ -102,6 +135,13 @@ module.exports = {
         'lg': 'var(--spacing-lg)',
         'xl': 'var(--spacing-xl)',
         '2xl': 'var(--spacing-2xl)',
+        // RT-SYS fluid spacing tokens
+        'rt-xs':  'var(--rt-sys-spacing-xs)',
+        'rt-sm':  'var(--rt-sys-spacing-sm)',
+        'rt-md':  'var(--rt-sys-spacing-md)',
+        'rt-lg':  'var(--rt-sys-spacing-lg)',
+        'rt-xl':  'var(--rt-sys-spacing-xl)',
+        'rt-2xl': 'var(--rt-sys-spacing-2xl)',
       },
 
       // Custom box-shadow values including glow effect
@@ -110,6 +150,9 @@ module.exports = {
         'md': 'var(--shadow-md)',
         'lg': 'var(--shadow-lg)',
         'glow': 'var(--shadow-glow)',
+        // RT-SYS shadow tokens
+        'soft': 'var(--rt-sys-shadow-soft)',
+        'rt-glow': 'var(--rt-sys-shadow-glow)',
       },
 
       // Transition duration utilities
@@ -139,6 +182,22 @@ module.exports = {
         'premium-md': 'var(--radius-lg)',
         'premium-lg': 'var(--radius-xl)',
         'full': 'var(--radius-full)',
+        // RT-SYS radius tokens
+        'rt-sm':  'var(--rt-sys-radius-sm)',
+        'rt-md':  'var(--rt-sys-radius-md)',
+        'rt-lg':  'var(--rt-sys-radius-lg)',
+        'rt-xl':  'var(--rt-sys-radius-xl)',
+        'rt-2xl': 'var(--rt-sys-radius-2xl)',
+      },
+
+      // RT-SYS fluid font sizes
+      fontSize: {
+        'rt-sm':   ['var(--rt-sys-text-sm)',   { lineHeight: '1.4' }],
+        'rt-base': ['var(--rt-sys-text-base)', { lineHeight: '1.5' }],
+        'rt-lg':   ['var(--rt-sys-text-lg)',   { lineHeight: '1.5' }],
+        'rt-xl':   ['var(--rt-sys-text-xl)',   { lineHeight: '1.3' }],
+        'rt-2xl':  ['var(--rt-sys-text-2xl)',  { lineHeight: '1.2' }],
+        'rt-3xl':  ['var(--rt-sys-text-3xl)',  { lineHeight: '1.1' }],
       },
 
       keyframes: {

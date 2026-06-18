@@ -4,7 +4,7 @@ import { Location } from "../models/Location.js";
 import { Property } from "../models/Property.js";
 import { connectDB } from "../src/config/db.js";
 import { requireAdmin } from "../src/middleware/adminAuth.js";
-import { createAuditLog } from "../src/services/adminAuditService.js";
+import { createAuditLog, safeCreateAuditLog } from "../src/services/adminAuditService.js";
 
 const router = Router();
 
@@ -276,7 +276,7 @@ router.post("/", requireAdmin, async (req, res) => {
         await newLocation.save();
 
         // Create audit log
-        await createAuditLog({
+        await safeCreateAuditLog({
             adminId: req.user._id,
             action: 'CREATE',
             resourceType: 'location',
@@ -424,7 +424,7 @@ router.put("/:id", requireAdmin, async (req, res) => {
         ).lean();
 
         // Create audit log
-        await createAuditLog({
+        await safeCreateAuditLog({
             adminId: req.user._id,
             action: 'UPDATE',
             resourceType: 'location',
@@ -501,7 +501,7 @@ router.delete("/:id", requireAdmin, async (req, res) => {
         });
 
         // Create audit log
-        await createAuditLog({
+        await safeCreateAuditLog({
             adminId: req.user._id,
             action: 'DELETE',
             resourceType: 'location',
@@ -565,7 +565,7 @@ router.patch("/:id/visibility", requireAdmin, async (req, res) => {
         ).lean();
 
         // Create audit log
-        await createAuditLog({
+        await safeCreateAuditLog({
             adminId: req.user._id,
             action: 'UPDATE',
             resourceType: 'location',

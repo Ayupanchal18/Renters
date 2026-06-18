@@ -1,9 +1,10 @@
 import { Router } from "express";
 import { z } from "zod";
+import jwt from "jsonwebtoken";
 import { Content } from "../models/Content.js";
 import { connectDB } from "../src/config/db.js";
 import { requireAdmin } from "../src/middleware/adminAuth.js";
-import { createAuditLog } from "../src/services/adminAuditService.js";
+import { createAuditLog, safeCreateAuditLog } from "../src/services/adminAuditService.js";
 
 const router = Router();
 
@@ -266,7 +267,7 @@ router.post("/banners", requireAdmin, async (req, res) => {
 
         await banner.save();
 
-        await createAuditLog({
+        await safeCreateAuditLog({
             adminId: req.user._id,
             action: 'CREATE',
             resourceType: 'content',
@@ -372,7 +373,7 @@ router.put("/banners/:id", requireAdmin, async (req, res) => {
             { new: true }
         ).lean();
 
-        await createAuditLog({
+        await safeCreateAuditLog({
             adminId: req.user._id,
             action: 'UPDATE',
             resourceType: 'content',
@@ -422,7 +423,7 @@ router.delete("/banners/:id", requireAdmin, async (req, res) => {
             message: "Banner deletion is disabled to prevent accidental data loss"
         });
 
-        await createAuditLog({
+        await safeCreateAuditLog({
             adminId: req.user._id,
             action: 'DELETE_DISABLED',
             resourceType: 'content',
@@ -533,7 +534,7 @@ router.post("/hero", requireAdmin, async (req, res) => {
 
         await hero.save();
 
-        await createAuditLog({
+        await safeCreateAuditLog({
             adminId: req.user._id,
             action: 'CREATE',
             resourceType: 'content',
@@ -638,7 +639,7 @@ router.put("/hero/:id", requireAdmin, async (req, res) => {
             { new: true }
         ).lean();
 
-        await createAuditLog({
+        await safeCreateAuditLog({
             adminId: req.user._id,
             action: 'UPDATE',
             resourceType: 'content',
@@ -688,7 +689,7 @@ router.delete("/hero/:id", requireAdmin, async (req, res) => {
             message: "Hero section deletion is disabled to prevent accidental data loss"
         });
 
-        await createAuditLog({
+        await safeCreateAuditLog({
             adminId: req.user._id,
             action: 'DELETE',
             resourceType: 'content',
@@ -799,7 +800,7 @@ router.post("/pages", requireAdmin, async (req, res) => {
 
         await pageContent.save();
 
-        await createAuditLog({
+        await safeCreateAuditLog({
             adminId: req.user._id,
             action: 'CREATE',
             resourceType: 'content',
@@ -904,7 +905,7 @@ router.put("/pages/:slug", requireAdmin, async (req, res) => {
             { new: true }
         ).lean();
 
-        await createAuditLog({
+        await safeCreateAuditLog({
             adminId: req.user._id,
             action: 'UPDATE',
             resourceType: 'content',
@@ -954,7 +955,7 @@ router.delete("/pages/:slug", requireAdmin, async (req, res) => {
             message: "Page deletion is disabled to prevent accidental data loss"
         });
 
-        await createAuditLog({
+        await safeCreateAuditLog({
             adminId: req.user._id,
             action: 'DELETE',
             resourceType: 'content',
@@ -1065,7 +1066,7 @@ router.post("/blog", requireAdmin, async (req, res) => {
 
         await blogPost.save();
 
-        await createAuditLog({
+        await safeCreateAuditLog({
             adminId: req.user._id,
             action: 'CREATE',
             resourceType: 'content',
@@ -1170,7 +1171,7 @@ router.put("/blog/:id", requireAdmin, async (req, res) => {
             { new: true }
         ).lean();
 
-        await createAuditLog({
+        await safeCreateAuditLog({
             adminId: req.user._id,
             action: 'UPDATE',
             resourceType: 'content',
@@ -1220,7 +1221,7 @@ router.delete("/blog/:id", requireAdmin, async (req, res) => {
             message: "Blog post deletion is disabled to prevent accidental data loss"
         });
 
-        await createAuditLog({
+        await safeCreateAuditLog({
             adminId: req.user._id,
             action: 'DELETE',
             resourceType: 'content',
@@ -1329,7 +1330,7 @@ router.put("/seo/:contentId", requireAdmin, async (req, res) => {
             .select('slug title type metadata')
             .lean();
 
-        await createAuditLog({
+        await safeCreateAuditLog({
             adminId: req.user._id,
             action: 'UPDATE',
             resourceType: 'content',
@@ -1367,6 +1368,267 @@ router.put("/seo/:contentId", requireAdmin, async (req, res) => {
             error: "INTERNAL_ERROR",
             message: "Failed to update SEO metadata"
         });
+    }
+});
+
+/* ---------------------- CMS VERSIONING & SCHEDULING ROUTES ---------------------- */
+
+/**
+ * POST /api/admin/content/pages/:id/autosave
+ * Save draft content (does not increment version)
+ */
+router.post("/pages/:id/autosave", requireAdmin, async (req, res) => {
+    try {
+        await connectDB();
+        const { content, title, slug } = req.body;
+        const page = await Content.findById(req.params.id);
+        if (!page) {
+            return res.status(404).json({ success: false, error: 'NOT_FOUND', message: 'Page not found' });
+        }
+        if (content !== undefined) page.content = content;
+        if (title !== undefined) page.title = title;
+        if (slug !== undefined) page.slug = slug;
+        
+        page.updatedBy = req.user._id;
+        await page.save();
+
+        res.json({ success: true, message: "Draft autosaved successfully", data: page });
+    } catch (error) {
+        console.error('Error autosaving CMS draft:', error);
+        res.status(500).json({ success: false, error: 'INTERNAL_ERROR', message: 'Failed to autosave draft' });
+    }
+});
+
+/**
+ * POST /api/admin/content/pages/:id/publish
+ * Publish page immediately and create a new history version
+ */
+router.post("/pages/:id/publish", requireAdmin, async (req, res) => {
+    try {
+        await connectDB();
+        const { content, title, slug, label } = req.body;
+        const page = await Content.findById(req.params.id);
+        if (!page) {
+            return res.status(404).json({ success: false, error: 'NOT_FOUND', message: 'Page not found' });
+        }
+
+        // Create version snapshot of current content before updating
+        const nextVersionNumber = (page.versions && page.versions.length > 0)
+            ? Math.max(...page.versions.map(v => v.versionNumber)) + 1
+            : 1;
+
+        page.versions.push({
+            versionNumber: nextVersionNumber,
+            content: page.content,
+            savedBy: req.user._id,
+            savedAt: new Date(),
+            label: label || `Publish Version ${nextVersionNumber}`
+        });
+
+        if (content !== undefined) page.content = content;
+        if (title !== undefined) page.title = title;
+        if (slug !== undefined) page.slug = slug;
+
+        page.status = 'published';
+        page.isPublished = true;
+        page.publishedAt = new Date();
+        page.scheduledFor = null; // Clear scheduling
+        page.updatedBy = req.user._id;
+
+        await page.save();
+
+        await safeCreateAuditLog({
+            adminId: req.user._id,
+            action: 'PUBLISH',
+            resourceType: 'content',
+            resourceId: page._id,
+            changes: { version: nextVersionNumber, title: page.title },
+            req
+        });
+
+        res.json({ success: true, message: "Page published successfully", data: page });
+    } catch (error) {
+        console.error('Error publishing CMS page:', error);
+        res.status(500).json({ success: false, error: 'INTERNAL_ERROR', message: 'Failed to publish page' });
+    }
+});
+
+/**
+ * POST /api/admin/content/pages/:id/schedule
+ * Schedule page publication for a future date
+ */
+router.post("/pages/:id/schedule", requireAdmin, async (req, res) => {
+    try {
+        await connectDB();
+        const { publishAt } = req.body;
+        if (!publishAt) {
+            return res.status(400).json({ success: false, error: 'VALIDATION_ERROR', message: 'Publish date is required' });
+        }
+
+        const page = await Content.findById(req.params.id);
+        if (!page) {
+            return res.status(404).json({ success: false, error: 'NOT_FOUND', message: 'Page not found' });
+        }
+
+        page.status = 'scheduled';
+        page.scheduledFor = new Date(publishAt);
+        page.isPublished = false;
+        page.updatedBy = req.user._id;
+
+        await page.save();
+
+        await safeCreateAuditLog({
+            adminId: req.user._id,
+            action: 'SCHEDULE',
+            resourceType: 'content',
+            resourceId: page._id,
+            changes: { scheduledFor: page.scheduledFor },
+            req
+        });
+
+        res.json({ success: true, message: `Page scheduled successfully for ${page.scheduledFor.toISOString()}`, data: page });
+    } catch (error) {
+        console.error('Error scheduling CMS page:', error);
+        res.status(500).json({ success: false, error: 'INTERNAL_ERROR', message: 'Failed to schedule publication' });
+    }
+});
+
+/**
+ * GET /api/admin/content/pages/:id/versions
+ * List all saved versions of a CMS page
+ */
+router.get("/pages/:id/versions", requireAdmin, async (req, res) => {
+    try {
+        await connectDB();
+        const page = await Content.findById(req.params.id)
+            .populate('versions.savedBy', 'name email role')
+            .lean();
+
+        if (!page) {
+            return res.status(404).json({ success: false, error: 'NOT_FOUND', message: 'Page not found' });
+        }
+
+        res.json({ success: true, data: page.versions || [] });
+    } catch (error) {
+        console.error('Error listing versions:', error);
+        res.status(500).json({ success: false, error: 'INTERNAL_ERROR', message: 'Failed to retrieve version list' });
+    }
+});
+
+/**
+ * GET /api/admin/content/pages/:id/versions/:vNum
+ * Fetch specific version of a CMS page
+ */
+router.get("/pages/:id/versions/:vNum", requireAdmin, async (req, res) => {
+    try {
+        await connectDB();
+        const vNum = parseInt(req.params.vNum);
+        const page = await Content.findById(req.params.id)
+            .populate('versions.savedBy', 'name email role')
+            .lean();
+
+        if (!page) {
+            return res.status(404).json({ success: false, error: 'NOT_FOUND', message: 'Page not found' });
+        }
+
+        const version = page.versions.find(v => v.versionNumber === vNum);
+        if (!version) {
+            return res.status(404).json({ success: false, error: 'NOT_FOUND', message: 'Version not found' });
+        }
+
+        res.json({ success: true, data: version });
+    } catch (error) {
+        console.error('Error fetching version details:', error);
+        res.status(500).json({ success: false, error: 'INTERNAL_ERROR', message: 'Failed to retrieve version details' });
+    }
+});
+
+/**
+ * POST /api/admin/content/pages/:id/versions/:vNum/restore
+ * Restore a historic version of a CMS page
+ */
+router.post("/pages/:id/versions/:vNum/restore", requireAdmin, async (req, res) => {
+    try {
+        await connectDB();
+        const vNum = parseInt(req.params.vNum);
+        const page = await Content.findById(req.params.id);
+
+        if (!page) {
+            return res.status(404).json({ success: false, error: 'NOT_FOUND', message: 'Page not found' });
+        }
+
+        const version = page.versions.find(v => v.versionNumber === vNum);
+        if (!version) {
+            return res.status(404).json({ success: false, error: 'NOT_FOUND', message: 'Version not found' });
+        }
+
+        // Create version snapshot of current content before restoring
+        const nextVersionNumber = (page.versions && page.versions.length > 0)
+            ? Math.max(...page.versions.map(v => v.versionNumber)) + 1
+            : 1;
+
+        page.versions.push({
+            versionNumber: nextVersionNumber,
+            content: page.content,
+            savedBy: req.user._id,
+            savedAt: new Date(),
+            label: `Before restoring Version ${vNum}`
+        });
+
+        page.content = version.content;
+        page.updatedBy = req.user._id;
+
+        await page.save();
+
+        await safeCreateAuditLog({
+            adminId: req.user._id,
+            action: 'RESTORE_VERSION',
+            resourceType: 'content',
+            resourceId: page._id,
+            changes: { restoredVersion: vNum, newVersion: nextVersionNumber },
+            req
+        });
+
+        res.json({ success: true, message: `Version ${vNum} restored successfully`, data: page });
+    } catch (error) {
+        console.error('Error restoring CMS page version:', error);
+        res.status(500).json({ success: false, error: 'INTERNAL_ERROR', message: 'Failed to restore version' });
+    }
+});
+
+/**
+ * GET /api/admin/content/pages/:id/preview-token
+ * Generate signed 24h preview JWT token
+ */
+router.get("/pages/:id/preview-token", requireAdmin, async (req, res) => {
+    try {
+        await connectDB();
+        const page = await Content.findById(req.params.id).lean();
+        if (!page) {
+            return res.status(404).json({ success: false, error: 'NOT_FOUND', message: 'Page not found' });
+        }
+
+        const secret = process.env.JWT_SECRET;
+        if (!secret) {
+            return res.status(500).json({ success: false, error: 'CONFIG_ERROR', message: 'JWT secret is not configured' });
+        }
+
+        const token = jwt.sign({
+            pageId: page._id.toString(),
+            slug: page.slug,
+            type: page.type
+        }, secret, { expiresIn: '24h' });
+
+        res.json({
+            success: true,
+            data: {
+                token,
+                previewUrl: `/preview?token=${token}`
+            }
+        });
+    } catch (error) {
+        console.error('Error generating preview token:', error);
+        res.status(500).json({ success: false, error: 'INTERNAL_ERROR', message: 'Failed to generate preview token' });
     }
 });
 

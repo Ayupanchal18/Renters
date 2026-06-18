@@ -1,6 +1,6 @@
 import React from "react";
 import { createNativeStackNavigator } from "@react-navigation/native-stack";
-import { ActivityIndicator, View, StyleSheet } from "react-native";
+import { ActivityIndicator, View, StyleSheet, AccessibilityInfo } from "react-native";
 import LoginScreen from "../screens/auth/LoginScreen";
 import RegisterScreen from "../screens/auth/RegisterScreen";
 import ForgotPasswordScreen from "../screens/auth/ForgotPasswordScreen";
@@ -19,6 +19,12 @@ import ChangePhoneScreen from "../screens/profile/ChangePhoneScreen";
 import DeleteAccountScreen from "../screens/profile/DeleteAccountScreen";
 import LegalScreen from "../screens/profile/LegalScreen";
 import OTPVerificationScreen from "../screens/profile/OTPVerificationScreen";
+import OnboardingScreen from "../screens/onboarding/OnboardingScreen";
+import MyVisitsScreen from "../screens/profile/MyVisitsScreen";
+import IncomingVisitsScreen from "../screens/profile/IncomingVisitsScreen";
+import AvailabilityEditorScreen from "../screens/profile/AvailabilityEditorScreen";
+import DocumentVaultScreen from "../screens/profile/DocumentVaultScreen";
+import LeaseDraftScreen from "../screens/profile/LeaseDraftScreen";
 import { useAuth } from "../features/auth/AuthContext";
 import { useTheme } from "../theme/useTheme";
 import type { RootStackParamList } from "./types";
@@ -26,8 +32,15 @@ import type { RootStackParamList } from "./types";
 const Stack = createNativeStackNavigator<RootStackParamList>();
 
 export default function RootNavigator() {
-  const { isAuthenticated, isGuest, isLoading } = useAuth();
+  const { isAuthenticated, isGuest, isLoading, hasSeenOnboarding, completeOnboarding } = useAuth();
   const { colors, isDark } = useTheme();
+  const [reduceMotion, setReduceMotion] = React.useState(false);
+
+  React.useEffect(() => {
+    AccessibilityInfo.isReduceMotionEnabled().then((enabled) => {
+      setReduceMotion(enabled);
+    });
+  }, []);
 
   if (isLoading) {
     return (
@@ -39,6 +52,22 @@ export default function RootNavigator() {
 
   const hasAccess = isAuthenticated || isGuest;
 
+  // ── First launch: show onboarding before anything else ──────
+  if (!hasSeenOnboarding && !isAuthenticated) {
+    return (
+      <Stack.Navigator screenOptions={{ headerShown: false, animation: reduceMotion ? "none" : "fade" }}>
+        <Stack.Screen name="Onboarding" options={{ animation: reduceMotion ? "none" : "fade" }}>
+          {() => <OnboardingScreen onDone={completeOnboarding} />}
+        </Stack.Screen>
+        <Stack.Screen name="Login" component={LoginScreen} />
+        <Stack.Screen name="Register" component={RegisterScreen} />
+        <Stack.Screen name="ForgotPassword" component={ForgotPasswordScreen} />
+        <Stack.Screen name="ResetPassword" component={ResetPasswordScreen} />
+        <Stack.Screen name="Legal" component={LegalScreen} />
+      </Stack.Navigator>
+    );
+  }
+
   return (
     <Stack.Navigator
       screenOptions={{
@@ -46,7 +75,7 @@ export default function RootNavigator() {
         headerStyle: { backgroundColor: colors.surface },
         headerTintColor: colors.primary,
         contentStyle: { backgroundColor: colors.background },
-        animation: "slide_from_right",
+        animation: reduceMotion ? "fade" : "fade_from_bottom",
         gestureEnabled: true,
       }}
     >
@@ -104,6 +133,11 @@ export default function RootNavigator() {
           <Stack.Screen name="DeleteAccount" component={DeleteAccountScreen} options={{ headerShown: false }} />
           <Stack.Screen name="Legal" component={LegalScreen} options={{ headerShown: false }} />
           <Stack.Screen name="OTPVerification" component={OTPVerificationScreen} options={{ headerShown: false }} />
+          <Stack.Screen name="MyVisits" component={MyVisitsScreen} options={{ headerShown: false }} />
+          <Stack.Screen name="IncomingVisits" component={IncomingVisitsScreen} options={{ headerShown: false }} />
+          <Stack.Screen name="AvailabilityEditor" component={AvailabilityEditorScreen} options={{ headerShown: false }} />
+          <Stack.Screen name="DocumentVault" component={DocumentVaultScreen} options={{ headerShown: false }} />
+          <Stack.Screen name="LeaseDraft" component={LeaseDraftScreen} options={{ headerShown: false }} />
         </>
       )}
     </Stack.Navigator>

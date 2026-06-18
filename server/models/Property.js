@@ -1,5 +1,6 @@
 
 import mongoose from "mongoose";
+import softDeletePlugin from "../src/plugins/softDeletePlugin.js";
 const { Schema } = mongoose;
 
 // Geo schema (no _id)
@@ -46,6 +47,11 @@ const propertySchema = new mongoose.Schema(
 
         mapLocation: { type: String, default: "" },
 
+        // Detailed location fields
+        locality: { type: String, default: "", index: true }, // e.g. "Koramangala", "Baner"
+        pincode: { type: String, default: "" },
+        state: { type: String, default: "" },
+
         // RENT-SPECIFIC FIELDS (validated only when listingType="rent")
         monthlyRent: { type: Number },
         securityDeposit: { type: Number, default: 0 },
@@ -57,6 +63,8 @@ const propertySchema = new mongoose.Schema(
             default: "any"
         },
         leaseDuration: { type: String, default: "" },
+        lockInPeriod: { type: Number, default: 0 }, // months
+        brokerage: { type: String, default: "" }, // e.g. "1 month rent", "No brokerage"
 
         // BUY-SPECIFIC FIELDS (validated only when listingType="buy")
         sellingPrice: { type: Number },
@@ -68,6 +76,13 @@ const propertySchema = new mongoose.Schema(
         },
         bookingAmount: { type: Number, default: 0 },
         loanAvailable: { type: Boolean, default: true },
+        priceNegotiable: { type: Boolean, default: false },
+        ownershipType: {
+            type: String,
+            enum: ["freehold", "leasehold", "cooperative", ""],
+            default: ""
+        },
+        reraNumber: { type: String, default: "" }, // RERA registration number
 
         // Legacy field - kept for backward compatibility, use rentNegotiable instead
         negotiable: { type: Boolean, default: false },
@@ -92,11 +107,31 @@ const propertySchema = new mongoose.Schema(
         parking: { type: String, default: "" },
         propertyAge: { type: String, default: "" },
 
+        // Infrastructure
+        waterSupply: { type: String, enum: ["24x7", "scheduled", "borewell", "tanker", ""], default: "" },
+        powerBackup: { type: String, enum: ["full", "partial", "none", ""], default: "" },
+        gatedCommunity: { type: Boolean, default: false },
+
         washroom: { type: String, default: "" },
         frontage: { type: String, default: "" },
 
         amenities: [{ type: String }], // array of strings
         photos: [{ type: String }], // cloud URLs
+        virtualTour: {
+            type: {
+                type: String,
+                enum: ["matterport", "panorama_360", "video", "none"],
+                default: "none"
+            },
+            matterportUrl: { type: String, default: "" },
+            panoramaImages: [
+                {
+                    url: { type: String, required: true },
+                    label: { type: String, default: "" }
+                }
+            ],
+            videoUrl: { type: String, default: "" }
+        },
 
         // Owner info
         ownerId: { type: Schema.Types.ObjectId, ref: "User", required: true },
@@ -144,6 +179,7 @@ propertySchema.index({ status: 1, isDeleted: 1, featured: -1, createdAt: -1 }); 
 propertySchema.index({ furnishing: 1, status: 1, isDeleted: 1 }); // furnishing filter
 propertySchema.index({ amenities: 1, status: 1, isDeleted: 1 }); // amenities filtering
 propertySchema.index({ availableFrom: 1, status: 1, isDeleted: 1 }); // availability filtering
+propertySchema.index({ status: 1, city: 1, category: 1 }); // admin listing search filter
 
 // Performance monitoring indexes
 propertySchema.index({ createdAt: -1 }); // date-based queries
@@ -161,6 +197,8 @@ propertySchema.index({ listingType: 1, status: 1, isDeleted: 1, createdAt: -1 })
 // Listing Lifecycle indexes
 propertySchema.index({ expiresAt: 1, status: 1, isDeleted: 1 }); // for expiration processing
 propertySchema.index({ expiresAt: 1, expirationWarned: 1, status: 1, isDeleted: 1 }); // for warning notifications
+
+propertySchema.plugin(softDeletePlugin);
 
 export const Property = mongoose.models.Property || mongoose.model("Property", propertySchema);
 

@@ -1,10 +1,10 @@
-import { memo, lazy, Suspense } from "react";
+import { memo, lazy, Suspense, useRef, useEffect, useCallback } from "react";
 import { PropertyCard } from "./property-card";
 import { Button } from "../ui/button";
 import { Loader2, Home, SearchX, RefreshCw, Map } from "lucide-react";
 
 // Lazy load the map component for better performance
-const PropertyMapView = lazy(() => import("./property-map-view"));
+const PropertyMapView = lazy(() => import("./PropertyMap"));
 
 // Map loading fallback
 const MapLoadingFallback = () => (
@@ -23,7 +23,7 @@ const MemoizedPropertyCard = memo(PropertyCard);
 const PropertySkeleton = memo(({ viewMode }) => {
     if (viewMode === "list") {
         return (
-            <div className="flex flex-col sm:flex-row bg-card border border-border rounded-2xl overflow-hidden animate-pulse">
+            <div className="flex flex-col sm:flex-row bg-card border border-border rounded-2xl overflow-hidden skeleton-wave">
                 <div className="w-full sm:w-80 h-56 sm:h-auto sm:min-h-[220px] flex-shrink-0 bg-muted" />
                 <div className="flex-1 p-5 sm:p-6 space-y-4">
                     <div className="space-y-2">
@@ -52,7 +52,7 @@ const PropertySkeleton = memo(({ viewMode }) => {
     }
 
     return (
-        <div className="bg-card border border-border rounded-2xl overflow-hidden animate-pulse">
+        <div className="bg-card border border-border rounded-2xl overflow-hidden skeleton-wave">
             <div className="h-52 bg-muted" />
             <div className="p-4 space-y-3">
                 <div className="space-y-2">
@@ -132,9 +132,46 @@ export function ListingsGrid({
     wishlistIds = new Set(),
     onWishlistChange,
     emptyStateMessage,
-    emptyStateTitle
+    emptyStateTitle,
+    // Bidirectional highlighting props
+    activeListingId = null,
+    hoveredListingId = null,
+    onCardHover,
+    onMarkerClick,
+    onMarkerHover,
 }) {
     const hasFilters = properties.length === 0 && !loading;
+    const cardRefs = useRef({});
+    const hoverTimer = useRef(null);
+
+    // Scroll card into view if activeListingId or hoveredListingId changes
+    useEffect(() => {
+        const idToScroll = hoveredListingId || activeListingId;
+        if (idToScroll && cardRefs.current[idToScroll]) {
+            cardRefs.current[idToScroll].scrollIntoView({
+                behavior: "smooth",
+                block: "nearest"
+            });
+        }
+    }, [hoveredListingId, activeListingId]);
+
+    const handleCardMouseEnter = useCallback((id) => {
+        clearTimeout(hoverTimer.current);
+        hoverTimer.current = setTimeout(() => {
+            onCardHover?.(id);
+        }, 75);
+    }, [onCardHover]);
+
+    const handleCardMouseLeave = useCallback(() => {
+        clearTimeout(hoverTimer.current);
+        hoverTimer.current = setTimeout(() => {
+            onCardHover?.(null);
+        }, 75);
+    }, [onCardHover]);
+
+    useEffect(() => {
+        return () => clearTimeout(hoverTimer.current);
+    }, []);
 
     if (viewMode === "map") {
         return (
@@ -146,6 +183,10 @@ export function ListingsGrid({
                         hasMore={hasMore}
                         onLoadMore={onLoadMore}
                         isLoadingMore={isLoadingMore}
+                        activeListingId={activeListingId}
+                        hoveredListingId={hoveredListingId}
+                        onMarkerClick={onMarkerClick}
+                        onMarkerHover={onMarkerHover}
                     />
                 </Suspense>
             </div>
@@ -184,12 +225,23 @@ export function ListingsGrid({
                             aria-label="Property grid view"
                         >
                             {properties.map((property) => (
-                                <div key={property._id} role="gridcell">
+                                <div 
+                                    key={property._id} 
+                                    role="gridcell"
+                                    ref={el => {
+                                        if (el) cardRefs.current[property._id] = el;
+                                        else delete cardRefs.current[property._id];
+                                    }}
+                                >
                                     <MemoizedPropertyCard 
                                         property={property} 
                                         viewMode="grid"
                                         initialSaved={wishlistIds.has(property._id)}
                                         onWishlistChange={onWishlistChange}
+                                        isHighlighted={hoveredListingId === property._id}
+                                        isActive={activeListingId === property._id}
+                                        onMouseEnter={() => handleCardMouseEnter(property._id)}
+                                        onMouseLeave={handleCardMouseLeave}
                                     />
                                 </div>
                             ))}
@@ -201,12 +253,23 @@ export function ListingsGrid({
                             aria-label="Property list view"
                         >
                             {properties.map((property) => (
-                                <div key={property._id} role="listitem">
+                                <div 
+                                    key={property._id} 
+                                    role="listitem"
+                                    ref={el => {
+                                        if (el) cardRefs.current[property._id] = el;
+                                        else delete cardRefs.current[property._id];
+                                    }}
+                                >
                                     <MemoizedPropertyCard 
                                         property={property} 
                                         viewMode="list"
                                         initialSaved={wishlistIds.has(property._id)}
                                         onWishlistChange={onWishlistChange}
+                                        isHighlighted={hoveredListingId === property._id}
+                                        isActive={activeListingId === property._id}
+                                        onMouseEnter={() => handleCardMouseEnter(property._id)}
+                                        onMouseLeave={handleCardMouseLeave}
                                     />
                                 </div>
                             ))}

@@ -1,7 +1,8 @@
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 import { Link, useLocation } from 'react-router-dom';
 import { cn } from '../../lib/utils';
 import { Button } from '../ui/button';
+import { getToken } from '../../utils/auth';
 import {
   LayoutDashboard,
   Users,
@@ -16,8 +17,16 @@ import {
   ClipboardList,
   X,
   Home,
-  Quote
+  Quote,
+  Megaphone,
+  Activity,
+  MessageSquare,
+  Shield,
+  Images,
+  TrendingUp,
+  ShieldAlert
 } from 'lucide-react';
+
 
 /**
  * Admin Sidebar Navigation Component
@@ -33,43 +42,56 @@ const navigationItems = [
     title: 'Overview',
     items: [
       { name: 'Dashboard', href: '/admin', icon: LayoutDashboard },
+      { name: 'Analytics', href: '/admin/analytics', icon: TrendingUp },
     ]
   },
   {
-    title: 'Management',
+    title: 'Administration',
+    items: [
+      { name: 'Reports', href: '/admin/reports', icon: FileBarChart },
+      { name: 'Audit Logs', href: '/admin/audit-logs', icon: ClipboardList },
+      { name: 'Roles & Permissions', href: '/admin/roles', icon: Shield },
+    ]
+  },
+  {
+    title: 'Directory & Listings',
     items: [
       { name: 'Users', href: '/admin/users', icon: Users },
+      { name: 'Vault Review', href: '/admin/vault', icon: ShieldAlert },
       { name: 'Properties', href: '/admin/properties', icon: Building2 },
       { name: 'Locations', href: '/admin/locations', icon: MapPin },
       { name: 'Categories', href: '/admin/categories', icon: FolderTree },
     ]
   },
   {
-    title: 'Content',
+    title: 'Content & Moderation',
     items: [
       { name: 'CMS', href: '/admin/content', icon: FileText },
+      { name: 'Media Library', href: '/admin/media', icon: Images },
       { name: 'Reviews', href: '/admin/reviews', icon: Star },
       { name: 'Testimonials', href: '/admin/testimonials', icon: Quote },
+      { name: 'Conversations', href: '/admin/conversations', icon: MessageSquare },
     ]
   },
   {
     title: 'Communication',
     items: [
       { name: 'Notifications', href: '/admin/notifications', icon: Bell },
+      { name: 'Campaigns', href: '/admin/campaigns', icon: Megaphone },
     ]
   },
   {
-    title: 'System',
+    title: 'System Settings',
     items: [
       { name: 'Settings', href: '/admin/settings', icon: Settings },
-      { name: 'Reports', href: '/admin/reports', icon: FileBarChart },
-      { name: 'Audit Logs', href: '/admin/audit-logs', icon: ClipboardList },
+      { name: 'OTP Monitoring', href: '/admin/monitoring', icon: Activity },
     ]
   }
 ];
 
 const AdminSidebar = ({ onClose }) => {
   const location = useLocation();
+  const [pendingCount, setPendingCount] = useState(0);
 
   const isActive = (href) => {
     if (href === '/admin') {
@@ -77,6 +99,31 @@ const AdminSidebar = ({ onClose }) => {
     }
     return location.pathname.startsWith(href);
   };
+
+  useEffect(() => {
+    const fetchPendingCount = async () => {
+      try {
+        const token = getToken();
+        if (!token) return;
+        const res = await fetch("/api/admin/vault/pending", {
+          headers: {
+            "Authorization": `Bearer ${token}`
+          }
+        });
+        const json = await res.json();
+        if (json.success && Array.isArray(json.data)) {
+          setPendingCount(json.data.length);
+        }
+      } catch (err) {
+        console.error("Failed to fetch pending vault count:", err);
+      }
+    };
+
+    fetchPendingCount();
+    // Poll every 30 seconds to keep badge current
+    const interval = setInterval(fetchPendingCount, 30000);
+    return () => clearInterval(interval);
+  }, []);
 
   return (
     <div className="flex h-full flex-col">
@@ -142,7 +189,12 @@ const AdminSidebar = ({ onClose }) => {
                       )}
                     >
                       <Icon className="h-4 w-4" />
-                      {item.name}
+                      <span className="flex-1">{item.name}</span>
+                      {item.name === 'Vault Review' && pendingCount > 0 && (
+                        <span className="ml-auto flex h-5 w-5 items-center justify-center rounded-full bg-destructive text-[10px] font-bold text-destructive-foreground">
+                          {pendingCount}
+                        </span>
+                      )}
                     </Link>
                   </li>
                 );

@@ -1,10 +1,10 @@
-import { useEffect, useState, useCallback } from "react";
+import { useEffect, useState, useCallback, lazy, Suspense } from "react";
 import { useParams, useNavigate, Link } from "react-router-dom";
 import { 
     ArrowLeft, Share2, Heart, Calendar, Home, 
     MapPin, Phone, MessageCircle, IndianRupee, Bed, Bath, 
     Maximize, CheckCircle, Clock, Shield, ChevronDown,
-    Building2, Layers, Car, Compass, Users, ChefHat, CalendarCheck
+    Building2, Layers, Car, Compass, Users, ChefHat, CalendarCheck, Globe
 } from 'lucide-react';
 
 import { Button } from "../components/ui/button";
@@ -25,6 +25,41 @@ import wishlistService from "../api/wishlistService";
 import { isAuthenticated } from "../utils/auth";
 import { useMessages } from "../hooks/useMessages";
 import { PropertyCard } from "../components/all_listing/property-card";
+import EmiCalculator from "../components/EmiCalculator";
+import BookingWidget from "../components/scheduling/BookingWidget";
+import NeighborhoodSection from "../components/neighborhood/NeighborhoodSection";
+
+// Lazy-load virtual tour renderers (code-split)
+const MatterportEmbed = lazy(() => import("../components/tour/MatterportEmbed"));
+const PanoramaViewer  = lazy(() => import("../components/tour/PanoramaViewer"));
+const VideoTourEmbed  = lazy(() => import("../components/tour/VideoTourEmbed"));
+
+function VirtualTourSection({ virtualTour }) {
+    if (!virtualTour || !virtualTour.type || virtualTour.type === "none") return null;
+    return (
+        <div className="bg-card rounded-xl border border-border p-4">
+            <div className="flex items-center gap-2 mb-3">
+                <Globe className="w-4 h-4 text-primary" />
+                <h3 className="text-sm font-semibold text-foreground">Virtual Tour</h3>
+                <span className="ml-auto px-2 py-0.5 text-[10px] font-semibold rounded-full bg-primary/10 text-primary">
+                    {{matterport:"3D Tour",panorama:"360° View",video:"Video Tour"}[virtualTour.type]}
+                </span>
+            </div>
+            <Suspense fallback={<div className="aspect-video rounded-xl bg-muted animate-pulse" />}>
+                {virtualTour.type === "matterport" && <MatterportEmbed url={virtualTour.matterportUrl} />}
+                {virtualTour.type === "panorama" && virtualTour.panoramaImages?.length > 0 && (
+                    <PanoramaViewer
+                        scenes={virtualTour.panoramaImages.map((img) => ({
+                            url: typeof img === "string" ? img : img.url,
+                            label: img.label || "",
+                        }))}
+                    />
+                )}
+                {virtualTour.type === "video" && <VideoTourEmbed url={virtualTour.videoUrl} />}
+            </Suspense>
+        </div>
+    );
+}
 
 /**
  * BuyPropertyDetail Page Component
@@ -756,14 +791,23 @@ export default function BuyPropertyDetail() {
                                 </div>
                             )}
 
+                            {/* EMI Calculator (Prompt 5) */}
+                            <EmiCalculator propertyPrice={propertyData.sellingPrice} />
+
                             {/* Property Details Grid */}
                             <PropertyDetailsGrid property={propertyData} isRoomType={isRoomType} />
+
+                            {/* Virtual Tour */}
+                            <VirtualTourSection virtualTour={propertyData.virtualTour} />
 
                             {/* Amenities */}
                             <PropertyAmenities property={propertyData} />
 
                             {/* Location */}
                             <PropertyLocation property={propertyData} />
+
+                            {/* Neighborhood Insights */}
+                            <NeighborhoodSection propertyId={propertyData._id} property={propertyData} />
 
                             {/* Related Buy Properties (Requirement 6.5) */}
                             <RelatedBuyProperties 
@@ -797,6 +841,13 @@ export default function BuyPropertyDetail() {
                                 {/* Price Card */}
                                 <BuyPriceDisplay property={propertyData} />
 
+                                {/* Booking Widget */}
+                                <BookingWidget
+                                    propertyId={propertyData._id}
+                                    ownerId={propertyData.ownerId || propertyData.owner?._id || propertyData.owner}
+                                    propertyTitle={propertyData.title}
+                                />
+
                                 {/* Owner Card - Contains all contact options */}
                                 <OwnerCard 
                                     owner={{
@@ -821,6 +872,13 @@ export default function BuyPropertyDetail() {
 
                         {/* Mobile-only sections */}
                         <div className="lg:hidden space-y-4">
+                            {/* Booking Widget */}
+                            <BookingWidget
+                                propertyId={propertyData._id}
+                                ownerId={propertyData.ownerId || propertyData.owner?._id || propertyData.owner}
+                                propertyTitle={propertyData.title}
+                            />
+
                             {/* Owner Card */}
                             <OwnerCard 
                                 owner={{

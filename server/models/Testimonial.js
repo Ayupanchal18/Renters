@@ -1,4 +1,5 @@
 import mongoose from "mongoose";
+import softDeletePlugin from "../src/plugins/softDeletePlugin.js";
 const { Schema } = mongoose;
 
 /**
@@ -54,6 +55,8 @@ const TestimonialSchema = new Schema(
 
 // Index for efficient querying
 TestimonialSchema.index({ isActive: 1, order: 1 });
+
+TestimonialSchema.plugin(softDeletePlugin);
 
 export const Testimonial =
     mongoose.models.Testimonial || mongoose.model("Testimonial", TestimonialSchema);

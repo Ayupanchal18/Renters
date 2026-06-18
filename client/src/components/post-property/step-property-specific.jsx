@@ -2,6 +2,14 @@ import { Input } from "../ui/input";
 import { Label } from "../ui/label";
 import { Button } from "../ui/button";
 import { Minus, Plus } from "lucide-react";
+import { WATER_SUPPLY_OPTIONS, WATER_SUPPLY_LABELS, POWER_BACKUP_OPTIONS, POWER_BACKUP_LABELS } from '@shared/propertyTypes';
+
+const SectionHeader = ({ title }) => (
+    <div className="flex items-center gap-2 pt-2 pb-1">
+        <h3 className="text-sm font-semibold text-primary uppercase tracking-wide">{title}</h3>
+        <div className="flex-1 h-px bg-border" />
+    </div>
+);
 
 export default function StepPropertySpecific({ formData, setFormData, validationErrors }) {
     // Categories: room, flat, house, pg, hostel, commercial
@@ -27,9 +35,11 @@ export default function StepPropertySpecific({ formData, setFormData, validation
             {/* ROOM / PG / HOSTEL CATEGORIES */}
             {showRoomFields && (
                 <>
+                    <SectionHeader title="Room Details" />
+
                     {/* Room Type */}
                     <div className="space-y-3">
-                        <Label className="text-foreground font-semibold text-sm sm:text-base">Room Type</Label>
+                        <Label className="text-foreground font-semibold text-sm sm:text-base">Room Type *</Label>
                         <div className="grid grid-cols-3 gap-2 sm:gap-3">
                             {["single", "double", "triple"].map((type) => (
                                 <label 
@@ -51,6 +61,9 @@ export default function StepPropertySpecific({ formData, setFormData, validation
                                 </label>
                             ))}
                         </div>
+                        {validationErrors.roomType && (
+                            <p className="text-destructive text-xs sm:text-sm">{validationErrors.roomType}</p>
+                        )}
                     </div>
 
                     {/* Bathroom Type */}
@@ -95,18 +108,23 @@ export default function StepPropertySpecific({ formData, setFormData, validation
             {/* FLAT / HOUSE CATEGORIES */}
             {showResidentialFields && (
                 <>
+                    <SectionHeader title="Layout & Area" />
+
                     {/* Areas */}
                     <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 sm:gap-6">
                         <div className="space-y-2">
-                            <Label htmlFor="builtUpArea" className="text-foreground font-semibold text-sm sm:text-base">Built-up Area (sq ft)</Label>
+                            <Label htmlFor="builtUpArea" className="text-foreground font-semibold text-sm sm:text-base">Built-up Area (sq ft) *</Label>
                             <Input
                                 id="builtUpArea"
                                 type="number"
                                 placeholder="0"
                                 value={formData.builtUpArea}
                                 onChange={(e) => updateData({ builtUpArea: e.target.value })}
-                                className="text-sm sm:text-base"
+                                className={`text-sm sm:text-base ${validationErrors.builtUpArea ? "border-destructive" : ""}`}
                             />
+                            {validationErrors.builtUpArea && (
+                                <p className="text-destructive text-xs sm:text-sm">{validationErrors.builtUpArea}</p>
+                            )}
                         </div>
 
                         <div className="space-y-2">
@@ -117,8 +135,11 @@ export default function StepPropertySpecific({ formData, setFormData, validation
                                 placeholder="0"
                                 value={formData.carpetArea}
                                 onChange={(e) => updateData({ carpetArea: e.target.value })}
-                                className="text-sm sm:text-base"
+                                className={`text-sm sm:text-base ${validationErrors.carpetArea ? "border-destructive" : ""}`}
                             />
+                            {validationErrors.carpetArea && (
+                                <p className="text-destructive text-xs sm:text-sm">{validationErrors.carpetArea}</p>
+                            )}
                         </div>
                     </div>
 
@@ -126,7 +147,7 @@ export default function StepPropertySpecific({ formData, setFormData, validation
                     <div className="grid grid-cols-3 gap-3 sm:gap-6">
                         {/* Bedrooms */}
                         <div className="space-y-2">
-                            <Label className="text-foreground font-semibold text-xs sm:text-base">Bedrooms</Label>
+                            <Label className="text-foreground font-semibold text-xs sm:text-base">Bedrooms *</Label>
                             <div className="flex items-center gap-1 sm:gap-2">
                                 <Button
                                     type="button"
@@ -143,7 +164,7 @@ export default function StepPropertySpecific({ formData, setFormData, validation
                                     type="number"
                                     value={formData.bedrooms}
                                     onChange={(e) => updateData({ bedrooms: e.target.value })}
-                                    className="text-center text-sm px-1"
+                                    className={`text-center text-sm px-1 ${validationErrors.bedrooms ? "border-destructive" : ""}`}
                                 />
                                 <Button
                                     type="button"
@@ -157,6 +178,9 @@ export default function StepPropertySpecific({ formData, setFormData, validation
                                     <Plus size={14} />
                                 </Button>
                             </div>
+                            {validationErrors.bedrooms && (
+                                <p className="text-destructive text-[10px] sm:text-xs">{validationErrors.bedrooms}</p>
+                            )}
                         </div>
 
                         {/* Bathrooms */}
@@ -230,6 +254,8 @@ export default function StepPropertySpecific({ formData, setFormData, validation
                         </div>
                     </div>
 
+                    <SectionHeader title="Building Details" />
+
                     {/* Floor Details */}
                     <div className="grid grid-cols-2 gap-4 sm:gap-6">
                         <div className="space-y-2">
@@ -239,8 +265,11 @@ export default function StepPropertySpecific({ formData, setFormData, validation
                                 type="number"
                                 value={formData.floorNumber}
                                 onChange={(e) => updateData({ floorNumber: e.target.value })}
-                                className="text-sm sm:text-base"
+                                className={`text-sm sm:text-base ${validationErrors.floorNumber ? "border-destructive" : ""}`}
                             />
+                            {validationErrors.floorNumber && (
+                                <p className="text-destructive text-xs sm:text-sm">{validationErrors.floorNumber}</p>
+                            )}
                         </div>
 
                         <div className="space-y-2">
@@ -327,17 +356,22 @@ export default function StepPropertySpecific({ formData, setFormData, validation
             {/* COMMERCIAL CATEGORY */}
             {isCommercial && (
                 <>
+                    <SectionHeader title="Space Details" />
+
                     {/* Areas */}
                     <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 sm:gap-6">
                         <div className="space-y-2">
-                            <Label htmlFor="builtUpAreaComm" className="text-foreground font-semibold text-sm sm:text-base">Built-up Area (sq ft)</Label>
+                            <Label htmlFor="builtUpAreaComm" className="text-foreground font-semibold text-sm sm:text-base">Built-up Area (sq ft) *</Label>
                             <Input
                                 id="builtUpAreaComm"
                                 type="number"
                                 value={formData.builtUpArea}
                                 onChange={(e) => updateData({ builtUpArea: e.target.value })}
-                                className="text-sm sm:text-base"
+                                className={`text-sm sm:text-base ${validationErrors.builtUpArea ? "border-destructive" : ""}`}
                             />
+                            {validationErrors.builtUpArea && (
+                                <p className="text-destructive text-xs sm:text-sm">{validationErrors.builtUpArea}</p>
+                            )}
                         </div>
 
                         <div className="space-y-2">
@@ -347,8 +381,11 @@ export default function StepPropertySpecific({ formData, setFormData, validation
                                 type="number"
                                 value={formData.carpetArea}
                                 onChange={(e) => updateData({ carpetArea: e.target.value })}
-                                className="text-sm sm:text-base"
+                                className={`text-sm sm:text-base ${validationErrors.carpetArea ? "border-destructive" : ""}`}
                             />
+                            {validationErrors.carpetArea && (
+                                <p className="text-destructive text-xs sm:text-sm">{validationErrors.carpetArea}</p>
+                            )}
                         </div>
                     </div>
 
@@ -393,6 +430,56 @@ export default function StepPropertySpecific({ formData, setFormData, validation
                         </div>
                     </div>
                 </>
+            )}
+
+            {/* INFRASTRUCTURE — shown for all categories */}
+            <SectionHeader title="Infrastructure" />
+
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 sm:gap-6">
+                {/* Water Supply */}
+                <div className="space-y-2">
+                    <Label htmlFor="waterSupply" className="text-foreground font-semibold text-sm sm:text-base">Water Supply</Label>
+                    <select
+                        id="waterSupply"
+                        value={formData.waterSupply || ''}
+                        onChange={(e) => updateData({ waterSupply: e.target.value })}
+                        className="w-full px-3 py-2.5 sm:py-2 border border-input rounded-lg bg-background text-foreground text-sm sm:text-base focus:outline-none focus:ring-2 focus:ring-ring"
+                    >
+                        <option value="">Select water supply</option>
+                        {WATER_SUPPLY_OPTIONS.map((opt) => (
+                            <option key={opt} value={opt}>{WATER_SUPPLY_LABELS[opt]}</option>
+                        ))}
+                    </select>
+                </div>
+
+                {/* Power Backup */}
+                <div className="space-y-2">
+                    <Label htmlFor="powerBackup" className="text-foreground font-semibold text-sm sm:text-base">Power Backup</Label>
+                    <select
+                        id="powerBackup"
+                        value={formData.powerBackup || ''}
+                        onChange={(e) => updateData({ powerBackup: e.target.value })}
+                        className="w-full px-3 py-2.5 sm:py-2 border border-input rounded-lg bg-background text-foreground text-sm sm:text-base focus:outline-none focus:ring-2 focus:ring-ring"
+                    >
+                        <option value="">Select power backup</option>
+                        {POWER_BACKUP_OPTIONS.map((opt) => (
+                            <option key={opt} value={opt}>{POWER_BACKUP_LABELS[opt]}</option>
+                        ))}
+                    </select>
+                </div>
+            </div>
+
+            {/* Gated Community — for flat/house */}
+            {(showResidentialFields) && (
+                <label className="flex items-center gap-3 cursor-pointer p-3 rounded-lg border border-border hover:bg-muted/50 transition-colors">
+                    <input
+                        type="checkbox"
+                        checked={formData.gatedCommunity || false}
+                        onChange={(e) => updateData({ gatedCommunity: e.target.checked })}
+                        className="w-5 h-5 rounded border-input accent-primary"
+                    />
+                    <span className="text-foreground font-medium text-sm sm:text-base">Gated Community / Society</span>
+                </label>
             )}
         </div>
     );

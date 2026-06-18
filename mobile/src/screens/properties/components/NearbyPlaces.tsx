@@ -1,7 +1,7 @@
-import React, { useState, useEffect } from "react"; 
+import React, { useState, useEffect, useMemo } from "react"; 
 import { StyleSheet, Text, View, ActivityIndicator, Pressable, ScrollView } from "react-native";
 import { MapPin, RefreshCw, AlertCircle } from "lucide-react-native";
-import { colors } from "../../../theme/tokens";
+import { useTheme } from "../../../theme/useTheme";
 import { nearbyService, Amenity } from "../../../features/properties/services/nearbyService";
 import { Property } from "../../../types/types";
 
@@ -26,6 +26,9 @@ interface Props {
 }
 
 export default function NearbyPlaces({ property, location }: Props) {
+  const { colors, isDark } = useTheme();
+  const styles = useMemo(() => getStyles(colors, isDark), [colors, isDark]);
+
   const [places, setPlaces] = useState<Amenity[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -122,9 +125,9 @@ export default function NearbyPlaces({ property, location }: Props) {
   );
 }
 
-const styles = StyleSheet.create({
+const getStyles = (colors: any, isDark: boolean) => StyleSheet.create({
   container: {
-    backgroundColor: "#fff",
+    backgroundColor: colors.surface,
     borderRadius: 16,
     borderWidth: 1,
     borderColor: colors.border,
@@ -136,7 +139,7 @@ const styles = StyleSheet.create({
     justifyContent: "space-between",
     alignItems: "center",
     padding: 16,
-    backgroundColor: "#f8fafc",
+    backgroundColor: isDark ? "rgba(255,255,255,0.03)" : "#f8fafc",
     borderBottomWidth: 1,
     borderBottomColor: colors.border,
   },
@@ -179,16 +182,16 @@ const styles = StyleSheet.create({
     alignItems: "center",
     gap: 12,
     padding: 12,
-    backgroundColor: "#fbfcfd",
+    backgroundColor: isDark ? "rgba(255,255,255,0.02)" : "#fbfcfd",
     borderRadius: 12,
     borderWidth: 1,
-    borderColor: "#f1f5f9",
+    borderColor: isDark ? colors.border : "#f1f5f9",
   },
   iconContainer: {
     width: 40,
     height: 40,
     borderRadius: 10,
-    backgroundColor: "#fff",
+    backgroundColor: isDark ? "rgba(255,255,255,0.08)" : "#fff",
     justifyContent: "center",
     alignItems: "center",
     shadowColor: "#000",

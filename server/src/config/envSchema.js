@@ -146,7 +146,7 @@ export const envSchema = z.object({
     /**
      * Vite frontend variables
      */
-    VITE_API_BASE_URL: z.string().url().optional(),
+    VITE_API_BASE_URL: z.string().optional(),
     VITE_GOOGLE_CLIENT_ID: z.string().optional(),
     VITE_FACEBOOK_APP_ID: z.string().optional(),
 

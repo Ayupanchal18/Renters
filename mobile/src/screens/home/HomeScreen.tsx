@@ -21,6 +21,7 @@ import { useAuth } from "../../features/auth/AuthContext";
 import { useTheme } from "../../theme/useTheme";
 import type { RootStackParamList } from "../../navigation/types";
 import type { Property } from "../../types/types";
+import { useScrollRestore } from "../../hooks/useScrollRestore";
 
 // Import modular Home components
 import HeroSearch from "./components/HeroSearch";
@@ -46,6 +47,7 @@ export default function HomeScreen() {
   const styles = useMemo(() => getStyles(colors, isDark), [colors, isDark]);
   const navigation = useNavigation<NavProp>();
   const { user } = useAuth();
+  const { scrollRef, onScroll } = useScrollRestore('home');
 
   // Featured / Recent listings
   const { data, isPending } = useQuery({
@@ -92,10 +94,13 @@ export default function HomeScreen() {
 
   return (
     <ScrollView
+      ref={scrollRef as any}
       style={styles.screen}
       contentContainerStyle={styles.content}
       showsVerticalScrollIndicator={false}
       contentInsetAdjustmentBehavior="automatic"
+      onScroll={onScroll}
+      scrollEventThrottle={200}
     >
       {/* Hero Section with Text Above Image */}
       <View style={styles.heroContainer}>
@@ -209,7 +214,7 @@ const getStyles = (colors: any, isDark: boolean) => StyleSheet.create({
     marginTop: -90, // Reduced negative margin so hero doesn't pull up as much
   },
   heroImageSection: {
-    height: 280,
+    height: 310,
     width: '100%',
   },
   heroImageStyle: {
@@ -224,7 +229,7 @@ const getStyles = (colors: any, isDark: boolean) => StyleSheet.create({
   },
   heroTextSection: {
     position: 'absolute',
-    top: 45, // Reduced by 10px from 55 to 45
+    top: 115,
     left: 20,
     right: 20,
     zIndex: 10,

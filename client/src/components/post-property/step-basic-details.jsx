@@ -1,5 +1,6 @@
 import { Input } from "../ui/input";
 import { Label } from "../ui/label";
+import { Lightbulb } from "lucide-react";
 
 const PROPERTY_TYPES = {
     room: ["Single Room", "Double Room", "Triple Room", "Dormitory"],
@@ -12,6 +13,7 @@ const PROPERTY_TYPES = {
 
 export default function StepBasicDetails({ formData, setFormData, validationErrors }) {
     const types = PROPERTY_TYPES[formData.category] || [];
+    const descLength = (formData.description || '').length;
 
     return (
         <div className="space-y-5 sm:space-y-6">
@@ -26,10 +28,51 @@ export default function StepBasicDetails({ formData, setFormData, validationErro
                     value={formData.title}
                     onChange={(e) => setFormData({ ...formData, title: e.target.value })}
                     className={`text-sm sm:text-base ${validationErrors.title ? "border-destructive" : ""}`}
+                    maxLength={120}
                 />
-                {validationErrors.title && (
-                    <p className="text-destructive text-xs sm:text-sm">{validationErrors.title}</p>
+                {/* Nudge */}
+                {(!formData.title || formData.title.length < 10) && (
+                    <div className="flex items-start gap-2 p-2.5 bg-amber-500/10 border border-amber-500/20 rounded-lg">
+                        <Lightbulb size={14} className="text-amber-500 flex-shrink-0 mt-0.5" />
+                        <p className="text-xs text-amber-700 dark:text-amber-400">
+                            <strong>Pro tip:</strong> Titles with location and size get 40% more clicks. Try: &ldquo;{formData.bedrooms || '2'} BHK {formData.furnishing === 'fully' ? 'Furnished' : ''} {formData.category === 'flat' ? 'Flat' : 'Property'} in {formData.city || 'Koramangala'}&rdquo;
+                        </p>
+                    </div>
                 )}
+                <div className="flex justify-between items-center">
+                    {validationErrors.title && (
+                        <p className="text-destructive text-xs sm:text-sm">{validationErrors.title}</p>
+                    )}
+                    <span className={`text-xs ml-auto ${formData.title?.length > 100 ? 'text-amber-500' : 'text-muted-foreground'}`}>
+                        {formData.title?.length || 0}/120
+                    </span>
+                </div>
+            </div>
+
+            {/* Description */}
+            <div className="space-y-2">
+                <Label htmlFor="description" className="text-foreground font-semibold text-sm sm:text-base">
+                    Description <span className="text-muted-foreground font-normal">(Recommended)</span>
+                </Label>
+                <textarea
+                    id="description"
+                    placeholder="Describe your property — mention nearby landmarks, transport, schools, unique features..."
+                    value={formData.description || ''}
+                    onChange={(e) => setFormData({ ...formData, description: e.target.value })}
+                    rows={4}
+                    maxLength={2000}
+                    className="w-full px-3 sm:px-4 py-2.5 sm:py-2 border rounded-lg bg-background text-foreground text-sm sm:text-base focus:outline-none focus:ring-2 focus:ring-ring resize-none border-input"
+                />
+                <div className="flex justify-between items-center">
+                    {descLength > 0 && descLength < 50 && (
+                        <p className="text-xs text-amber-500">
+                            Add more detail — descriptions over 100 words get 25% more inquiries.
+                        </p>
+                    )}
+                    <span className={`text-xs ml-auto ${descLength > 1800 ? 'text-amber-500' : 'text-muted-foreground'}`}>
+                        {descLength}/2000
+                    </span>
+                </div>
             </div>
 
             {/* Property Type */}
@@ -98,6 +141,7 @@ export default function StepBasicDetails({ formData, setFormData, validationErro
                     type="date"
                     value={formData.availableFrom}
                     onChange={(e) => setFormData({ ...formData, availableFrom: e.target.value })}
+                    min={new Date().toISOString().split('T')[0]}
                     className={`w-full px-3 sm:px-4 py-2.5 sm:py-2 border rounded-lg bg-background text-foreground text-sm sm:text-base focus:outline-none focus:ring-2 focus:ring-ring ${validationErrors.availableFrom ? "border-destructive" : "border-input"
                         }`}
                 />

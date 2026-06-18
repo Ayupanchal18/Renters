@@ -1,9 +1,13 @@
 import { Router } from "express";
 import { z } from "zod";
+import bcrypt from "bcryptjs";
 import { SystemSettings } from "../models/SystemSettings.js";
+import { User } from "../models/User.js";
 import { connectDB } from "../src/config/db.js";
 import { requireAdmin } from "../src/middleware/adminAuth.js";
-import { createAuditLog } from "../src/services/adminAuditService.js";
+import { createAuditLog, safeCreateAuditLog } from "../src/services/adminAuditService.js";
+import { encrypt, decrypt } from "../src/utils/crypto.js";
+import { requirePermission } from "../src/middleware/permissionGuard.js";
 
 const router = Router();
 
@@ -124,7 +128,7 @@ const validateSettingValue = (value, type) => {
  * GET /api/admin/settings
  * List all settings with pagination and filters
  */
-router.get("/", requireAdmin, async (req, res) => {
+router.get("/", requirePermission('settings:read'), async (req, res) => {
     try {
         await connectDB();
 
@@ -154,10 +158,19 @@ router.get("/", requireAdmin, async (req, res) => {
         ]);
 
         // Mask sensitive values for display
-        const maskedSettings = settings.map(setting => ({
-            ...setting,
-            displayValue: maskSensitiveValue(setting.key, setting.value)
-        }));
+        const maskedSettings = settings.map(setting => {
+            let val = setting.value;
+            if (setting.category === 'api' && typeof val === 'string' && val.includes(':')) {
+                try {
+                    val = decrypt(val);
+                } catch (e) { }
+            }
+            return {
+                ...setting,
+                value: setting.category === 'api' ? maskSensitiveValue(setting.key, val) : setting.value,
+                displayValue: maskSensitiveValue(setting.key, val)
+            };
+        });
 
         res.json({
             success: true,
@@ -180,7 +193,7 @@ router.get("/", requireAdmin, async (req, res) => {
  * GET /api/admin/settings/:key
  * Get a specific setting by key
  */
-router.get("/:key", requireAdmin, async (req, res) => {
+router.get("/:key", requirePermission('settings:read'), async (req, res) => {
     try {
         await connectDB();
 
@@ -196,11 +209,19 @@ router.get("/:key", requireAdmin, async (req, res) => {
             });
         }
 
+        let val = setting.value;
+        if (setting.category === 'api' && typeof val === 'string' && val.includes(':')) {
+            try {
+                val = decrypt(val);
+            } catch (e) { }
+        }
+
         res.json({
             success: true,
             data: {
                 ...setting,
-                displayValue: maskSensitiveValue(setting.key, setting.value)
+                value: setting.category === 'api' ? maskSensitiveValue(setting.key, val) : setting.value,
+                displayValue: maskSensitiveValue(setting.key, val)
             }
         });
     } catch (error) {
@@ -218,7 +239,7 @@ router.get("/:key", requireAdmin, async (req, res) => {
  * POST /api/admin/settings
  * Create a new setting
  */
-router.post("/", requireAdmin, async (req, res) => {
+router.post("/", requirePermission('settings:write'), async (req, res) => {
     try {
         await connectDB();
 
@@ -253,10 +274,15 @@ router.post("/", requireAdmin, async (req, res) => {
             });
         }
 
+        let finalValue = value;
+        if (category === 'api') {
+            finalValue = encrypt(typeof value === 'string' ? value : JSON.stringify(value));
+        }
+
         const setting = new SystemSettings({
             key,
-            value,
-            type,
+            value: finalValue,
+            type: category === 'api' ? 'string' : type,
             description,
             isPublic,
             category,
@@ -265,7 +291,7 @@ router.post("/", requireAdmin, async (req, res) => {
 
         await setting.save();
 
-        await createAuditLog({
+        await safeCreateAuditLog({
             adminId: req.user._id,
             action: 'CREATE',
             resourceType: 'settings',
@@ -293,7 +319,7 @@ router.post("/", requireAdmin, async (req, res) => {
  * PUT /api/admin/settings/:key
  * Update a setting by key
  */
-router.put("/:key", requireAdmin, async (req, res) => {
+router.put("/:key", requirePermission('settings:write'), async (req, res) => {
     try {
         await connectDB();
 
@@ -328,13 +354,18 @@ router.put("/:key", requireAdmin, async (req, res) => {
             });
         }
 
+        if (updateData.value !== undefined && (updateData.category === 'api' || currentSetting.category === 'api')) {
+            updateData.value = encrypt(typeof updateData.value === 'string' ? updateData.value : JSON.stringify(updateData.value));
+            updateData.type = 'string';
+        }
+
         const updatedSetting = await SystemSettings.findOneAndUpdate(
             { key: req.params.key },
             updateData,
             { new: true }
         ).lean();
 
-        await createAuditLog({
+        await safeCreateAuditLog({
             adminId: req.user._id,
             action: 'UPDATE',
             resourceType: 'settings',
@@ -363,7 +394,7 @@ router.put("/:key", requireAdmin, async (req, res) => {
  * PUT /api/admin/settings
  * Bulk update multiple settings
  */
-router.put("/", requireAdmin, async (req, res) => {
+router.put("/", requirePermission('settings:write'), async (req, res) => {
     try {
         await connectDB();
 
@@ -396,13 +427,20 @@ router.put("/", requireAdmin, async (req, res) => {
                     continue;
                 }
 
+                let finalValue = value;
+                let finalType = currentSetting.type;
+                if (currentSetting.category === 'api') {
+                    finalValue = encrypt(typeof value === 'string' ? value : JSON.stringify(value));
+                    finalType = 'string';
+                }
+
                 const updatedSetting = await SystemSettings.findOneAndUpdate(
                     { key },
-                    { value, updatedBy: req.user._id },
+                    { value: finalValue, type: finalType, updatedBy: req.user._id },
                     { new: true }
                 ).lean();
 
-                await createAuditLog({
+                await safeCreateAuditLog({
                     adminId: req.user._id,
                     action: 'UPDATE',
                     resourceType: 'settings',
@@ -440,7 +478,7 @@ router.put("/", requireAdmin, async (req, res) => {
  * DELETE /api/admin/settings/:key
  * Delete a setting by key
  */
-router.delete("/:key", requireAdmin, async (req, res) => {
+router.delete("/:key", requirePermission('settings:write'), async (req, res) => {
     try {
         await connectDB();
 
@@ -461,7 +499,7 @@ router.delete("/:key", requireAdmin, async (req, res) => {
             message: "Settings deletion is disabled to prevent accidental data loss"
         });
 
-        await createAuditLog({
+        await safeCreateAuditLog({
             adminId: req.user._id,
             action: 'DELETE',
             resourceType: 'settings',
@@ -488,7 +526,7 @@ router.delete("/:key", requireAdmin, async (req, res) => {
  * GET /api/admin/settings/features
  * Get all feature flags
  */
-router.get("/features/list", requireAdmin, async (req, res) => {
+router.get("/features/list", requirePermission('settings:read'), async (req, res) => {
     try {
         await connectDB();
 
@@ -515,7 +553,7 @@ router.get("/features/list", requireAdmin, async (req, res) => {
  * PUT /api/admin/settings/features/:key
  * Toggle a feature flag
  */
-router.put("/features/:key", requireAdmin, async (req, res) => {
+router.put("/features/:key", requirePermission('settings:write'), async (req, res) => {
     try {
         await connectDB();
 
@@ -549,7 +587,7 @@ router.put("/features/:key", requireAdmin, async (req, res) => {
 
             await newFeature.save();
 
-            await createAuditLog({
+            await safeCreateAuditLog({
                 adminId: req.user._id,
                 action: 'CREATE',
                 resourceType: 'settings',
@@ -573,7 +611,7 @@ router.put("/features/:key", requireAdmin, async (req, res) => {
             { new: true }
         ).lean();
 
-        await createAuditLog({
+        await safeCreateAuditLog({
             adminId: req.user._id,
             action: 'UPDATE',
             resourceType: 'settings',
@@ -604,7 +642,7 @@ router.put("/features/:key", requireAdmin, async (req, res) => {
  * GET /api/admin/settings/maintenance
  * Get maintenance mode status
  */
-router.get("/maintenance/status", requireAdmin, async (req, res) => {
+router.get("/maintenance/status", requirePermission('settings:read'), async (req, res) => {
     try {
         await connectDB();
 
@@ -636,7 +674,7 @@ router.get("/maintenance/status", requireAdmin, async (req, res) => {
  * POST /api/admin/settings/maintenance
  * Toggle maintenance mode
  */
-router.post("/maintenance", requireAdmin, async (req, res) => {
+router.post("/maintenance", requirePermission('settings:write'), async (req, res) => {
     try {
         await connectDB();
 
@@ -690,7 +728,7 @@ router.post("/maintenance", requireAdmin, async (req, res) => {
             updatedBy: req.user._id
         });
 
-        await createAuditLog({
+        await safeCreateAuditLog({
             adminId: req.user._id,
             action: enabled ? 'ACTIVATE' : 'DEACTIVATE',
             resourceType: 'settings',
@@ -728,7 +766,7 @@ router.post("/maintenance", requireAdmin, async (req, res) => {
  * GET /api/admin/settings/api-keys
  * View API keys with masked values
  */
-router.get("/api-keys/list", requireAdmin, async (req, res) => {
+router.get("/api-keys/list", requirePermission('settings:api-keys:read'), async (req, res) => {
     try {
         await connectDB();
 
@@ -738,11 +776,20 @@ router.get("/api-keys/list", requireAdmin, async (req, res) => {
             .lean();
 
         // Mask all API key values for security
-        const maskedApiKeys = apiKeys.map(key => ({
-            ...key,
-            displayValue: maskSensitiveValue(key.key, key.value),
-            isMasked: true
-        }));
+        const maskedApiKeys = apiKeys.map(key => {
+            let val = key.value;
+            if (typeof val === 'string' && val.includes(':')) {
+                try {
+                    val = decrypt(val);
+                } catch (e) { }
+            }
+            return {
+                ...key,
+                value: maskSensitiveValue(key.key, val),
+                displayValue: maskSensitiveValue(key.key, val),
+                isMasked: true
+            };
+        });
 
         res.json({
             success: true,
@@ -762,9 +809,37 @@ router.get("/api-keys/list", requireAdmin, async (req, res) => {
  * GET /api/admin/settings/api-keys/:key/reveal
  * Reveal full API key value (for copy functionality)
  */
-router.get("/api-keys/:key/reveal", requireAdmin, async (req, res) => {
+router.post("/api-keys/:key/reveal", requirePermission('settings:api-keys:reveal'), async (req, res) => {
     try {
         await connectDB();
+
+        const { password } = req.body;
+        if (!password) {
+            return res.status(400).json({
+                success: false,
+                error: "VALIDATION_ERROR",
+                message: "Password verification is required to reveal API keys"
+            });
+        }
+
+        // Fetch requester from DB to check password
+        const adminUser = await User.findById(req.user._id);
+        if (!adminUser || !adminUser.passwordHash) {
+            return res.status(401).json({
+                success: false,
+                error: "AUTH_FAILED",
+                message: "User authentication details not found"
+            });
+        }
+
+        const match = await bcrypt.compare(password, adminUser.passwordHash);
+        if (!match) {
+            return res.status(401).json({
+                success: false,
+                error: "AUTH_FAILED",
+                message: "Invalid verification password"
+            });
+        }
 
         const apiKey = await SystemSettings.findOne({
             key: req.params.key,
@@ -779,8 +854,18 @@ router.get("/api-keys/:key/reveal", requireAdmin, async (req, res) => {
             });
         }
 
+        // Decrypt value
+        let decryptedValue = apiKey.value;
+        if (typeof decryptedValue === 'string' && decryptedValue.includes(':')) {
+            try {
+                decryptedValue = decrypt(decryptedValue);
+            } catch (e) {
+                console.error("Failed to decrypt API key:", e.message);
+            }
+        }
+
         // Log the reveal action for security audit
-        await createAuditLog({
+        await safeCreateAuditLog({
             adminId: req.user._id,
             action: 'UPDATE',
             resourceType: 'settings',
@@ -793,7 +878,7 @@ router.get("/api-keys/:key/reveal", requireAdmin, async (req, res) => {
             success: true,
             data: {
                 key: apiKey.key,
-                value: apiKey.value,
+                value: decryptedValue,
                 description: apiKey.description
             }
         });
@@ -811,7 +896,7 @@ router.get("/api-keys/:key/reveal", requireAdmin, async (req, res) => {
  * POST /api/admin/settings/api-keys
  * Create a new API key setting
  */
-router.post("/api-keys", requireAdmin, async (req, res) => {
+router.post("/api-keys", requirePermission('settings:write'), async (req, res) => {
     try {
         await connectDB();
 
@@ -843,9 +928,10 @@ router.post("/api-keys", requireAdmin, async (req, res) => {
             });
         }
 
+        const encryptedValue = encrypt(String(value));
         const apiKey = new SystemSettings({
             key,
-            value,
+            value: encryptedValue,
             type: 'string',
             description: description || `API key for ${key}`,
             isPublic: false,
@@ -855,7 +941,7 @@ router.post("/api-keys", requireAdmin, async (req, res) => {
 
         await apiKey.save();
 
-        await createAuditLog({
+        await safeCreateAuditLog({
             adminId: req.user._id,
             action: 'CREATE',
             resourceType: 'settings',
@@ -868,6 +954,7 @@ router.post("/api-keys", requireAdmin, async (req, res) => {
             success: true,
             data: {
                 ...apiKey.toObject(),
+                value: maskSensitiveValue(key, value),
                 displayValue: maskSensitiveValue(key, value)
             },
             message: "API key created successfully"
@@ -886,7 +973,7 @@ router.post("/api-keys", requireAdmin, async (req, res) => {
  * PUT /api/admin/settings/api-keys/:key
  * Update an API key
  */
-router.put("/api-keys/:key", requireAdmin, async (req, res) => {
+router.put("/api-keys/:key", requirePermission('settings:write'), async (req, res) => {
     try {
         await connectDB();
 
@@ -906,7 +993,7 @@ router.put("/api-keys/:key", requireAdmin, async (req, res) => {
         }
 
         const updateData = { updatedBy: req.user._id };
-        if (value !== undefined) updateData.value = value;
+        if (value !== undefined) updateData.value = encrypt(String(value));
         if (description !== undefined) updateData.description = description;
 
         const updatedKey = await SystemSettings.findOneAndUpdate(
@@ -915,7 +1002,7 @@ router.put("/api-keys/:key", requireAdmin, async (req, res) => {
             { new: true }
         ).lean();
 
-        await createAuditLog({
+        await safeCreateAuditLog({
             adminId: req.user._id,
             action: 'UPDATE',
             resourceType: 'settings',
@@ -925,11 +1012,14 @@ router.put("/api-keys/:key", requireAdmin, async (req, res) => {
             req
         });
 
+        const displayVal = value !== undefined ? value : decrypt(updatedKey.value);
+
         res.json({
             success: true,
             data: {
                 ...updatedKey,
-                displayValue: maskSensitiveValue(updatedKey.key, updatedKey.value)
+                value: maskSensitiveValue(updatedKey.key, displayVal),
+                displayValue: maskSensitiveValue(updatedKey.key, displayVal)
             },
             message: "API key updated successfully"
         });
@@ -947,7 +1037,7 @@ router.put("/api-keys/:key", requireAdmin, async (req, res) => {
  * DELETE /api/admin/settings/api-keys/:key
  * Delete an API key
  */
-router.delete("/api-keys/:key", requireAdmin, async (req, res) => {
+router.delete("/api-keys/:key", requirePermission('settings:write'), async (req, res) => {
     try {
         await connectDB();
 
@@ -972,7 +1062,7 @@ router.delete("/api-keys/:key", requireAdmin, async (req, res) => {
             message: "API key deletion is disabled to prevent accidental data loss"
         });
 
-        await createAuditLog({
+        await safeCreateAuditLog({
             adminId: req.user._id,
             action: 'DELETE',
             resourceType: 'settings',
@@ -998,7 +1088,7 @@ router.delete("/api-keys/:key", requireAdmin, async (req, res) => {
  * GET /api/admin/settings/public
  * Get all public settings (can be used by frontend without admin auth)
  */
-router.get("/public/list", requireAdmin, async (req, res) => {
+router.get("/public/list", requirePermission('settings:read'), async (req, res) => {
     try {
         await connectDB();
 
@@ -1024,7 +1114,7 @@ router.get("/public/list", requireAdmin, async (req, res) => {
  * GET /api/admin/settings/category/:category
  * Get all settings in a specific category
  */
-router.get("/category/:category", requireAdmin, async (req, res) => {
+router.get("/category/:category", requirePermission('settings:read'), async (req, res) => {
     try {
         await connectDB();
 
@@ -1043,10 +1133,19 @@ router.get("/category/:category", requireAdmin, async (req, res) => {
             .lean();
 
         // Mask sensitive values
-        const maskedSettings = settings.map(setting => ({
-            ...setting,
-            displayValue: maskSensitiveValue(setting.key, setting.value)
-        }));
+        const maskedSettings = settings.map(setting => {
+            let val = setting.value;
+            if (setting.category === 'api' && typeof val === 'string' && val.includes(':')) {
+                try {
+                    val = decrypt(val);
+                } catch (e) { }
+            }
+            return {
+                ...setting,
+                value: setting.category === 'api' ? maskSensitiveValue(setting.key, val) : setting.value,
+                displayValue: maskSensitiveValue(setting.key, val)
+            };
+        });
 
         res.json({
             success: true,

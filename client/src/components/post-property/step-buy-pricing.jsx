@@ -1,7 +1,7 @@
 import { Input } from "../ui/input";
 import { Label } from "../ui/label";
 import { IndianRupee } from 'lucide-react';
-import { POSSESSION_STATUS, POSSESSION_STATUS_LABELS } from '@shared/propertyTypes';
+import { POSSESSION_STATUS, POSSESSION_STATUS_LABELS, OWNERSHIP_TYPES, OWNERSHIP_TYPE_LABELS } from '@shared/propertyTypes';
 
 export default function StepBuyPricing({ formData, setFormData, validationErrors }) {
     return (
@@ -83,8 +83,56 @@ export default function StepBuyPricing({ formData, setFormData, validationErrors
                 </div>
             </div>
 
-            {/* Loan Available */}
-            <div className="pt-2">
+            {/* Ownership Type */}
+            <div className="space-y-3">
+                <Label className="text-foreground font-semibold text-sm sm:text-base">Ownership Type</Label>
+                <div className="grid grid-cols-1 xs:grid-cols-3 gap-2 sm:gap-3">
+                    {OWNERSHIP_TYPES.map((type) => (
+                        <label
+                            key={type}
+                            className={`flex items-center gap-2 p-3 rounded-lg border-2 cursor-pointer transition-all ${
+                                formData.ownershipType === type
+                                    ? "border-primary bg-primary/5"
+                                    : "border-border hover:border-primary/50"
+                            }`}
+                        >
+                            <input
+                                type="radio"
+                                name="ownershipType"
+                                value={type}
+                                checked={formData.ownershipType === type}
+                                onChange={(e) => setFormData({ ...formData, ownershipType: e.target.value })}
+                                className="w-4 h-4 text-primary accent-primary"
+                            />
+                            <span className="text-foreground text-sm sm:text-base">
+                                {OWNERSHIP_TYPE_LABELS[type]}
+                            </span>
+                        </label>
+                    ))}
+                </div>
+            </div>
+
+            {/* RERA Registration Number — shown for under-construction */}
+            {formData.possessionStatus === 'under_construction' && (
+                <div className="space-y-2">
+                    <Label htmlFor="reraNumber" className="text-foreground font-semibold text-sm sm:text-base">
+                        RERA Registration Number
+                    </Label>
+                    <Input
+                        id="reraNumber"
+                        placeholder="e.g., P52100003060"
+                        value={formData.reraNumber || ''}
+                        onChange={(e) => setFormData({ ...formData, reraNumber: e.target.value })}
+                        className="text-sm sm:text-base"
+                    />
+                    <p className="text-xs text-muted-foreground">
+                        RERA number is required by law for under-construction properties in India.
+                    </p>
+                </div>
+            )}
+
+            {/* Checkboxes */}
+            <div className="space-y-3 pt-2">
                 <label className="flex items-center gap-3 cursor-pointer p-3 rounded-lg border border-border hover:bg-muted/50 transition-colors">
                     <input
                         type="checkbox"
@@ -93,6 +141,16 @@ export default function StepBuyPricing({ formData, setFormData, validationErrors
                         className="w-5 h-5 rounded border-input text-primary accent-primary"
                     />
                     <span className="text-foreground font-medium text-sm sm:text-base">Loan available for this property</span>
+                </label>
+
+                <label className="flex items-center gap-3 cursor-pointer p-3 rounded-lg border border-border hover:bg-muted/50 transition-colors">
+                    <input
+                        type="checkbox"
+                        checked={formData.priceNegotiable || false}
+                        onChange={(e) => setFormData({ ...formData, priceNegotiable: e.target.checked })}
+                        className="w-5 h-5 rounded border-input text-primary accent-primary"
+                    />
+                    <span className="text-foreground font-medium text-sm sm:text-base">Price is negotiable</span>
                 </label>
             </div>
         </div>

@@ -3,12 +3,15 @@ import { Eye, MapPin, Edit2, MoreVertical, ToggleLeft, ToggleRight, Trash2, Tren
 import { Link } from "react-router-dom";
 import { PropertiesSectionSkeleton } from "../ui/skeleton-loaders";
 import { LoadingOverlay, InlineLoading } from "../ui/loading-states";
+import { Dialog, DialogContent } from "../ui/dialog";
+import AvailabilityEditor from "../scheduling/AvailabilityEditor";
 
 // Memoized PropertyCard component with optimized mobile design
 const PropertyCard = React.memo(function PropertyCard({ 
     prop, 
     onToggleStatus, 
     onDeleteProperty, 
+    onManageAvailability,
     operationLoading, 
     activeDropdown,
     setActiveDropdown 
@@ -72,6 +75,16 @@ const PropertyCard = React.memo(function PropertyCard({
                             Activate
                         </>
                     )}
+                </button>
+                <button
+                    onClick={() => {
+                        setActiveDropdown(null);
+                        onManageAvailability(prop);
+                    }}
+                    className="flex items-center gap-2.5 px-3 py-2 text-sm text-foreground hover:bg-muted w-full text-left transition-colors"
+                >
+                    <Calendar size={14} className="text-primary" />
+                    Availability
                 </button>
                 <div className="border-t border-border my-1" />
                 <button
@@ -360,6 +373,11 @@ const PropertiesSection = React.memo(function PropertiesSection({
     const [sortBy, setSortBy] = useState('createdAt');
     const [sortOrder, setSortOrder] = useState('desc');
     const [operationLoading, setOperationLoading] = useState({});
+    const [selectedAvailabilityProperty, setSelectedAvailabilityProperty] = useState(null);
+
+    const handleManageAvailability = useCallback((prop) => {
+        setSelectedAvailabilityProperty(prop);
+    }, []);
 
     const handleToggleStatus = useCallback(async (propertyId, currentStatus) => {
         const newStatus = currentStatus === 'active' ? 'inactive' : 'active';
@@ -539,6 +557,7 @@ const PropertiesSection = React.memo(function PropertiesSection({
                                     prop={prop}
                                     onToggleStatus={handleToggleStatus}
                                     onDeleteProperty={handleDeleteProperty}
+                                    onManageAvailability={handleManageAvailability}
                                     operationLoading={operationLoading}
                                     activeDropdown={activeDropdown}
                                     setActiveDropdown={setActiveDropdown}
@@ -580,6 +599,19 @@ const PropertiesSection = React.memo(function PropertiesSection({
                     </div>
                 )}
             </div>
+
+            {/* Availability Settings Dialog */}
+            {selectedAvailabilityProperty && (
+                <Dialog open={!!selectedAvailabilityProperty} onOpenChange={() => setSelectedAvailabilityProperty(null)}>
+                    <DialogContent className="max-w-5xl p-0 overflow-hidden bg-transparent border-0 shadow-none">
+                        <AvailabilityEditor
+                            propertyId={selectedAvailabilityProperty._id}
+                            propertyTitle={selectedAvailabilityProperty.title}
+                            onClose={() => setSelectedAvailabilityProperty(null)}
+                        />
+                    </DialogContent>
+                </Dialog>
+            )}
         </div>
     );
 });

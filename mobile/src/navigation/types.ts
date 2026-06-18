@@ -1,4 +1,7 @@
 export type RootStackParamList = {
+  // Onboarding (first launch only)
+  Onboarding: undefined;
+
   // Auth screens
   Login: undefined;
   Register: undefined;
@@ -33,6 +36,11 @@ export type RootStackParamList = {
   DeleteAccount: undefined;
   Legal: undefined;
   OTPVerification: { type: "email" | "phone"; contact: string };
+  MyVisits: undefined;
+  IncomingVisits: undefined;
+  AvailabilityEditor: { propertyId: string; propertyTitle: string };
+  DocumentVault: undefined;
+  LeaseDraft: { leaseId?: string; propertyId?: string; tenantId?: string };
 };
 
 // Utility for useNavigation typing

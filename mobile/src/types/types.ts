@@ -41,6 +41,8 @@ export interface User {
   avatar?: string;
   emailVerified?: boolean;
   phoneVerified?: boolean;
+  verified?: boolean;
+  isVerified?: boolean;
   emailVerifiedAt?: string;
   phoneVerifiedAt?: string;
   createdAt?: string;
@@ -48,6 +50,11 @@ export interface User {
   termsAcceptedAt?: string;
   bio?: string;
   authProvider?: string;
+  privacySettings?: {
+    communications?: {
+      pushNotifications?: boolean;
+    };
+  };
 }
 
 /* ─── Auth ────────────────────────────────────────────────── */
@@ -165,6 +172,14 @@ export interface Property {
 
   createdAt?: string;
   updatedAt?: string;
+
+  // Virtual Tour
+  virtualTour?: {
+    type: "matterport" | "panorama_360" | "video" | "none";
+    matterportUrl?: string;
+    panoramaImages?: Array<{ url: string; label: string } | string>;
+    videoUrl?: string;
+  };
 }
 
 /* ─── Wishlist ─────────────────────────────────────────────── */

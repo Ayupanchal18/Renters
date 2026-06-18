@@ -1,94 +1,165 @@
-import { useState } from "react";
-import { ChevronRight, ChevronLeft, Check, MapPin, Home, Building2, DollarSign, Camera, User, AlertCircle, ShoppingBag } from 'lucide-react';
+import { useState, useEffect } from "react";
+import { ChevronRight, ChevronLeft, Check, MapPin, Home, Building2, DollarSign, Camera, AlertCircle, ClipboardCheck, Globe } from 'lucide-react';
 import { Button } from "../ui/button";
 import { Card } from "../ui/card";
 
-import StepListingType from "../post-property/step-listing-type";
-import StepCategory from "../post-property/step-category";
-import StepBasicDetails from "../post-property/step-basic-details";
-import StepLocation from "../post-property/step-location";
-import StepRentPricing from "../post-property/step-rent-pricing";
-import StepBuyPricing from "../post-property/step-buy-pricing";
-import StepPropertySpecific from "../post-property/step-property-specific";
-import StepAmenities from "../post-property/step-amenities";
-import StepPhotos from "../post-property/step-photos";
-import StepOwnerDetails from "../post-property/step-owner-details";
-import SuccessPage from "../post-property/success-page";
+import BasicInfoStep from "./steps/BasicInfoStep";
+import LocationStep from "./steps/LocationStep";
+import DetailsStep from "./steps/DetailsStep";
+import PhotosStep from "./steps/PhotosStep";
+import VirtualTourStep from "./steps/VirtualTourStep";
+import PricingStep from "./steps/PricingStep";
+import ReviewStep from "./steps/ReviewStep";
+import SuccessPage from "./success-page";
+import DraftRestoreModal from "./draft-restore-modal";
+
 import { useDispatch } from "react-redux";
 import { postRentProperty, postBuyProperty } from "../../redux/slices/propertySlice";
 import { LISTING_TYPES } from "@shared/propertyTypes";
+import { validateStep } from "@shared/validation/wizard";
+import { useDraftSave, loadDraft, clearDraft } from "../../hooks/useDraftSave";
 
 const STEPS = [
-    { id: 1, name: "Listing Type", icon: ShoppingBag },
-    { id: 2, name: "Category", icon: Home },
-    { id: 3, name: "Details", icon: Building2 },
-    { id: 4, name: "Location", icon: MapPin },
-    { id: 5, name: "Pricing", icon: DollarSign },
-    { id: 6, name: "Specifics", icon: Home },
-    { id: 7, name: "Amenities", icon: Check },
-    { id: 8, name: "Photos", icon: Camera },
-    { id: 9, name: "Owner", icon: User },
+    { id: 1, name: "Basic Info", icon: Home },
+    { id: 2, name: "Location", icon: MapPin },
+    { id: 3, name: "Details & Amenities", icon: Building2 },
+    { id: 4, name: "Photos", icon: Camera },
+    { id: 5, name: "Virtual Tour", icon: Globe },
+    { id: 6, name: "Pricing", icon: DollarSign },
+    { id: 7, name: "Review", icon: ClipboardCheck },
 ];
+
+const INITIAL_FORM_DATA = {
+    listingType: "",
+    category: "",
+    title: "",
+    description: "",
+    propertyType: "",
+    furnishing: "",
+    availableFrom: "",
+    city: "",
+    state: "",
+    locality: "",
+    pincode: "",
+    address: "",
+    mapLocation: "",
+    monthlyRent: "",
+    securityDeposit: "",
+    maintenanceCharge: "",
+    negotiable: false,
+    rentNegotiable: false,
+    preferredTenants: "any",
+    leaseDuration: "",
+    lockInPeriod: 0,
+    brokerage: "",
+    sellingPrice: "",
+    pricePerSqft: "",
+    possessionStatus: "ready",
+    bookingAmount: "",
+    loanAvailable: true,
+    priceNegotiable: false,
+    ownershipType: "",
+    reraNumber: "",
+    roomType: "",
+    bathroomType: "",
+    kitchenAvailable: false,
+    builtUpArea: "",
+    carpetArea: "",
+    bedrooms: "",
+    bathrooms: "",
+    balconies: "",
+    floorNumber: "",
+    totalFloors: "",
+    facingDirection: "",
+    parking: "",
+    propertyAge: "",
+    waterSupply: "",
+    powerBackup: "",
+    gatedCommunity: false,
+    washroom: "",
+    frontage: "",
+    amenities: [],
+    photos: [],
+    virtualTour: {
+        type: "none",
+        matterportUrl: "",
+        videoUrl: "",
+        panoramaImages: [],
+    },
+    ownerName: "",
+    ownerPhone: "",
+    ownerEmail: "",
+    ownerType: "",
+};
 
 export default function PropertyWizard() {
     const [currentStep, setCurrentStep] = useState(1);
     const [isSubmitting, setIsSubmitting] = useState(false);
     const [submitted, setSubmitted] = useState(false);
+    const [propertyId, setPropertyId] = useState(null);
     const [validationErrors, setValidationErrors] = useState({});
+    const [showDraftModal, setShowDraftModal] = useState(false);
+    const [pendingDraft, setPendingDraft] = useState(null);
 
-    const dispatch = useDispatch()
+    const dispatch = useDispatch();
 
-    const [formData, setFormData] = useState({
-        listingType: "",
-        category: "",
-        title: "",
-        propertyType: "",
-        furnishing: "",
-        availableFrom: "",
-        city: "",
-        address: "",
-        mapLocation: "",
-        monthlyRent: "",
-        securityDeposit: "",
-        maintenanceCharge: "",
-        negotiable: false,
-        rentNegotiable: false,
-        preferredTenants: "any",
-        leaseDuration: "",
-        sellingPrice: "",
-        pricePerSqft: "",
-        possessionStatus: "ready",
-        bookingAmount: "",
-        loanAvailable: true,
-        roomType: "",
-        bathroomType: "",
-        kitchenAvailable: false,
-        builtUpArea: "",
-        carpetArea: "",
-        bedrooms: "",
-        bathrooms: "",
-        balconies: "",
-        floorNumber: "",
-        totalFloors: "",
-        facingDirection: "",
-        parking: "",
-        propertyAge: "",
-        washroom: "",
-        frontage: "",
-        amenities: [],
-        photos: [],
-        ownerName: "",
-        ownerPhone: "",
-        ownerEmail: "",
-        ownerType: "",
-    });
+    const [formData, setFormData] = useState(INITIAL_FORM_DATA);
+
+    // Draft auto-save
+    useDraftSave(formData, currentStep, submitted);
+
+    // Check for saved draft on mount
+    useEffect(() => {
+        const draft = loadDraft();
+        if (draft && draft.formData) {
+            setPendingDraft(draft);
+            setShowDraftModal(true);
+        }
+    }, []);
+
+    // Auto-scroll to first validation error on step transition failure
+    useEffect(() => {
+        if (Object.keys(validationErrors).length > 0) {
+            const timer = setTimeout(() => {
+                const firstErrorEl = document.querySelector('.border-destructive, .text-destructive, [class*="border-destructive"], [class*="text-destructive"]');
+                if (firstErrorEl) {
+                    firstErrorEl.scrollIntoView({ behavior: 'smooth', block: 'center' });
+                    if (['INPUT', 'SELECT', 'TEXTAREA'].includes(firstErrorEl.tagName)) {
+                        firstErrorEl.focus({ preventScroll: true });
+                    }
+                }
+            }, 100);
+            return () => clearTimeout(timer);
+        }
+    }, [validationErrors]);
+
+    const handleRestoreDraft = () => {
+        if (pendingDraft?.formData) {
+            // Restore form data (photos will be empty since File objects can't be serialized)
+            setFormData({
+                ...INITIAL_FORM_DATA,
+                ...pendingDraft.formData,
+                photos: [], // Photos can't be restored from localStorage
+            });
+            const restoredStep = pendingDraft.currentStep || 1;
+            setCurrentStep(Math.min(restoredStep, 7));
+        }
+        setShowDraftModal(false);
+        setPendingDraft(null);
+    };
+
+    const handleDiscardDraft = () => {
+        clearDraft();
+        setShowDraftModal(false);
+        setPendingDraft(null);
+    };
 
     const postPropertyreq = async () => {
         const fd = new FormData();
         
         // Fields to exclude based on listing type
-        const rentOnlyFields = ['monthlyRent', 'securityDeposit', 'maintenanceCharge', 'rentNegotiable', 'preferredTenants', 'leaseDuration'];
-        const buyOnlyFields = ['sellingPrice', 'pricePerSqft', 'possessionStatus', 'bookingAmount', 'loanAvailable'];
+        const rentOnlyFields = ['monthlyRent', 'securityDeposit', 'maintenanceCharge', 'rentNegotiable', 'preferredTenants', 'leaseDuration', 'lockInPeriod', 'brokerage'];
+        const buyOnlyFields = ['sellingPrice', 'pricePerSqft', 'possessionStatus', 'bookingAmount', 'loanAvailable', 'priceNegotiable', 'ownershipType', 'reraNumber'];
         
         // For BUY properties, exclude RENT fields. For RENT properties, exclude BUY fields.
         const fieldsToExclude = formData.listingType === LISTING_TYPES.BUY ? rentOnlyFields : buyOnlyFields;
@@ -101,6 +172,24 @@ export default function PropertyWizard() {
             
             if (key === "photos") {
                 formData.photos.forEach(p => fd.append("photos", p.file));
+            } else if (key === "virtualTour") {
+                // Handle virtual tour nested object
+                const vt = formData.virtualTour;
+                if (vt && vt.type && vt.type !== "none") {
+                    fd.append("virtualTourType", vt.type);
+                    if (vt.type === "matterport" && vt.matterportUrl) {
+                        fd.append("matterportUrl", vt.matterportUrl);
+                    }
+                    if (vt.type === "video" && vt.videoUrl) {
+                        fd.append("videoUrl", vt.videoUrl);
+                    }
+                    if (vt.type === "panorama" && vt.panoramaImages?.length > 0) {
+                        vt.panoramaImages.forEach((pano, idx) => {
+                            fd.append("panoramaImages", pano.file);
+                            fd.append("panoramaLabels", pano.label || `Scene ${idx + 1}`);
+                        });
+                    }
+                }
             } else if (key === "amenities" && Array.isArray(formData[key])) {
                 // Handle amenities array
                 if (formData[key].length > 0) {
@@ -125,54 +214,15 @@ export default function PropertyWizard() {
         }
     };
 
-    const validateStep = (step) => {
-        const errors = {};
-
-        switch (step) {
-            case 1:
-                if (!formData.listingType) errors.listingType = "Please select a listing type (Rent or Buy)";
-                break;
-
-            case 2:
-                if (!formData.category) errors.category = "Please select a property category";
-                break;
-
-            case 3:
-                if (!formData.title) errors.title = "Title is required";
-                if (!formData.propertyType) errors.propertyType = "Property type is required";
-                if (!formData.furnishing) errors.furnishing = "Furnishing status is required";
-                if (!formData.availableFrom) errors.availableFrom = "Available from date is required";
-                break;
-
-            case 4:
-                if (!formData.city) errors.city = "City is required";
-                if (!formData.address) errors.address = "Address is required";
-                break;
-
-            case 5:
-                if (formData.listingType === LISTING_TYPES.RENT) {
-                    if (!formData.monthlyRent) errors.monthlyRent = "Monthly rent is required";
-                } else if (formData.listingType === LISTING_TYPES.BUY) {
-                    if (!formData.sellingPrice) errors.sellingPrice = "Selling price is required";
-                }
-                break;
-
-            case 9:
-                if (!formData.ownerName) errors.ownerName = "Owner name is required";
-                if (!formData.ownerPhone) errors.ownerPhone = "Phone number is required";
-                if (!formData.ownerEmail) errors.ownerEmail = "Email is required";
-                if (!formData.ownerType) errors.ownerType = "Please specify if you are owner or broker";
-                break;
-        }
-
-        setValidationErrors(errors);
-        return Object.keys(errors).length === 0;
-    };
-
     const handleNext = () => {
-        if (validateStep(currentStep)) {
+        const errors = validateStep(currentStep, formData);
+        setValidationErrors(errors);
+
+        if (Object.keys(errors).length === 0) {
             if (currentStep < STEPS.length) {
                 setCurrentStep(currentStep + 1);
+                // Scroll to top of step content
+                window.scrollTo({ top: 0, behavior: 'smooth' });
             } else {
                 handleSubmit();
             }
@@ -183,15 +233,32 @@ export default function PropertyWizard() {
         if (currentStep > 1) {
             setCurrentStep(currentStep - 1);
             setValidationErrors({});
+            window.scrollTo({ top: 0, behavior: 'smooth' });
         }
+    };
+
+    const handleEditStep = (step) => {
+        setCurrentStep(step);
+        setValidationErrors({});
+        window.scrollTo({ top: 0, behavior: 'smooth' });
     };
 
     const handleSubmit = async () => {
         setIsSubmitting(true);
         
         try {
-            await postPropertyreq();
+            const response = await postPropertyreq();
             console.log("Form submitted:", formData);
+            
+            // Extract property ID from various possible response formats
+            let newPropertyId = null;
+            if (response) {
+                newPropertyId = response.data?._id || response.property?._id || response._id || response.data?.property?._id;
+            }
+            if (newPropertyId) setPropertyId(newPropertyId);
+            
+            // Clear draft on successful submission
+            clearDraft();
             setSubmitted(true);
         } catch (error) {
             console.error("Submit error:", error);
@@ -201,7 +268,7 @@ export default function PropertyWizard() {
     };
 
     if (submitted) {
-        return <SuccessPage />;
+        return <SuccessPage propertyId={propertyId} />;
     }
 
     const renderStep = () => {
@@ -209,27 +276,19 @@ export default function PropertyWizard() {
 
         switch (currentStep) {
             case 1:
-                return <StepListingType {...commonProps} />;
+                return <BasicInfoStep {...commonProps} />;
             case 2:
-                return <StepCategory {...commonProps} />;
+                return <LocationStep {...commonProps} />;
             case 3:
-                return <StepBasicDetails {...commonProps} />;
+                return <DetailsStep {...commonProps} />;
             case 4:
-                return <StepLocation {...commonProps} />;
+                return <PhotosStep {...commonProps} />;
             case 5:
-                // Conditionally render pricing step based on listing type
-                if (formData.listingType === LISTING_TYPES.BUY) {
-                    return <StepBuyPricing {...commonProps} />;
-                }
-                return <StepRentPricing {...commonProps} />;
+                return <VirtualTourStep {...commonProps} />;
             case 6:
-                return <StepPropertySpecific {...commonProps} />;
+                return <PricingStep {...commonProps} />;
             case 7:
-                return <StepAmenities {...commonProps} />;
-            case 8:
-                return <StepPhotos {...commonProps} />;
-            case 9:
-                return <StepOwnerDetails {...commonProps} />;
+                return <ReviewStep formData={formData} onEditStep={handleEditStep} />;
             default:
                 return null;
         }
@@ -237,12 +296,21 @@ export default function PropertyWizard() {
 
     return (
         <div className="min-h-screen bg-background py-4 sm:py-8 px-3 sm:px-6 lg:px-8">
-            <div className="max-w-4xl mx-auto">
+            {/* Draft Restore Modal */}
+            {showDraftModal && (
+                <DraftRestoreModal
+                    draft={pendingDraft}
+                    onRestore={handleRestoreDraft}
+                    onDiscard={handleDiscardDraft}
+                />
+            )}
+
+            <div className="max-w-4xl mx-auto pb-20 sm:pb-0">
                 {/* Header */}
                 <div className="mb-6 sm:mb-8">
                     <h1 className="text-2xl sm:text-3xl lg:text-4xl font-bold text-foreground mb-1 sm:mb-2">Post Your Property</h1>
                     <p className="text-sm sm:text-base text-muted-foreground">
-                        Step {currentStep} of {STEPS.length}
+                        Step {currentStep} of {STEPS.length} — {STEPS[currentStep - 1].name}
                     </p>
                 </div>
 
@@ -325,8 +393,8 @@ export default function PropertyWizard() {
                 {/* Step Content */}
                 <Card className="p-4 sm:p-6 lg:p-8 shadow-lg border border-border mb-6 sm:mb-8 bg-card">{renderStep()}</Card>
 
-                {/* Buttons */}
-                <div className="flex gap-3 sm:gap-4 justify-between">
+                {/* Buttons - Desktop (normal flow) */}
+                <div className="hidden sm:flex gap-3 sm:gap-4 justify-between">
                     <Button
                         variant="outline"
                         onClick={handlePrevious}
@@ -334,7 +402,7 @@ export default function PropertyWizard() {
                         className="flex items-center gap-1 sm:gap-2 px-4 sm:px-6 text-sm sm:text-base"
                     >
                         <ChevronLeft size={18} />
-                        <span className="hidden xs:inline">Previous</span>
+                        <span>Previous</span>
                     </Button>
 
                     <Button
@@ -344,7 +412,40 @@ export default function PropertyWizard() {
                     >
                         {isSubmitting ? (
                             <>
-                                <span className="animate-spin">⏳</span> <span className="hidden sm:inline">Processing...</span>
+                                <span className="animate-spin">⏳</span> <span>Processing...</span>
+                            </>
+                        ) : currentStep === STEPS.length ? (
+                            <>
+                                Submit <Check size={18} />
+                            </>
+                        ) : (
+                            <>
+                                Next <ChevronRight size={18} />
+                            </>
+                        )}
+                    </Button>
+                </div>
+
+                {/* Buttons - Mobile (sticky bottom) */}
+                <div className="fixed bottom-0 left-0 right-0 sm:hidden bg-background/95 backdrop-blur-md border-t border-border p-3 flex gap-3 z-40">
+                    <Button
+                        variant="outline"
+                        onClick={handlePrevious}
+                        disabled={currentStep === 1}
+                        className="flex-1 flex items-center justify-center gap-1.5 h-11"
+                    >
+                        <ChevronLeft size={18} />
+                        Previous
+                    </Button>
+
+                    <Button
+                        onClick={handleNext}
+                        disabled={isSubmitting}
+                        className="flex-1 flex items-center justify-center gap-1.5 h-11"
+                    >
+                        {isSubmitting ? (
+                            <>
+                                <span className="animate-spin">⏳</span> Processing...
                             </>
                         ) : currentStep === STEPS.length ? (
                             <>

@@ -419,7 +419,7 @@ const OTPVerificationModal = React.memo(({
           <div className="space-y-4">
             <div className="flex justify-center gap-2">
               {otp.map((digit, index) => (
-                <Input
+                <input
                   key={index}
                   ref={(el) => (inputRefs.current[index] = el)}
                   type="text"
@@ -430,9 +430,14 @@ const OTPVerificationModal = React.memo(({
                   onKeyDown={(e) => handleKeyDown(index, e)}
                   onPaste={handlePaste}
                   className={cn(
-                    "w-12 h-12 text-center text-lg font-semibold border-input bg-background text-foreground",
-                    displayError && "border-red-300 dark:border-red-700 focus:border-red-500 focus:ring-red-500",
-                    success && "border-green-300 dark:border-green-700 focus:border-green-500 focus:ring-green-500"
+                    "flex rounded-md border bg-background px-0 py-2",
+                    "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/30 focus-visible:ring-offset-2 focus-visible:ring-offset-background focus-visible:border-primary",
+                    "transition-all duration-180",
+                    "disabled:cursor-not-allowed disabled:opacity-50",
+                    "w-12 h-12 text-center text-lg font-semibold text-foreground",
+                    !displayError && !success && "border-input",
+                    displayError && "border-destructive focus-visible:ring-destructive/30 focus-visible:border-destructive animate-shake",
+                    success && "border-green-500 focus-visible:ring-green-500/30 focus-visible:border-green-500"
                   )}
                   disabled={isLoading || success}
                 />

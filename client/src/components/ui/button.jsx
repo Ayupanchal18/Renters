@@ -8,16 +8,13 @@ import { cn } from "../../lib/utils";
  * Premium Button Component with enhanced variants
  */
 const buttonVariants = cva(
-    // Base styles with premium transitions and micro-interactions
-    // Transition timing: transform 180ms, box-shadow 180ms, background 160ms (Req 3.7)
-    // Added hover-lift-shadow and active-press for enhanced micro-interactions (Req 2.1, 2.2)
-    "inline-flex items-center justify-center gap-2 whitespace-nowrap rounded-md text-sm ring-offset-background focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/30 focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50 disabled:cursor-not-allowed disabled:saturate-50 [&_svg]:pointer-events-none [&_svg]:size-4 [&_svg]:shrink-0 hover-lift-shadow active-press",
+    // Base styles: smooth transitions, press-down feedback, keyboard focus
+    "inline-flex items-center justify-center gap-2 whitespace-nowrap rounded-md text-sm ring-offset-background focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50 disabled:cursor-not-allowed disabled:saturate-50 [&_svg]:pointer-events-none [&_svg]:size-4 [&_svg]:shrink-0 transition-all duration-200 active:scale-95",
     {
         variants: {
             variant: {
-                // Primary: solid bg, white text, subtle inset gradient, shadow-lg on focus with primary ring at 30% opacity (Req 3.1)
-                // Micro-interactions handled by base hover-lift-shadow and active-press classes (Req 2.1, 2.2)
-                default: "bg-primary text-primary-foreground shadow-md bg-gradient-to-b from-primary to-primary/90",
+                // Primary: solid bg, white text, subtle gradient + glow on hover
+                default: "bg-primary text-primary-foreground shadow-md bg-gradient-to-b from-primary to-primary/90 hover:shadow-rt-glow",
                 
                 // Destructive: similar to primary but with error color
                 destructive:
@@ -34,8 +31,8 @@ const buttonVariants = cva(
                 // Ghost: transparent bg, colored text, hover bg using primary at 8% opacity (Req 3.4)
                 ghost: "bg-transparent text-primary hover:bg-primary/8 active:bg-primary/12",
                 
-                // Link: text styling with underline (no lift effect needed)
-                link: "text-primary underline-offset-4 hover:underline [&.hover-lift-shadow]:hover:transform-none [&.active-press]:active:transform-none",
+                // Link: text styling with underline (no scale effect needed)
+                link: "text-primary underline-offset-4 hover:underline [&]:active:scale-100",
             },
             size: {
                 default: "h-10 px-4 py-2",

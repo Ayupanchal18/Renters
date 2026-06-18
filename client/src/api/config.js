@@ -1,10 +1,13 @@
 import axios from "axios";
 import { enhanceApiClient } from "../utils/errorHandling";
 
-const API_BASE_URL = import.meta.env.VITE_API_BASE_URL;
+const RAW_API_BASE_URL = import.meta.env.VITE_API_BASE_URL || "";
+const API_BASE_URL = RAW_API_BASE_URL.endsWith('/api') 
+    ? RAW_API_BASE_URL.slice(0, -4) 
+    : RAW_API_BASE_URL;
 
 const baseApiClient = axios.create({
-    baseURL: API_BASE_URL,
+    baseURL: API_BASE_URL || undefined,
     timeout: 30000,
     transformResponse: [(data) => {
         if (typeof data === 'string') {

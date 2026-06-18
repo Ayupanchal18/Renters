@@ -1,5 +1,5 @@
 import { Home, ShoppingBag } from 'lucide-react';
-import { LISTING_TYPES, LISTING_TYPE_LABELS } from '@shared/propertyTypes';
+import { LISTING_TYPES } from '@shared/propertyTypes';
 
 const LISTING_OPTIONS = [
     {

@@ -24,7 +24,8 @@ import {
   ChevronLeft,
   ChevronRight,
   ChevronsLeft,
-  ChevronsRight
+  ChevronsRight,
+  SearchX
 } from 'lucide-react';
 
 /**
@@ -132,23 +133,20 @@ const UserCard = ({
             </DropdownMenuItem>
             <DropdownMenuSeparator />
             {status === 'active' && (
-              <DropdownMenuItem onClick={() => onStatusChange(user._id, 'deactivate')}>
+              <DropdownMenuItem onClick={() => onStatusChange(user, 'deactivate')}>
                 <UserX className="h-4 w-4 mr-2" />
                 Deactivate
               </DropdownMenuItem>
             )}
             {status === 'inactive' && (
-              <DropdownMenuItem onClick={() => onStatusChange(user._id, 'activate')}>
+              <DropdownMenuItem onClick={() => onStatusChange(user, 'activate')}>
                 <UserCheck className="h-4 w-4 mr-2" />
                 Activate
               </DropdownMenuItem>
             )}
             {status !== 'blocked' && (
               <DropdownMenuItem 
-                onClick={() => {
-                  const reason = window.prompt('Enter reason for blocking (optional):');
-                  onStatusChange(user._id, 'block', reason);
-                }}
+                onClick={() => onStatusChange(user, 'block')}
                 className="text-destructive focus:text-destructive"
               >
                 <Ban className="h-4 w-4 mr-2" />
@@ -156,19 +154,19 @@ const UserCard = ({
               </DropdownMenuItem>
             )}
             {status === 'blocked' && (
-              <DropdownMenuItem onClick={() => onStatusChange(user._id, 'unblock')}>
+              <DropdownMenuItem onClick={() => onStatusChange(user, 'unblock')}>
                 <UserCheck className="h-4 w-4 mr-2" />
                 Unblock User
               </DropdownMenuItem>
             )}
             <DropdownMenuSeparator />
-            <DropdownMenuItem onClick={() => onResetPassword(user._id)}>
+            <DropdownMenuItem onClick={() => onResetPassword(user)}>
               <Key className="h-4 w-4 mr-2" />
               Reset Password
             </DropdownMenuItem>
             <DropdownMenuSeparator />
             <DropdownMenuItem 
-              onClick={() => onDelete(user._id)}
+              onClick={() => onDelete(user)}
               className="text-destructive focus:text-destructive"
             >
               <Trash2 className="h-4 w-4 mr-2" />
@@ -207,7 +205,9 @@ const UserTableRow = ({
   onChangeRole, 
   onStatusChange, 
   onDelete, 
-  onResetPassword 
+  onResetPassword,
+  selected,
+  onSelect
 }) => {
   const getStatus = () => {
     if (user.isBlocked) return 'blocked';
@@ -227,7 +227,16 @@ const UserTableRow = ({
   };
 
   return (
-    <tr className="border-b border-border hover:bg-muted/50 transition-colors">
+    <tr className={cn('border-b border-border hover:bg-muted/50 transition-colors', selected && 'bg-primary/5')}>
+      <td className="px-4 py-3 w-10">
+        <input
+          type="checkbox"
+          checked={!!selected}
+          onChange={(e) => onSelect?.(user._id, e.target.checked)}
+          className="h-4 w-4 rounded border-border accent-primary cursor-pointer"
+          aria-label={`Select ${user.name}`}
+        />
+      </td>
       <td className="px-4 py-3">
         <div className="flex items-center gap-3">
           <div className="h-10 w-10 rounded-full bg-primary/10 flex items-center justify-center shrink-0">
@@ -276,23 +285,20 @@ const UserTableRow = ({
             </DropdownMenuItem>
             <DropdownMenuSeparator />
             {status === 'active' && (
-              <DropdownMenuItem onClick={() => onStatusChange(user._id, 'deactivate')}>
+              <DropdownMenuItem onClick={() => onStatusChange(user, 'deactivate')}>
                 <UserX className="h-4 w-4 mr-2" />
                 Deactivate
               </DropdownMenuItem>
             )}
             {status === 'inactive' && (
-              <DropdownMenuItem onClick={() => onStatusChange(user._id, 'activate')}>
+              <DropdownMenuItem onClick={() => onStatusChange(user, 'activate')}>
                 <UserCheck className="h-4 w-4 mr-2" />
                 Activate
               </DropdownMenuItem>
             )}
             {status !== 'blocked' && (
               <DropdownMenuItem 
-                onClick={() => {
-                  const reason = window.prompt('Enter reason for blocking (optional):');
-                  onStatusChange(user._id, 'block', reason);
-                }}
+                onClick={() => onStatusChange(user, 'block')}
                 className="text-destructive focus:text-destructive"
               >
                 <Ban className="h-4 w-4 mr-2" />
@@ -300,19 +306,19 @@ const UserTableRow = ({
               </DropdownMenuItem>
             )}
             {status === 'blocked' && (
-              <DropdownMenuItem onClick={() => onStatusChange(user._id, 'unblock')}>
+              <DropdownMenuItem onClick={() => onStatusChange(user, 'unblock')}>
                 <UserCheck className="h-4 w-4 mr-2" />
                 Unblock User
               </DropdownMenuItem>
             )}
             <DropdownMenuSeparator />
-            <DropdownMenuItem onClick={() => onResetPassword(user._id)}>
+            <DropdownMenuItem onClick={() => onResetPassword(user)}>
               <Key className="h-4 w-4 mr-2" />
               Reset Password
             </DropdownMenuItem>
             <DropdownMenuSeparator />
             <DropdownMenuItem 
-              onClick={() => onDelete(user._id)}
+              onClick={() => onDelete(user)}
               className="text-destructive focus:text-destructive"
             >
               <Trash2 className="h-4 w-4 mr-2" />
@@ -446,8 +452,32 @@ const UserTable = ({
   onChangeRole,
   onStatusChange,
   onDelete,
-  onResetPassword
+  onResetPassword,
+  hasActiveFilters,
+  onClearFilters,
+  selectedIds = [],
+  onSelectionChange
 }) => {
+  const allSelected = users.length > 0 && users.every(u => selectedIds.includes(u._id));
+  const someSelected = users.some(u => selectedIds.includes(u._id));
+
+  const handleSelectAll = (checked) => {
+    if (checked) {
+      const newIds = [...new Set([...selectedIds, ...users.map(u => u._id)])];
+      onSelectionChange?.(newIds);
+    } else {
+      onSelectionChange?.(selectedIds.filter(id => !users.some(u => u._id === id)));
+    }
+  };
+
+  const handleSelectRow = (id, checked) => {
+    if (checked) {
+      onSelectionChange?.([...selectedIds, id]);
+    } else {
+      onSelectionChange?.(selectedIds.filter(i => i !== id));
+    }
+  };
+
   return (
     <>
       {/* Mobile Card View */}
@@ -455,8 +485,21 @@ const UserTable = ({
         {loading ? (
           <CardSkeleton />
         ) : users.length === 0 ? (
-          <div className="px-4 py-12 text-center">
-            <p className="text-muted-foreground">No users found</p>
+          <div className="bg-card border border-border rounded-lg p-6 text-center flex flex-col items-center justify-center">
+            <div className="h-12 w-12 rounded-full bg-muted flex items-center justify-center mb-3">
+              <SearchX className="h-6 w-6 text-muted-foreground" />
+            </div>
+            <h3 className="font-semibold text-foreground mb-1">No users found</h3>
+            <p className="text-xs text-muted-foreground max-w-xs mb-3">
+              {hasActiveFilters
+                ? "We couldn't find any users matching your filters. Try clearing or resetting your query."
+                : "No users registered yet."}
+            </p>
+            {hasActiveFilters && onClearFilters && (
+              <Button variant="outline" size="sm" onClick={onClearFilters}>
+                Reset Filters
+              </Button>
+            )}
           </div>
         ) : (
           users.map((user) => (
@@ -482,6 +525,16 @@ const UserTable = ({
         <table className="w-full min-w-[700px]">
           <thead>
             <tr className="border-b border-border bg-muted/50">
+              <th className="px-4 py-3 w-10">
+                <input
+                  type="checkbox"
+                  checked={allSelected}
+                  ref={el => { if (el) el.indeterminate = someSelected && !allSelected; }}
+                  onChange={(e) => handleSelectAll(e.target.checked)}
+                  className="h-4 w-4 rounded border-border accent-primary cursor-pointer"
+                  aria-label="Select all users"
+                />
+              </th>
               <th className="px-4 py-3 text-left text-sm font-medium text-muted-foreground whitespace-nowrap">
                 <SortableHeader
                   column="name"
@@ -526,7 +579,22 @@ const UserTable = ({
             ) : users.length === 0 ? (
               <tr>
                 <td colSpan={6} className="px-4 py-12 text-center">
-                  <p className="text-muted-foreground">No users found</p>
+                  <div className="flex flex-col items-center justify-center">
+                    <div className="h-12 w-12 rounded-full bg-muted flex items-center justify-center mb-3">
+                      <SearchX className="h-6 w-6 text-muted-foreground" />
+                    </div>
+                    <h3 className="font-semibold text-foreground mb-1">No users found</h3>
+                    <p className="text-xs text-muted-foreground max-w-sm mb-3">
+                      {hasActiveFilters
+                        ? "We couldn't find any users matching your filters. Try clearing or resetting your query."
+                        : "No users registered yet."}
+                    </p>
+                    {hasActiveFilters && onClearFilters && (
+                      <Button variant="outline" size="sm" onClick={onClearFilters}>
+                        Reset Filters
+                      </Button>
+                    )}
+                  </div>
                 </td>
               </tr>
             ) : (
@@ -539,6 +607,8 @@ const UserTable = ({
                   onStatusChange={onStatusChange}
                   onDelete={onDelete}
                   onResetPassword={onResetPassword}
+                  selected={selectedIds.includes(user._id)}
+                  onSelect={handleSelectRow}
                 />
               ))
             )}

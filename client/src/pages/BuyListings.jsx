@@ -11,7 +11,9 @@ import SEOHead from "../components/seo/SEOHead";
 import propertyService from "../api/propertyService";
 import wishlistService from "../api/wishlistService";
 import { isAuthenticated } from "../utils/auth";
-import { SlidersHorizontal, X, Sparkles, Building2 } from "lucide-react";
+import { SlidersHorizontal, X, Sparkles, Building2, Map as MapIcon } from "lucide-react";
+import { Dialog, DialogContent, DialogTitle, DialogDescription } from "../components/ui/dialog";
+import PropertyMap from "../components/all_listing/PropertyMap";
 
 /**
  * BuyListings Page Component
@@ -54,6 +56,9 @@ export default function BuyListings() {
     const [loadingMore, setLoadingMore] = useState(false);
     const [wishlistIds, setWishlistIds] = useState(new Set());
     const [mobileFiltersOpen, setMobileFiltersOpen] = useState(false);
+    const [mobileMapOpen, setMobileMapOpen] = useState(false);
+    const [hoveredListingId, setHoveredListingId] = useState(null);
+    const [activeListingId, setActiveListingId] = useState(null);
     
     // Check for search params in URL on initial load
     const urlQuery = searchParams.get('q') || '';
@@ -302,9 +307,13 @@ export default function BuyListings() {
 
     // Handle view mode change - persist to localStorage
     const handleViewModeChange = useCallback((newViewMode) => {
-        setViewMode(newViewMode);
-        if (typeof window !== 'undefined') {
-            localStorage.setItem('propertyViewMode', newViewMode);
+        if (newViewMode === 'map') {
+            setMobileMapOpen(true);
+        } else {
+            setViewMode(newViewMode);
+            if (typeof window !== 'undefined') {
+                localStorage.setItem('propertyViewMode', newViewMode);
+            }
         }
     }, []);
 
@@ -420,6 +429,9 @@ export default function BuyListings() {
                                 <span className="sm:hidden">Showing results for buy properties</span>
                                 <span className="hidden sm:inline">Properties for Sale</span>
                             </h1>
+                            <div className="sr-only" aria-live="polite">
+                                {pagination.total} properties found {filters.location ? `in ${filters.location}` : ""}
+                            </div>
                             <p className="text-xs sm:text-sm text-muted-foreground hidden sm:block">
                                 Find your dream home from {pagination.total} verified listings
                             </p>
@@ -485,59 +497,116 @@ export default function BuyListings() {
                         </>
                     )}
 
-                    {/* Desktop Layout */}
-                    <div className="flex gap-8">
-                        {/* Desktop Sidebar */}
-                        <div className="hidden lg:block w-80 flex-shrink-0">
-                            <div className="sticky top-24">
-                                <BuyFilterSidebar 
-                                    filters={filters} 
-                                    onFilterChange={handleFilterChange} 
-                                />
+                    {/* Main Content Layout */}
+                    <div className="flex flex-col lg:flex-row gap-6 relative">
+                        {/* Listings Column */}
+                        <div className="flex-1 min-w-0">
+                            <div className="flex gap-6">
+                                {/* Desktop Filter Sidebar (xl+) */}
+                                <div className="hidden xl:block w-72 flex-shrink-0">
+                                    <div className="sticky top-[80px]">
+                                        <BuyFilterSidebar 
+                                            filters={filters} 
+                                            onFilterChange={handleFilterChange} 
+                                        />
+                                    </div>
+                                </div>
+
+                                {/* Listings List & Controls */}
+                                <div className="flex-1 min-w-0">
+                                    <ViewControls
+                                        viewMode={viewMode === "map" ? "grid" : viewMode}
+                                        onViewChange={handleViewModeChange}
+                                        sortBy={sortBy}
+                                        onSortChange={handleSortChange}
+                                        properties={properties}
+                                        total={pagination.total}
+                                        listingType="buy"
+                                        activeFilterCount={activeFilterCount}
+                                        onFilterClick={() => setMobileFiltersOpen(true)}
+                                        onClearFilters={() => handleFilterChange('clearAll')}
+                                    />
+
+                                    <ListingsGrid
+                                        viewMode={viewMode === "map" ? "grid" : viewMode}
+                                        properties={properties}
+                                        loading={isLoading}
+                                        onClearFilters={() => handleFilterChange('clearAll')}
+                                        onLoadMore={handleLoadMore}
+                                        hasMore={pagination.hasMore}
+                                        isLoadingMore={loadingMore}
+                                        total={pagination.total}
+                                        wishlistIds={wishlistIds}
+                                        onWishlistChange={(propertyId, isFavorited) => {
+                                            setWishlistIds(prev => {
+                                                const newSet = new Set(prev);
+                                                if (isFavorited) {
+                                                    newSet.add(propertyId);
+                                                } else {
+                                                    newSet.delete(propertyId);
+                                                }
+                                                return newSet;
+                                            });
+                                        }}
+                                        emptyStateMessage="No properties for sale found matching your criteria. Try adjusting your filters or search for a different location."
+                                        emptyStateTitle="No properties for sale"
+                                        activeListingId={activeListingId}
+                                        hoveredListingId={hoveredListingId}
+                                        onCardHover={setHoveredListingId}
+                                        onMarkerClick={setActiveListingId}
+                                    />
+                                </div>
                             </div>
                         </div>
 
-                        {/* Main Content */}
-                        <div className="flex-1 min-w-0">
-                            <ViewControls
-                                viewMode={viewMode}
-                                onViewChange={handleViewModeChange}
-                                sortBy={sortBy}
-                                onSortChange={handleSortChange}
-                                properties={properties}
-                                total={pagination.total}
-                                listingType="buy"
-                                activeFilterCount={activeFilterCount}
-                                onFilterClick={() => setMobileFiltersOpen(true)}
-                                onClearFilters={() => handleFilterChange('clearAll')}
-                            />
-
-                            <ListingsGrid
-                                viewMode={viewMode}
-                                properties={properties}
-                                loading={isLoading}
-                                onClearFilters={() => handleFilterChange('clearAll')}
-                                onLoadMore={handleLoadMore}
-                                hasMore={pagination.hasMore}
-                                isLoadingMore={loadingMore}
-                                total={pagination.total}
-                                wishlistIds={wishlistIds}
-                                onWishlistChange={(propertyId, isFavorited) => {
-                                    setWishlistIds(prev => {
-                                        const newSet = new Set(prev);
-                                        if (isFavorited) {
-                                            newSet.add(propertyId);
-                                        } else {
-                                            newSet.delete(propertyId);
-                                        }
-                                        return newSet;
-                                    });
-                                }}
-                                emptyStateMessage="No properties for sale found matching your criteria. Try adjusting your filters or search for a different location."
-                                emptyStateTitle="No properties for sale"
-                            />
+                        {/* Sticky Desktop Map (lg+) */}
+                        <div className="hidden lg:block w-[40%] xl:w-[35%] flex-shrink-0">
+                            <div className="sticky top-[80px] h-[calc(100vh-100px)] min-h-[450px]">
+                                <PropertyMap
+                                    properties={properties}
+                                    loading={isLoading}
+                                    activeListingId={activeListingId}
+                                    hoveredListingId={hoveredListingId}
+                                    onMarkerClick={setActiveListingId}
+                                    onMarkerHover={setHoveredListingId}
+                                    className="h-full rounded-2xl border border-border"
+                                />
+                            </div>
                         </div>
                     </div>
+
+                    {/* Floating "View on Map" FAB (Mobile/Tablet below lg) */}
+                    <div className="lg:hidden fixed bottom-6 left-1/2 -translate-x-1/2 z-40">
+                        <button
+                            onClick={() => setMobileMapOpen(true)}
+                            className="flex items-center gap-2 px-5 py-3 rounded-full bg-emerald-500 hover:bg-emerald-600 text-white font-semibold shadow-lg hover:shadow-xl active:scale-95 transition-all duration-200 border border-emerald-500/20 backdrop-blur-sm"
+                            aria-label="View properties on map"
+                        >
+                            <MapIcon className="w-4 h-4" />
+                            <span>View on Map</span>
+                        </button>
+                    </div>
+
+                    {/* Full-Screen Mobile Map Dialog/Drawer */}
+                    <Dialog open={mobileMapOpen} onOpenChange={setMobileMapOpen}>
+                        <DialogContent className="sm:max-w-[90vw] w-[95vw] h-[85vh] p-0 overflow-hidden rounded-2xl border border-border/80 bg-card/95 backdrop-blur-xl">
+                            <DialogTitle className="sr-only">Properties Map View</DialogTitle>
+                            <DialogDescription className="sr-only">
+                                Interactive map showing locations of the listed properties.
+                            </DialogDescription>
+                            <div className="relative w-full h-full">
+                                <PropertyMap
+                                    properties={properties}
+                                    loading={isLoading}
+                                    activeListingId={activeListingId}
+                                    hoveredListingId={hoveredListingId}
+                                    onMarkerClick={setActiveListingId}
+                                    onMarkerHover={setHoveredListingId}
+                                    className="h-full rounded-2xl border-0"
+                                />
+                            </div>
+                        </DialogContent>
+                    </Dialog>
                 </div>
             </main>
             <Footer />

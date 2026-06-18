@@ -2,7 +2,11 @@
   "extends": "expo/tsconfig.base.json",
   "compilerOptions": {
     "jsx": "react-jsx",
-    "strict": true
+    "strict": true,
+    "baseUrl": ".",
+    "paths": {
+      "@shared/*": ["../shared/*"]
+    }
   },
   "include": [
     "**/*.ts",

@@ -17,6 +17,7 @@ import { useAuth } from "../../features/auth/AuthContext";
 import ProtectedScreen from "../../components/auth/ProtectedScreen";
 import type { WishlistItem } from "../../types/types";
 import type { RootStackParamList } from "../../navigation/types";
+import { useScrollRestore } from "../../hooks/useScrollRestore";
 
 type NavProp = NativeStackNavigationProp<RootStackParamList>;
 
@@ -25,6 +26,7 @@ export default function WishlistScreen() {
   const styles = useMemo(() => getStyles(colors, isDark), [colors, isDark]);
   const navigation = useNavigation<NavProp>();
   const { isGuest } = useAuth();
+  const { scrollRef, onScroll } = useScrollRestore('wishlist');
   
   const { data, isPending, isError, refetch, isRefetching } = useQuery({
     queryKey: ["wishlist"],
@@ -81,10 +83,13 @@ export default function WishlistScreen() {
 
   return (
     <FlatList
+      ref={scrollRef as any}
       data={data}
       renderItem={renderItem}
       keyExtractor={(item) => item._id}
       style={{ backgroundColor: colors.background }}
+      onScroll={onScroll}
+      scrollEventThrottle={200}
       contentContainerStyle={[
         styles.list,
         (!data || data.length === 0) && styles.emptyContainer,

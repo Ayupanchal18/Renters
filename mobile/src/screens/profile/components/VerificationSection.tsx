@@ -84,6 +84,16 @@ export default function VerificationSection({ user }: Props) {
           isLoading={loadingType === "phone"}
           colors={colors}
         />
+        <View style={styles.divider} />
+        <PressableRow 
+          label="Document Vault" 
+          sublabel="Government ID & address proofs"
+          statusText={user?.verified ? "Verified" : "Manage Vault"}
+          icon={<ShieldCheck color={colors.textSecondary} size={22} />} 
+          statusIcon={user?.verified ? <CheckCircle color={colors.success} size={18} /> : undefined}
+          onPress={() => navigation.navigate("DocumentVault")}
+          colors={colors}
+        />
       </View>
     </View>
   );

@@ -1,7 +1,7 @@
 import { Router } from "express";
 import { z } from "zod";
 import { connectDB } from "../src/config/db.js";
-import { requireAdmin } from "../src/middleware/adminAuth.js";
+import { requirePermission } from "../src/middleware/permissionGuard.js";
 import { filterAuditLogs, getAuditStats, VALID_ACTIONS, VALID_RESOURCE_TYPES } from "../src/services/adminAuditService.js";
 import { User } from "../models/User.js";
 
@@ -33,7 +33,7 @@ const auditLogsQuerySchema = z.object({
  * GET /api/admin/audit-logs
  * Get paginated audit logs with filters
  */
-router.get("/", requireAdmin, async (req, res) => {
+router.get("/", requirePermission('audit-logs:read'), async (req, res) => {
     try {
         await connectDB();
 
@@ -84,7 +84,7 @@ router.get("/", requireAdmin, async (req, res) => {
  * GET /api/admin/audit-logs/stats
  * Get audit log statistics
  */
-router.get("/stats", requireAdmin, async (req, res) => {
+router.get("/stats", requirePermission('audit-logs:read'), async (req, res) => {
     try {
         await connectDB();
 
@@ -111,7 +111,7 @@ router.get("/stats", requireAdmin, async (req, res) => {
  * GET /api/admin/audit-logs/filters
  * Get available filter options (actions, resource types, admins)
  */
-router.get("/filters", requireAdmin, async (req, res) => {
+router.get("/filters", requirePermission('audit-logs:read'), async (req, res) => {
     try {
         await connectDB();
 

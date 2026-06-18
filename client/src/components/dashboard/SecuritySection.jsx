@@ -15,7 +15,7 @@ import {
     AlertDialogFooter,
     AlertDialogHeader,
     AlertDialogTitle,
-} from "../ui/alert-dialog";
+} from "../ui/alert-dialog.jsx";
 
 const SecuritySection = React.memo(function SecuritySection({ isLoading = false, error = null, user = null }) {
     const [activeModal, setActiveModal] = useState(null);

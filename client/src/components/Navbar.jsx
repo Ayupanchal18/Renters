@@ -18,7 +18,7 @@ import {
     AlertDialogFooter,
     AlertDialogHeader,
     AlertDialogTitle,
-} from "./ui/alert-dialog";
+} from "./ui/alert-dialog.jsx";
 
 /**
  * Navbar variant styles using CVA
@@ -228,7 +228,7 @@ export default function Navbar({ variant = "default" }) {
                     <Link
                         to="/"
                         className={cn(
-                            "flex items-center gap-2 text-xl font-bold hover:opacity-80 transition-opacity",
+                            "flex items-center gap-2.5 text-2xl font-bold hover:opacity-80 transition-opacity",
                             isGradientVariant
                                 ? "text-white"
                                 : "bg-gradient-to-r from-primary to-primary bg-clip-text text-transparent"
@@ -237,7 +237,7 @@ export default function Navbar({ variant = "default" }) {
                         <img 
                             src="/Logo2.png" 
                             alt="Renters Logo" 
-                            className="h-8 w-8 object-contain"
+                            className="h-10 w-10 object-contain"
                         />
                         <span>Renters</span>
                     </Link>

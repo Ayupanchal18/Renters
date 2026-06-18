@@ -1,6 +1,6 @@
-import React, { useState } from 'react';
+import React, { useState, useMemo } from 'react';
 import { View, Text, StyleSheet, Pressable, LayoutAnimation, UIManager, Platform } from 'react-native';
-import { colors } from '../../theme/tokens';
+import { useTheme } from '../../theme/useTheme';
 
 // Enable LayoutAnimation for Android
 if (Platform.OS === 'android' && UIManager.setLayoutAnimationEnabledExperimental) {
@@ -17,6 +17,8 @@ interface CollapsibleSectionProps {
 
 export default function CollapsibleSection({ title, children, defaultOpen = true, count, icon }: CollapsibleSectionProps) {
   const [isOpen, setIsOpen] = useState(defaultOpen);
+  const { colors, isDark } = useTheme();
+  const styles = useMemo(() => getStyles(colors, isDark), [colors, isDark]);
 
   const toggleOpen = () => {
     LayoutAnimation.configureNext(LayoutAnimation.Presets.easeInEaseOut);
@@ -45,7 +47,7 @@ export default function CollapsibleSection({ title, children, defaultOpen = true
   );
 }
 
-const styles = StyleSheet.create({
+const getStyles = (colors: any, isDark: boolean) => StyleSheet.create({
   container: {
     backgroundColor: colors.surface,
     borderRadius: 12,
@@ -100,3 +102,4 @@ const styles = StyleSheet.create({
     paddingBottom: 16,
   },
 });
+

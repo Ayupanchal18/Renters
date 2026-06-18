@@ -7,6 +7,17 @@ import { queryClient } from "../state/queryClient";
 import { AuthProvider } from "../features/auth/AuthContext";
 import RootNavigator from "../navigation/RootNavigator";
 import { ThemeProvider, useTheme } from "../theme/ThemeContext";
+import NetworkWarning from "../components/ui/NetworkWarning";
+import * as Notifications from 'expo-notifications';
+
+// Handle notifications when the app is in the foreground
+Notifications.setNotificationHandler({
+  handleNotification: async () => ({
+    shouldShowAlert: true,
+    shouldPlaySound: true,
+    shouldSetBadge: true,
+  } as any),
+});
 
 function RootAppContent() {
   const { colors, isDark } = useTheme();
@@ -26,6 +37,7 @@ function RootAppContent() {
   return (
     <NavigationContainer theme={navTheme}>
       <StatusBar style={isDark ? "light" : "dark"} />
+      <NetworkWarning />
       <RootNavigator />
     </NavigationContainer>
   );

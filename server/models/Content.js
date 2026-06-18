@@ -44,6 +44,23 @@ const ContentSchema = new Schema(
             type: Date,
             default: null
         },
+        scheduledFor: {
+            type: Date,
+            default: null
+        },
+        status: {
+            type: String,
+            enum: ['draft', 'scheduled', 'published', 'archived'],
+            default: 'draft',
+            index: true
+        },
+        versions: [{
+            versionNumber: { type: Number, required: true },
+            content: { type: String, default: '' }, // HTML string content of the version
+            savedBy: { type: Schema.Types.ObjectId, ref: 'User' },
+            savedAt: { type: Date, default: Date.now },
+            label: { type: String, default: '' }
+        }],
         order: {
             type: Number,
             default: 0,
@@ -87,10 +104,20 @@ ContentSchema.index({ isPublished: 1, publishedAt: -1 });
 ContentSchema.index({ type: 1, isPublished: 1, startDate: 1, endDate: 1 });
 ContentSchema.index({ title: 'text', content: 'text' });
 
-// Pre-save hook to set publishedAt when publishing
+// Pre-save hook to set publishedAt when publishing and synchronize status/isPublished
 ContentSchema.pre('save', function (next) {
-    if (this.isModified('isPublished') && this.isPublished && !this.publishedAt) {
-        this.publishedAt = new Date();
+    if (this.status === 'published') {
+        this.isPublished = true;
+        if (!this.publishedAt) {
+            this.publishedAt = new Date();
+        }
+    } else if (this.isPublished) {
+        this.status = 'published';
+        if (!this.publishedAt) {
+            this.publishedAt = new Date();
+        }
+    } else {
+        this.isPublished = false;
     }
     next();
 });

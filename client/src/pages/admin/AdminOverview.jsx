@@ -4,9 +4,11 @@ import { Card, CardContent, CardHeader, CardTitle } from '../../components/ui/ca
 import { Skeleton } from '../../components/ui/skeleton';
 import { Button } from '../../components/ui/button';
 import StatsCards from '../../components/admin/StatsCards';
+import KpiCard from '../../components/admin/KpiCard';
 import ActivityFeed from '../../components/admin/ActivityFeed';
 import { authenticatedFetch, getHeaders } from '../../lib/api';
 import { cn } from '../../lib/utils';
+import { useAdminSocket } from '../../hooks/useAdminSocket';
 import {
   RefreshCw,
   TrendingUp,
@@ -14,8 +16,12 @@ import {
   MapPin,
   AlertCircle,
   Home,
-  ShoppingCart
+  ShoppingCart,
+  Users,
+  CheckCircle,
+  Clock
 } from 'lucide-react';
+
 
 /**
  * Admin Overview Page
@@ -151,15 +157,24 @@ const AdminOverview = () => {
     loadData();
   }, [loadData]);
 
-  // Auto-refresh every 30 seconds (Requirement 2.5)
+  // Live socket updates
+  const { isConnected } = useAdminSocket(useCallback((data) => {
+    console.log('Live dashboard update received:', data);
+    fetchStats();
+    fetchActivities();
+  }, [fetchStats, fetchActivities]));
+
+  // Falls back to 60s polling if socket is not connected
   useEffect(() => {
+    if (isConnected) return;
+
     const interval = setInterval(() => {
       fetchStats();
       fetchActivities();
-    }, 30000);
+    }, 60000);
 
     return () => clearInterval(interval);
-  }, [fetchStats, fetchActivities]);
+  }, [isConnected, fetchStats, fetchActivities]);
 
   if (error && !stats) {
     return (
@@ -196,8 +211,52 @@ const AdminOverview = () => {
         </Button>
       </div>
 
-      {/* Stats Cards */}
+      {/* Stats Cards (legacy) */}
       <StatsCards stats={stats} loading={loading} />
+
+      {/* Enhanced KPI Cards with Sparklines */}
+      <div className="grid gap-4 grid-cols-2 lg:grid-cols-4">
+        <KpiCard
+          label="Total Users"
+          value={stats?.users?.total?.toLocaleString() ?? '—'}
+          delta={stats?.users?.newThisMonth ? `+${stats.users.newThisMonth} this month` : undefined}
+          deltaDirection="up"
+          sparklineData={stats?.users?.sparkline}
+          icon={Users}
+          color="#6366f1"
+          loading={loading}
+        />
+        <KpiCard
+          label="Total Properties"
+          value={stats?.properties?.total?.toLocaleString() ?? '—'}
+          delta={stats?.properties?.active ? `${stats.properties.active} active` : undefined}
+          deltaDirection="up"
+          sparklineData={stats?.properties?.sparkline}
+          icon={Building2}
+          color="#10b981"
+          loading={loading}
+        />
+        <KpiCard
+          label="Pending Review"
+          value={stats?.properties?.pending?.toLocaleString() ?? '—'}
+          delta={stats?.properties?.pending > 0 ? 'Needs attention' : 'All clear'}
+          deltaDirection={stats?.properties?.pending > 0 ? 'down' : 'up'}
+          sparklineData={stats?.properties?.pendingSparkline}
+          icon={Clock}
+          color="#f59e0b"
+          loading={loading}
+        />
+        <KpiCard
+          label="New Users Today"
+          value={stats?.users?.newToday?.toLocaleString() ?? '—'}
+          delta={stats?.users?.newThisMonth ? `${stats.users.newThisMonth} this month` : undefined}
+          deltaDirection="up"
+          sparklineData={stats?.users?.todaySparkline}
+          icon={CheckCircle}
+          color="#06b6d4"
+          loading={loading}
+        />
+      </div>
 
       {/* Charts and Activity Grid */}
       <div className="grid gap-6 lg:grid-cols-3">

@@ -7,7 +7,8 @@ import { Property } from "../models/Property.js";
 import { User } from "../models/User.js";
 import { connectDB } from "../src/config/db.js";
 import { requireAdmin } from "../src/middleware/adminAuth.js";
-import { createAuditLog } from "../src/services/adminAuditService.js";
+import { createAuditLog, safeCreateAuditLog } from "../src/services/adminAuditService.js";
+import { emitDashboardUpdate } from "../socket.js";
 
 const router = Router();
 
@@ -381,7 +382,7 @@ router.post("/", requireAdmin, async (req, res) => {
         await newProperty.save();
 
         // Create audit log
-        await createAuditLog({
+        await safeCreateAuditLog({
             adminId: req.user._id,
             action: 'CREATE',
             resourceType: 'property',
@@ -395,6 +396,8 @@ router.post("/", requireAdmin, async (req, res) => {
             },
             req
         });
+
+        emitDashboardUpdate('property', { action: 'CREATE', resourceId: newProperty._id });
 
         res.status(201).json({
             success: true,
@@ -538,7 +541,7 @@ router.put("/:id", requireAdmin, async (req, res) => {
             .lean();
 
         // Create audit log
-        await createAuditLog({
+        await safeCreateAuditLog({
             adminId: req.user._id,
             action: 'UPDATE',
             resourceType: 'property',
@@ -552,6 +555,8 @@ router.put("/:id", requireAdmin, async (req, res) => {
             },
             req
         });
+
+        emitDashboardUpdate('property', { action: 'UPDATE', resourceId: req.params.id });
 
         res.json({
             success: true,
@@ -607,7 +612,7 @@ router.delete("/:id", requireAdmin, async (req, res) => {
         });
 
         // Create audit log
-        await createAuditLog({
+        await safeCreateAuditLog({
             adminId: req.user._id,
             action: 'DELETE',
             resourceType: 'property',
@@ -620,6 +625,8 @@ router.delete("/:id", requireAdmin, async (req, res) => {
             },
             req
         });
+
+        emitDashboardUpdate('property', { action: 'DELETE', resourceId: req.params.id });
 
         res.json({
             success: true,
@@ -692,7 +699,7 @@ router.patch("/:id/status", requireAdmin, async (req, res) => {
             .lean();
 
         // Create audit log
-        await createAuditLog({
+        await safeCreateAuditLog({
             adminId: req.user._id,
             action: 'UPDATE',
             resourceType: 'property',
@@ -702,6 +709,8 @@ router.patch("/:id/status", requireAdmin, async (req, res) => {
             metadata: { reason },
             req
         });
+
+        emitDashboardUpdate('property', { action: 'STATUS_CHANGE', resourceId: req.params.id, status });
 
         // Notification would be sent here via notification service
 
@@ -780,7 +789,7 @@ router.patch("/:id/featured", requireAdmin, async (req, res) => {
             .lean();
 
         // Create audit log
-        await createAuditLog({
+        await safeCreateAuditLog({
             adminId: req.user._id,
             action: 'UPDATE',
             resourceType: 'property',
@@ -792,6 +801,8 @@ router.patch("/:id/featured", requireAdmin, async (req, res) => {
             },
             req
         });
+
+        emitDashboardUpdate('property', { action: 'FEATURED_CHANGE', resourceId: req.params.id, featured });
 
         res.json({
             success: true,
@@ -865,7 +876,7 @@ router.post("/:id/images", requireAdmin, upload.array("images", 10), async (req,
             .lean();
 
         // Create audit log
-        await createAuditLog({
+        await safeCreateAuditLog({
             adminId: req.user._id,
             action: 'UPDATE',
             resourceType: 'property',
@@ -966,7 +977,7 @@ router.delete("/:id/images", requireAdmin, async (req, res) => {
             .lean();
 
         // Create audit log
-        await createAuditLog({
+        await safeCreateAuditLog({
             adminId: req.user._id,
             action: 'UPDATE',
             resourceType: 'property',
@@ -992,4 +1003,113 @@ router.delete("/:id/images", requireAdmin, async (req, res) => {
     }
 });
 
+/* ---------------------- BULK ACTION ROUTES ---------------------- */
+
+const bulkPropertyStatusSchema = z.object({
+    ids: z.array(z.string().min(1)).min(1).max(100),
+    status: z.enum(['active', 'inactive', 'blocked', 'rented', 'sold', 'expired']),
+    reason: z.string().optional()
+});
+
+const bulkPropertyExportSchema = z.object({
+    ids: z.array(z.string().min(1)).min(1).max(100),
+    format: z.enum(['csv', 'json']).default('csv')
+});
+
+/**
+ * PATCH /api/admin/properties/bulk/status
+ * Bulk change property status
+ */
+router.patch('/bulk/status', requireAdmin, async (req, res) => {
+    try {
+        await connectDB();
+
+        const parseResult = bulkPropertyStatusSchema.safeParse(req.body);
+        if (!parseResult.success) {
+            return res.status(400).json({ success: false, error: 'VALIDATION_ERROR', details: parseResult.error.errors });
+        }
+
+        const { ids, status, reason } = parseResult.data;
+
+        const result = await Property.updateMany(
+            { _id: { $in: ids }, isDeleted: { $ne: true } },
+            { status }
+        );
+
+        await safeCreateAuditLog({
+            adminId: req.user._id,
+            action: 'BULK_STATUS_CHANGE',
+            resourceType: 'property',
+            resourceId: null,
+            metadata: { count: result.modifiedCount, ids, status, reason },
+            req
+        });
+
+        emitDashboardUpdate('property', { action: 'BULK_STATUS_CHANGE', count: result.modifiedCount, ids, status });
+
+        res.json({ success: true, data: { modifiedCount: result.modifiedCount }, message: `${result.modifiedCount} properties updated to ${status}` });
+    } catch (error) {
+        console.error('Bulk property status error:', error);
+        res.status(500).json({ success: false, error: 'INTERNAL_ERROR', message: 'Bulk status update failed' });
+    }
+});
+
+/**
+ * POST /api/admin/properties/bulk/export
+ * Bulk export properties as CSV or JSON
+ */
+router.post('/bulk/export', requireAdmin, async (req, res) => {
+    try {
+        await connectDB();
+
+        const parseResult = bulkPropertyExportSchema.safeParse(req.body);
+        if (!parseResult.success) {
+            return res.status(400).json({ success: false, error: 'VALIDATION_ERROR', details: parseResult.error.errors });
+        }
+
+        const { ids, format } = parseResult.data;
+
+        const properties = await Property.find({ _id: { $in: ids }, isDeleted: { $ne: true } })
+            .select('title city address category status monthlyRent listingType createdAt ownerName ownerEmail')
+            .lean();
+
+        await safeCreateAuditLog({
+            adminId: req.user._id,
+            action: 'EXPORT',
+            resourceType: 'property',
+            resourceId: null,
+            metadata: { count: properties.length, ids, format },
+            req
+        });
+
+        if (format === 'json') {
+            res.setHeader('Content-Disposition', 'attachment; filename="properties-export.json"');
+            res.setHeader('Content-Type', 'application/json');
+            return res.json(properties);
+        }
+
+        const headers = ['Title', 'City', 'Category', 'Status', 'Rent', 'Type', 'Owner', 'Created'];
+        const rows = properties.map(p => [
+            `"${(p.title || '').replace(/"/g, '""')}"`,
+            `"${(p.city || '').replace(/"/g, '""')}"`,
+            p.category || '',
+            p.status || '',
+            p.monthlyRent || 0,
+            p.listingType || '',
+            `"${(p.ownerName || '').replace(/"/g, '""')}"`,
+            p.createdAt ? new Date(p.createdAt).toISOString().split('T')[0] : ''
+        ].join(','));
+
+        const csv = [headers.join(','), ...rows].join('\n');
+        res.setHeader('Content-Disposition', 'attachment; filename="properties-export.csv"');
+        res.setHeader('Content-Type', 'text/csv');
+        return res.send(csv);
+
+    } catch (error) {
+        console.error('Bulk property export error:', error);
+        res.status(500).json({ success: false, error: 'INTERNAL_ERROR', message: 'Bulk export failed' });
+    }
+});
+
 export default router;
+

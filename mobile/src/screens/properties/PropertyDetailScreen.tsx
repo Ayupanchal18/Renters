@@ -1,4 +1,4 @@
-import React, { useMemo, useState } from "react";
+import React, { useMemo, useState, Suspense, lazy } from "react";
 import type { NativeStackScreenProps } from "@react-navigation/native-stack";
 import {
   StyleSheet,
@@ -15,7 +15,7 @@ import { SafeAreaView } from "react-native-safe-area-context";
 import { LinearGradient } from "expo-linear-gradient";
 import { BlurView } from "expo-blur";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { ArrowLeft, Share2, Heart, MapPin, IndianRupee, Shield, CheckCircle, Clock, Bed, Bath, Sofa, Phone, MessageCircle, Wifi, Car, Dumbbell, Trees, Shield as Security, Camera, Gamepad2, Flame, Home, Users, Zap, Waves, Wind, Sparkles } from "lucide-react-native";
+import { ArrowLeft, Share2, Heart, MapPin, IndianRupee, Shield, CheckCircle, Clock, Bed, Bath, Sofa, Phone, MessageCircle, Wifi, Car, Dumbbell, Trees, Shield as Security, Camera, Gamepad2, Flame, Home, Users, Zap, Waves, Wind, Sparkles, Calendar } from "lucide-react-native";
 import { fetchPropertyDetail, fetchRentListings, fetchBuyListings } from "../../features/properties/services/propertyService";
 import { addToWishlist, removeFromWishlist } from "../../features/wishlist/services/wishlistService";
 import { useAuth } from "../../features/auth/AuthContext";
@@ -31,11 +31,25 @@ import MobileContactBar from "../../components/ui/MobileContactBar";
 import CollapsibleSection from "../../components/ui/CollapsibleSection";
 import Badge from "../../components/ui/Badge";
 import PropertyCard from "../../components/ui/PropertyCard";
+import VerifiedBadge from "../../components/ui/VerifiedBadge";
 
 // Page Specific Components
 import PropertyLocation from "./components/PropertyLocation";
 import NearbyPlaces from "./components/NearbyPlaces";
 import CommuteCalculator from "./components/CommuteCalculator";
+import EmiCalculator from "../../components/EmiCalculator";
+import BookingWidget from "../../components/properties/BookingWidget";
+import { neighborhoodService } from "../../features/properties/services/neighborhoodService";
+import type { NeighborhoodCategories, AmenityItem } from "../../features/properties/services/neighborhoodService";
+import ScoreGauge from "./components/ScoreGauge";
+import AmenitiesList from "./components/AmenitiesList";
+import NeighborhoodMap from "./components/NeighborhoodMap";
+import SkeletonLoader from "../../components/ui/SkeletonLoader";
+
+// Lazy-loaded Virtual Tour Components
+const MatterportEmbed = lazy(() => import("../../components/tour/MatterportEmbed"));
+const PanoramaViewer = lazy(() => import("../../components/tour/PanoramaViewer"));
+const VideoWalkthrough = lazy(() => import("../../components/tour/VideoWalkthrough"));
 
 type Props = NativeStackScreenProps<RootStackParamList, "PropertyDetail">;
 
@@ -46,6 +60,8 @@ export default function PropertyDetailScreen({ route, navigation }: Props) {
   const queryClient = useQueryClient();
   const { user, logout, isGuest } = useAuth();
   const [isCreatingConversation, setIsCreatingConversation] = useState(false);
+  const [activeCategory, setActiveCategory] = useState<keyof NeighborhoodCategories>("schools");
+  const [selectedAmenity, setSelectedAmenity] = useState<AmenityItem | null>(null);
 
   // Function to get appropriate icon for amenity
   const getAmenityIcon = (amenity: string) => {
@@ -112,6 +128,31 @@ export default function PropertyDetailScreen({ route, navigation }: Props) {
     queryKey: ["property-detail", identifier, type],
     queryFn: () => fetchPropertyDetail(identifier, type),
   });
+
+  const {
+    data: neighborhoodData,
+    isPending: isNeighborhoodPending,
+    isError: isNeighborhoodError,
+    refetch: refetchNeighborhood,
+  } = useQuery({
+    queryKey: ["neighborhood-insights", property?._id],
+    queryFn: () => neighborhoodService.getNeighborhoodInsights(property!._id),
+    enabled: !!property?._id,
+  });
+
+  // Helper: server populates ownerId as an object {_id, name, ...}; extract the string ID safely
+  const extractOwnerId = (rawOwnerId: any): string => {
+    if (!rawOwnerId) return "";
+    if (typeof rawOwnerId === "string") return rawOwnerId;
+    return rawOwnerId?._id?.toString?.() ?? rawOwnerId?.id?.toString?.() ?? String(rawOwnerId);
+  };
+
+  const isOwner = useMemo(() => {
+    if (!property || !user) return false;
+    const propOwnerId = extractOwnerId(property.ownerId);
+    const currentUserId = user.id || user._id;
+    return propOwnerId === String(currentUserId);
+  }, [property, user]);
 
   // Fetch wishlist to check if this property is wishlisted
   const { data: wishlistData } = useQuery({
@@ -225,16 +266,19 @@ export default function PropertyDetailScreen({ route, navigation }: Props) {
       return;
     }
 
-    const ownerId = property?.ownerId || (property as any)?.owner;    if (!ownerId || !property?._id) return;
+    // Extract the actual string ID — server may populate ownerId as an object
+    const rawOwner = property?.ownerId || (property as any)?.owner;
+    const ownerIdStr = extractOwnerId(rawOwner);
+    if (!ownerIdStr || !property?._id) return;
 
-    if (user._id === ownerId || user.id === ownerId) {
+    if (user._id === ownerIdStr || user.id === ownerIdStr) {
       Alert.alert("Notice", "This is your own property.");
       return;
     }
 
     setIsCreatingConversation(true);
     try {
-      const result = await messageService.createConversation(ownerId, property._id);
+      const result = await messageService.createConversation(ownerIdStr, property._id);
       if (result.success) {
         const conversationId = result.data?.conversation?._id || result.data?.conversation?.id || result.data?._id || result.data?.id;
         navigation.navigate("Messages" as any, { conversationId });
@@ -382,6 +426,35 @@ export default function PropertyDetailScreen({ route, navigation }: Props) {
           </View>
         )}
 
+        {/* Virtual Tour Section */}
+        {property.virtualTour && property.virtualTour.type !== "none" && (
+          <View style={styles.paddedSection}>
+            <CollapsibleSection title="Virtual Tour" defaultOpen={true}>
+              <Suspense fallback={<ActivityIndicator size="small" color={colors.primary} />}>
+                {property.virtualTour.type === "matterport" && (
+                  <MatterportEmbed url={property.virtualTour.matterportUrl} />
+                )}
+                {property.virtualTour.type === "panorama_360" && (
+                  <PanoramaViewer panoramaImages={property.virtualTour.panoramaImages} />
+                )}
+                {property.virtualTour.type === "video" && (
+                  <VideoWalkthrough 
+                    videoUrl={property.virtualTour.videoUrl} 
+                    posterImage={property.photos && property.photos[0] ? property.photos[0] : undefined}
+                  />
+                )}
+              </Suspense>
+            </CollapsibleSection>
+          </View>
+        )}
+
+        {/* EMI Calculator (Buy properties only) */}
+        {!isRent && (
+          <View style={styles.paddedSection}>
+            <EmiCalculator propertyPrice={price} />
+          </View>
+        )}
+
         {/* Additional Details - Collapsible */}
         {isRent && (property.securityDeposit || property.maintenanceCharge) && (
           <View style={styles.paddedSection}>
@@ -457,6 +530,57 @@ export default function PropertyDetailScreen({ route, navigation }: Props) {
           <PropertyLocation property={property} />
         </View>
 
+        {/* Neighborhood Insights Section (Collapsible, collapsed by default) */}
+        <View style={styles.paddedSection}>
+          <CollapsibleSection title="Neighborhood Insights" defaultOpen={false}>
+            {isNeighborhoodPending ? (
+              <View style={styles.loadingContainer}>
+                <ActivityIndicator size="small" color={colors.primary} />
+                <Text style={{ color: colors.textSecondary, marginTop: 8 }}>Loading neighborhood details...</Text>
+              </View>
+            ) : isNeighborhoodError ? (
+              <View style={styles.errorContainer}>
+                <Text style={{ color: colors.error }}>Failed to load neighborhood details.</Text>
+                <AppButton style={{ marginTop: 8 }} onPress={() => refetchNeighborhood()}>Retry</AppButton>
+              </View>
+            ) : neighborhoodData && neighborhoodData.available === false ? (
+              <View style={styles.emptyContainer}>
+                <Text style={{ color: colors.textSecondary, textAlign: "center" }}>
+                  Neighborhood insights aren't available for this location yet.
+                </Text>
+              </View>
+            ) : neighborhoodData ? (
+              <View>
+                {/* Score Gauges */}
+                <View style={styles.gaugesRow}>
+                  <ScoreGauge score={neighborhoodData.walkScore} label="Walk Score" />
+                  <ScoreGauge score={neighborhoodData.transitScore} label="Transit Score" />
+                </View>
+
+                {/* Amenities List */}
+                <AmenitiesList
+                  categories={neighborhoodData.categories}
+                  activeCategory={activeCategory}
+                  onCategoryChange={(cat: any) => {
+                    setActiveCategory(cat);
+                    setSelectedAmenity(null);
+                  }}
+                  onAmenitySelect={(item) => setSelectedAmenity(item)}
+                />
+
+                {/* Neighborhood Map */}
+                <NeighborhoodMap
+                  propertyLat={parseCoordsFromProp()?.lat || 0}
+                  propertyLng={parseCoordsFromProp()?.lng || 0}
+                  propertyTitle={property.title}
+                  amenities={neighborhoodData.categories[activeCategory] || []}
+                  selectedAmenity={selectedAmenity}
+                />
+              </View>
+            ) : null}
+          </CollapsibleSection>
+        </View>
+
         {/* Nearby Places Section */}
         <View style={styles.paddedSection}>
           <NearbyPlaces property={property} />
@@ -472,16 +596,55 @@ export default function PropertyDetailScreen({ route, navigation }: Props) {
           <Text style={styles.subHeading}>Listed By</Text>
           <View style={styles.ownerCard}>
             <View style={styles.ownerAvatar}>
-              <Text style={styles.ownerAvatarText}>{property.ownerName?.charAt(0) || 'O'}</Text>
+<Text style={styles.ownerAvatarText}>{property.ownerName?.charAt(0) || 'O'}</Text>
             </View>
             <View style={styles.ownerInfo}>
-              <Text style={styles.ownerName}>{property.ownerName || 'Owner'}</Text>
+              <View style={{ flexDirection: "row", alignItems: "center" }}>
+                <Text style={styles.ownerName}>{property.ownerName || 'Owner'}</Text>
+                {((property.ownerId as any)?.isVerified || (property as any).owner?.isVerified || (property as any).ownerId?.verified || property.verified) ? (
+                  <VerifiedBadge size={16} />
+                ) : null}
+              </View>
               {property.ownerType ? (
                 <Text style={styles.ownerType}>{property.ownerType}</Text>
               ) : null}
             </View>
           </View>
         </View>
+
+        {/* Visit Booking Scheduling section */}
+        {isOwner ? (
+          <View style={styles.paddedSection}>
+            <View style={[styles.ownerAvailabilityCard, { backgroundColor: colors.surface, borderColor: colors.border }]}>
+              <Calendar size={20} color={colors.primary} style={{ marginBottom: 6 }} />
+              <Text style={[styles.ownerAvailabilityTitle, { color: colors.textPrimary }]}>
+                Listing Availability
+              </Text>
+              <Text style={[styles.ownerAvailabilityDesc, { color: colors.textSecondary }]}>
+                Configure dates, time slots, and overrides for prospective viewings.
+              </Text>
+              <AppButton
+                onPress={() =>
+                  navigation.navigate("AvailabilityEditor", {
+                    propertyId: property._id,
+                    propertyTitle: property.title,
+                  })
+                }
+                style={{ width: "100%", marginTop: 8 }}
+              >
+                Manage Availability
+              </AppButton>
+            </View>
+          </View>
+        ) : (
+          <View style={styles.paddedSection}>
+            <BookingWidget
+              propertyId={property._id}
+              ownerId={extractOwnerId(property.ownerId)}
+              propertyTitle={property.title}
+            />
+          </View>
+        )}
 
         {/* Similar Listings */}
         {relatedItems.length > 0 && (
@@ -867,4 +1030,44 @@ const getStyles = (colors: any, isDark: boolean) =>
     ownerInfo: { flex: 1 },
     ownerName: { fontSize: 16, fontWeight: "800", color: colors.textPrimary },
     ownerType: { fontSize: 13, color: colors.textSecondary, textTransform: "capitalize", marginTop: 2, fontWeight: "600" },
+    ownerAvailabilityCard: {
+      padding: 16,
+      borderRadius: 16,
+      borderWidth: 1.5,
+      alignItems: "center",
+      justifyContent: "center",
+      marginBottom: 16,
+    },
+    ownerAvailabilityTitle: {
+      fontSize: 14,
+      fontWeight: "800",
+      marginBottom: 4,
+    },
+    ownerAvailabilityDesc: {
+      fontSize: 11,
+      textAlign: "center",
+      lineHeight: 16,
+      marginBottom: 12,
+    },
+    gaugesRow: {
+      flexDirection: "row",
+      justifyContent: "space-around",
+      alignItems: "center",
+      marginVertical: 12,
+    },
+    loadingContainer: {
+      alignItems: "center",
+      justifyContent: "center",
+      paddingVertical: 24,
+    },
+    errorContainer: {
+      alignItems: "center",
+      justifyContent: "center",
+      paddingVertical: 24,
+    },
+    emptyContainer: {
+      paddingVertical: 16,
+      alignItems: "center",
+      justifyContent: "center",
+    },
   });

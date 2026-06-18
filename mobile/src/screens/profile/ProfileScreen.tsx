@@ -5,7 +5,7 @@ import AppScreen from "../../components/layout/AppScreen";
 import AppButton from "../../components/ui/AppButton";
 import { useAuth } from "../../features/auth/AuthContext";
 import { useTheme } from "../../theme/useTheme";
-import { MapPin, Heart, MessageSquare, ShieldCheck, Mail, Phone, Settings, ChevronRight, Activity, AlertCircle, CheckCircle, Moon, Sun, PlusCircle, Building2, Camera } from "lucide-react-native";
+import { MapPin, Heart, MessageSquare, ShieldCheck, Mail, Phone, Settings, ChevronRight, Activity, AlertCircle, CheckCircle, Moon, Sun, PlusCircle, Building2, Camera, Calendar } from "lucide-react-native";
 import { getAccessToken } from "../../features/auth/services/tokenStorage";
 import { env } from "../../config/env";
 
@@ -399,6 +399,28 @@ export default function ProfileScreen() {
             <View style={{ flex: 1 }}>
               <Text style={styles.quickActionTitle}>Notifications</Text>
               <Text style={styles.quickActionSub}>Stay up to date</Text>
+            </View>
+            <ChevronRight size={18} color={colors.textSecondary} />
+          </Pressable>
+          <View style={[styles.divider]} />
+          <Pressable style={styles.quickAction} onPress={() => navigation.navigate("MyVisits" as any)}>
+            <View style={[styles.quickActionIcon, { backgroundColor: `${colors.primary}20` }]}>
+              <Calendar size={20} color={colors.primary} />
+            </View>
+            <View style={{ flex: 1 }}>
+              <Text style={styles.quickActionTitle}>My Visits</Text>
+              <Text style={styles.quickActionSub}>Track your viewing schedule</Text>
+            </View>
+            <ChevronRight size={18} color={colors.textSecondary} />
+          </Pressable>
+          <View style={[styles.divider]} />
+          <Pressable style={styles.quickAction} onPress={() => navigation.navigate("IncomingVisits" as any)}>
+            <View style={[styles.quickActionIcon, { backgroundColor: `${colors.primary}20` }]}>
+              <Calendar size={20} color={colors.primary} />
+            </View>
+            <View style={{ flex: 1 }}>
+              <Text style={styles.quickActionTitle}>Incoming Visits</Text>
+              <Text style={styles.quickActionSub}>Manage requests on your listings</Text>
             </View>
             <ChevronRight size={18} color={colors.textSecondary} />
           </Pressable>

@@ -1,7 +1,7 @@
 import { Input } from "../ui/input";
 import { Label } from "../ui/label";
 import { IndianRupee } from 'lucide-react';
-import { PREFERRED_TENANTS, PREFERRED_TENANTS_LABELS } from '@shared/propertyTypes';
+import { PREFERRED_TENANTS, PREFERRED_TENANTS_LABELS, LOCK_IN_PERIODS, LOCK_IN_PERIOD_LABELS } from '@shared/propertyTypes';
 
 export default function StepRentPricing({ formData, setFormData, validationErrors }) {
     return (
@@ -42,9 +42,12 @@ export default function StepRentPricing({ formData, setFormData, validationError
                             placeholder="0"
                             value={formData.securityDeposit}
                             onChange={(e) => setFormData({ ...formData, securityDeposit: e.target.value })}
-                            className="pl-8 text-sm sm:text-base"
+                            className={`pl-8 text-sm sm:text-base ${validationErrors.securityDeposit ? "border-destructive" : ""}`}
                         />
                     </div>
+                    {validationErrors.securityDeposit && (
+                        <p className="text-destructive text-xs sm:text-sm">{validationErrors.securityDeposit}</p>
+                    )}
                 </div>
 
                 {/* Maintenance Charge */}
@@ -91,6 +94,40 @@ export default function StepRentPricing({ formData, setFormData, validationError
                         placeholder="e.g., 11 months"
                         value={formData.leaseDuration}
                         onChange={(e) => setFormData({ ...formData, leaseDuration: e.target.value })}
+                        className="text-sm sm:text-base"
+                    />
+                </div>
+            </div>
+
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 sm:gap-6">
+                {/* Lock-in Period */}
+                <div className="space-y-2">
+                    <Label htmlFor="lockInPeriod" className="text-foreground font-semibold text-sm sm:text-base">Lock-in Period</Label>
+                    <select
+                        id="lockInPeriod"
+                        value={formData.lockInPeriod || 0}
+                        onChange={(e) => setFormData({ ...formData, lockInPeriod: Number(e.target.value) })}
+                        className="w-full h-10 px-3 rounded-md border border-input bg-background text-foreground text-sm sm:text-base"
+                    >
+                        {LOCK_IN_PERIODS.map((period) => (
+                            <option key={period} value={period}>
+                                {LOCK_IN_PERIOD_LABELS[period]}
+                            </option>
+                        ))}
+                    </select>
+                </div>
+
+                {/* Brokerage */}
+                <div className="space-y-2">
+                    <Label htmlFor="brokerage" className="text-foreground font-semibold text-sm sm:text-base">
+                        Brokerage <span className="text-muted-foreground font-normal">(if applicable)</span>
+                    </Label>
+                    <Input
+                        id="brokerage"
+                        type="text"
+                        placeholder="e.g., 1 month rent, No brokerage"
+                        value={formData.brokerage || ''}
+                        onChange={(e) => setFormData({ ...formData, brokerage: e.target.value })}
                         className="text-sm sm:text-base"
                     />
                 </div>

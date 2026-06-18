@@ -35,40 +35,42 @@ export default function ProfileCard({ user, completion = 0, completionData, onPo
                 </div>
 
                 {/* Completion Progress */}
-                <div className="bg-white/10 backdrop-blur-sm rounded-xl p-4 mb-5">
-                    <div className="flex justify-between items-center mb-3">
-                        <div className="flex items-center gap-2">
-                            <TrendingUp size={16} className="text-white/80" />
-                            <span className="text-sm font-medium text-white/90">Profile Completion</span>
+                {completion < 100 && (
+                    <div className="bg-white/10 backdrop-blur-sm rounded-xl p-4 mb-5">
+                        <div className="flex justify-between items-center mb-3">
+                            <div className="flex items-center gap-2">
+                                <TrendingUp size={16} className="text-white/80" />
+                                <span className="text-sm font-medium text-white/90">Profile Completion</span>
+                            </div>
+                            <span className="text-sm font-bold text-white">{completion}%</span>
                         </div>
-                        <span className="text-sm font-bold text-white">{completion}%</span>
-                    </div>
-                    <div className="w-full bg-white/20 rounded-full h-2.5 mb-2">
-                        <div
-                            className={`bg-gradient-to-r ${completionColor} rounded-full h-2.5 transition-all duration-500 ease-out`}
-                            style={{ width: `${completion}%` }}
-                        />
-                    </div>
-                    <p className="text-xs text-white/60">{completionText}</p>
-                    
-                    {/* Next Step Hint */}
-                    {completionData?.nextStep && completion < 100 && (
-                        <div className="mt-3 pt-3 border-t border-white/10">
-                            <div className="flex items-start gap-2">
-                                <AlertCircle size={14} className="text-white/70 mt-0.5 flex-shrink-0" />
-                                <div>
-                                    <p className="text-xs text-white/70">Next step:</p>
-                                    <p className="text-xs font-medium text-white/90">
-                                        {completionData.nextStep.label}
-                                        <span className="text-white/50 ml-1">
-                                            (+{completionData.nextStep.weight}%)
-                                        </span>
-                                    </p>
+                        <div className="w-full bg-white/20 rounded-full h-2.5 mb-2">
+                            <div
+                                className={`bg-gradient-to-r ${completionColor} rounded-full h-2.5 transition-all duration-500 ease-out`}
+                                style={{ width: `${completion}%` }}
+                            />
+                        </div>
+                        <p className="text-xs text-white/60">{completionText}</p>
+                        
+                        {/* Next Step Hint */}
+                        {completionData?.nextStep && (
+                            <div className="mt-3 pt-3 border-t border-white/10">
+                                <div className="flex items-start gap-2">
+                                    <AlertCircle size={14} className="text-white/70 mt-0.5 flex-shrink-0" />
+                                    <div>
+                                        <p className="text-xs text-white/70">Next step:</p>
+                                        <p className="text-xs font-medium text-white/90">
+                                            {completionData.nextStep.label}
+                                            <span className="text-white/50 ml-1">
+                                                (+{completionData.nextStep.weight}%)
+                                            </span>
+                                        </p>
+                                    </div>
                                 </div>
                             </div>
-                        </div>
-                    )}
-                </div>
+                        )}
+                    </div>
+                )}
 
                 {/* Post Property Button */}
                 <button

@@ -5,6 +5,8 @@ import {
     FILTER_PROPERTY_TYPE_OPTIONS, 
 } from "../../utils/propertyTypeStandardization";
 import { PREFERRED_TENANTS_LABELS } from "@shared/propertyTypes";
+import { Card } from "../ui/card";
+import { Slider } from "../ui/slider";
 
 /**
  * Rent-specific filter sidebar component
@@ -180,14 +182,14 @@ export function RentFilterSidebar({ filters, onFilterChange, hideHeader = false,
     return (
         <aside 
             ref={sidebarRef}
-            className={`w-full lg:w-80 overflow-hidden ${
-                compact 
-                    ? 'bg-transparent' 
-                    : 'bg-card/50 backdrop-blur-sm border border-border/50 rounded-2xl shadow-lg shadow-black/5'
-            }`}
+            className="w-full lg:w-80 overflow-hidden"
             role="complementary"
             aria-label="Rent property filters"
         >
+            <Card
+                variant={compact ? "default" : "glass"}
+                className={`w-full overflow-hidden border-0 ${compact ? 'bg-transparent shadow-none' : ''}`}
+            >
             {/* Header */}
             {!hideHeader && (
                 <div className="relative overflow-hidden">
@@ -220,7 +222,7 @@ export function RentFilterSidebar({ filters, onFilterChange, hideHeader = false,
                                 aria-label="Clear all filters"
                             >
                                 <RotateCcw className="w-3.5 h-3.5 group-hover:rotate-[-360deg] transition-transform duration-500" />
-                                Reset
+                                Clear all
                             </button>
                         )}
                     </div>
@@ -243,10 +245,10 @@ export function RentFilterSidebar({ filters, onFilterChange, hideHeader = false,
                                 <label
                                     key={option.value}
                                     className={`
-                                        relative flex items-center justify-center px-3 py-3 rounded-xl cursor-pointer text-sm font-medium transition-all duration-200
+                                        relative flex items-center justify-center px-4 py-2.5 rounded-full cursor-pointer text-xs font-semibold border transition-all duration-200 active:scale-95
                                         ${isSelected
-                                            ? "bg-gradient-to-br from-primary to-primary/90 text-primary-foreground shadow-lg shadow-primary/25 scale-[1.02]"
-                                            : "bg-muted/50 text-muted-foreground hover:bg-muted hover:text-foreground hover:scale-[1.01]"
+                                            ? "bg-primary border-primary text-primary-foreground shadow-md shadow-primary/10"
+                                            : "bg-background border-border text-muted-foreground hover:bg-muted hover:text-foreground"
                                         }
                                     `}
                                 >
@@ -283,10 +285,10 @@ export function RentFilterSidebar({ filters, onFilterChange, hideHeader = false,
                                 <label
                                     key={bed}
                                     className={`
-                                        flex items-center justify-center w-14 h-14 rounded-xl cursor-pointer text-sm font-bold transition-all duration-200
+                                        flex items-center justify-center w-11 h-11 rounded-full cursor-pointer text-xs font-bold border transition-all duration-200 active:scale-95
                                         ${isSelected
-                                            ? "bg-gradient-to-br from-primary to-primary/90 text-primary-foreground shadow-lg shadow-primary/25 scale-105"
-                                            : "bg-muted/50 text-muted-foreground hover:bg-muted hover:text-foreground hover:scale-[1.02]"
+                                            ? "bg-primary border-primary text-primary-foreground shadow-md shadow-primary/10"
+                                            : "bg-background border-border text-muted-foreground hover:bg-muted hover:text-foreground"
                                         }
                                     `}
                                 >
@@ -309,7 +311,25 @@ export function RentFilterSidebar({ filters, onFilterChange, hideHeader = false,
                     title="Monthly Budget"
                     badge={(filters.priceRange.min > 0 || filters.priceRange.max < 100000) ? "1" : null}
                 >
-                    <div className="space-y-4">
+                    <div className="space-y-4 mt-2">
+                        {/* Range slider display */}
+                        <div className="flex justify-between items-center text-xs font-semibold text-foreground bg-muted/40 px-3 py-2 rounded-xl">
+                            <span>Selected Range:</span>
+                            <span className="text-primary font-bold">
+                                ₹{filters.priceRange.min?.toLocaleString()} - ₹{filters.priceRange.max === 100000 ? '1,00,000+' : filters.priceRange.max?.toLocaleString()}
+                            </span>
+                        </div>
+                        <div className="px-1 py-3">
+                            <Slider
+                                min={0}
+                                max={100000}
+                                step={1000}
+                                value={[filters.priceRange.min || 0, filters.priceRange.max || 100000]}
+                                onValueChange={(val) => {
+                                    onFilterChange("priceRange", { min: val[0], max: val[1] });
+                                }}
+                            />
+                        </div>
                         <div className="grid grid-cols-2 gap-3">
                             <div className="space-y-2">
                                 <label htmlFor="price-min" className="text-xs font-semibold text-muted-foreground uppercase tracking-wide">
@@ -559,6 +579,7 @@ export function RentFilterSidebar({ filters, onFilterChange, hideHeader = false,
                     </Button>
                 </div>
             )}
+            </Card>
         </aside>
     );
 }

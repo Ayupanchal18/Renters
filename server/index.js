@@ -1,12 +1,14 @@
 import "dotenv/config";
+import fs from "fs";
+import path from "path";
+import { fileURLToPath } from "url";
 import express from "express";
 import cors from "cors";
 import cookieParser from "cookie-parser";
 import http from "http";
-import path from "path";
-import { fileURLToPath } from "url";
 import propertiesRouter from "./routes/properties.js";
 import { createAuditMiddleware } from "./src/middleware/auditLogger.js";
+import apiErrorHandler from "./src/middleware/errorHandler.js";
 import {
     addRequestId,
     securityHeaders,
@@ -17,11 +19,23 @@ import {
 import { createRequestLogger } from "./src/middleware/requestLogger.js";
 import { createCacheHeadersMiddleware } from "./src/middleware/cacheHeaders.js";
 import { setupSwagger } from "./src/docs/swagger.js";
+import helmet from "helmet";
+import mongoSanitize from "express-mongo-sanitize";
+import {
+    adminWriteLimit,
+    bulkLimit,
+    passwordLimit,
+    exportLimit
+} from "./src/middleware/rateLimiter.js";
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
+const debugFile = path.join(__dirname, "../debug.log");
+fs.appendFileSync(debugFile, `[INDEX.JS] Loading at ${new Date().toISOString()}\n`);
+
 
 export default async function createServer(devMode = false) {
+
     const app = express();
     
     // DEBUG: Log all incoming requests to check mobile connectivity
@@ -123,6 +137,27 @@ export default async function createServer(devMode = false) {
     app.use(addRequestId);
     app.use(securityHeaders);
 
+    // MongoDB Query sanitization to prevent NoSQL injection
+    app.use((req, res, next) => {
+        const sanitizeFn = mongoSanitize.sanitize || ((v) => v);
+        ['body', 'params', 'headers', 'query'].forEach((key) => {
+            if (req[key] && typeof req[key] === 'object') {
+                try {
+                    sanitizeFn(req[key], { replaceWith: '_' });
+                } catch (e) {
+                    // Fail-silent to prevent any server crash
+                }
+            }
+        });
+        next();
+    });
+
+    // Helmet security headers (without conflicting with our existing CSP)
+    app.use(helmet({
+        contentSecurityPolicy: false,
+        crossOriginEmbedderPolicy: false,
+    }));
+
     // Request logging middleware (after addRequestId so we have request IDs)
     app.use(createRequestLogger({
         logRequestStart: process.env.LOG_REQUEST_START !== 'false',
@@ -143,9 +178,36 @@ export default async function createServer(devMode = false) {
         maxRequests: 10, // 10 attempts per 15 minutes
         message: "Too many authentication attempts, please try again later"
     });
-    app.use('/api/auth/login', authRateLimiter);
-    app.use('/api/auth/register', authRateLimiter);
+    
+    // Apply password limit to sensitive auth routes
+    app.use('/api/auth/login', passwordLimit);
+    app.use('/api/auth/register', passwordLimit);
+    
+    // Apply fallback auth rate limiter to sending OTP
     app.use('/api/verification/send-otp', authRateLimiter);
+
+    // Apply bulk rate limit to bulk operations
+    app.use('/api/admin/users/bulk/status', bulkLimit);
+    app.use('/api/admin/users/bulk', bulkLimit);
+    app.use('/api/admin/properties/bulk/status', bulkLimit);
+    app.use('/api/admin/reviews/bulk/approve', bulkLimit);
+    app.use('/api/admin/reviews/bulk/reject', bulkLimit);
+
+    // Apply export limit to bulk export endpoints
+    app.use('/api/admin/users/bulk/export', exportLimit);
+    app.use('/api/admin/properties/bulk/export', exportLimit);
+
+    // Apply general admin write action rate limiter (60 actions/min)
+    app.use('/api/admin', (req, res, next) => {
+        if (['POST', 'PUT', 'PATCH', 'DELETE'].includes(req.method)) {
+            // Skip bulk and export paths since they are limited by bulkLimit and exportLimit
+            if (req.path.includes('/bulk') || req.path.includes('/export')) {
+                return next();
+            }
+            return adminWriteLimit(req, res, next);
+        }
+        next();
+    });
 
     // Security audit logging middleware
     app.use(createAuditMiddleware({
@@ -194,6 +256,7 @@ export default async function createServer(devMode = false) {
             `file://${path.join(__dirname, "src/config/db.js")}`
         );
         await connectDB();
+        console.log("🟢 Database connected successfully in Express (Vite Middleware)");
 
         // Initialize database with indexes and default configurations
         const { initializeDatabase } = await import(
@@ -217,6 +280,7 @@ export default async function createServer(devMode = false) {
         app.use("/api/properties/rent", (await safeImport("routes/rentProperties.js")).default);
         app.use("/api/properties/buy", (await safeImport("routes/buyProperties.js")).default);
         app.use("/api/properties", (await safeImport("routes/properties.js")).default);
+        app.use("/api/bookings", (await safeImport("routes/bookings.js")).default);
         app.use("/api/users", (await safeImport("routes/users.js")).default);
         app.use("/api/wishlist", (await safeImport("routes/wishlist.js")).default);
         app.use("/api/conversations", (await safeImport("routes/conversations.js")).default);
@@ -245,8 +309,17 @@ export default async function createServer(devMode = false) {
         app.use("/api/admin/audit-logs", (await safeImport("routes/adminAuditLogs.js")).default);
         app.use("/api/admin/messages", (await safeImport("routes/adminMessages.js")).default);
         app.use("/api/admin/testimonials", (await safeImport("routes/adminTestimonials.js")).default);
+        app.use("/api/admin/verifications", (await safeImport("routes/adminVerifications.js")).default);
+        app.use("/api/admin/search", (await safeImport("routes/adminSearch.js")).default);
+        app.use("/api/admin/roles", (await safeImport("routes/adminRoles.js")).default);
+        app.use("/api/admin/notification-center", (await safeImport("routes/adminNotificationCenter.js")).default);
+        app.use("/api/admin/media", (await safeImport("routes/adminMedia.js")).default);
+        app.use("/api/admin/analytics", (await safeImport("routes/adminAnalytics.js")).default);
+        app.use("/api/admin/vault", (await safeImport("routes/adminVault.js")).default);
 
         app.use("/api/upload", (await safeImport("routes/upload.js")).default);
+        app.use("/api/vault", (await safeImport("routes/vault.js")).default);
+        app.use("/api/leases", (await safeImport("routes/leases.js")).default);
         app.use("/api/audit", (await safeImport("routes/audit.js")).default);
         app.use("/api/privacy", (await safeImport("routes/privacy.js")).default);
         app.use("/api/delivery-preferences", (await safeImport("routes/deliveryPreferences.js")).default);
@@ -277,10 +350,23 @@ export default async function createServer(devMode = false) {
         console.warn("Socket.IO initialization failed:", err);
     }
 
+    // -------------------------
+    //   START CMS SCHEDULER
+    // -------------------------
+    try {
+        const { startPublishScheduler } = await import("./src/jobs/publishScheduler.js");
+        startPublishScheduler();
+    } catch (err) {
+        console.warn("CMS scheduler initialization failed:", err);
+    }
+
     // In development mode, don't add catch-all error handlers
     // Let Vite handle non-API routes
     // Note: In production, static files and catch-all are handled in start.js
     // so we only add error handler here, not notFoundHandler
+    // Centralized API error handler (always format API errors as JSON)
+    app.use("/api", apiErrorHandler);
+
     if (!devMode) {
         app.use(errorHandler);
     }

@@ -22,6 +22,7 @@ import {
     addToPasswordHistory
 } from '../src/services/passwordValidationService.js';
 import notificationService from '../src/services/notificationService.js';
+import fcmService from '../src/services/fcmService.js';
 
 const router = Router();
 
@@ -109,6 +110,117 @@ router.patch("/me",
         }
     }
 );
+
+// Update privacy/notification settings
+router.patch("/me/privacy", authenticateToken, async (req, res) => {
+    try {
+        await connectDB();
+        const { pushNotifications } = req.body;
+        
+        const user = await User.findById(req.user._id);
+        if (!user) return res.status(404).json({ error: "User not found" });
+
+        const previousPushSetting = user.privacySettings?.communications?.pushNotifications;
+        
+        // Update the setting
+        if (!user.privacySettings) user.privacySettings = {};
+        if (!user.privacySettings.communications) user.privacySettings.communications = {};
+        
+        if (typeof pushNotifications === 'boolean') {
+            user.privacySettings.communications.pushNotifications = pushNotifications;
+            await user.save();
+
+            // Handle FCM topic subscription/unsubscription
+            if (user.fcmTokens && user.fcmTokens.length > 0) {
+                if (pushNotifications && !previousPushSetting) {
+                    await fcmService.subscribeToTopic(user.fcmTokens, 'property_alerts');
+                } else if (!pushNotifications && previousPushSetting) {
+                    await fcmService.unsubscribeFromTopic(user.fcmTokens, 'property_alerts');
+                }
+            }
+        }
+
+        const { passwordHash, ...safeUser } = user.toObject();
+        sendSuccess(res, safeUser, "Privacy settings updated");
+    } catch (error) {
+        console.error('Update privacy error:', error);
+        res.status(500).json({ error: "Internal server error" });
+    }
+});
+
+// Register FCM token
+router.post("/fcm-token", authenticateToken, async (req, res) => {
+    try {
+        await connectDB();
+        const { token, deviceType } = req.body;
+        if (!token) return res.status(400).json({ error: "Token is required" });
+
+        const user = await User.findById(req.user._id);
+        if (!user) return res.status(404).json({ error: "User not found" });
+
+        // Initialize fcmTokens if it doesn't exist
+        if (!user.fcmTokens) user.fcmTokens = [];
+
+        // Check if token already exists
+        const tokenIndex = user.fcmTokens.findIndex(t => t.token === token);
+
+        if (tokenIndex > -1) {
+            // Update existing token metadata
+            user.fcmTokens[tokenIndex].lastUsedAt = new Date();
+            if (deviceType) user.fcmTokens[tokenIndex].deviceType = deviceType;
+        } else {
+            // Add new token
+            user.fcmTokens.push({
+                token,
+                deviceType: deviceType || "other",
+                lastUsedAt: new Date()
+            });
+        }
+
+        await user.save();
+
+        // Auto-subscribe if preferences allow
+        const pushEnabled = user.privacySettings?.communications?.pushNotifications !== false;
+        if (pushEnabled) {
+            await fcmService.subscribeToTopic(token, 'property_alerts');
+        }
+
+        res.json({ success: true, message: "FCM token registered" });
+    } catch (error) {
+        console.error('Register FCM token error:', error);
+        res.status(500).json({ error: "Internal server error" });
+    }
+});
+
+// Unregister FCM token
+router.delete("/fcm-token/:token", authenticateToken, async (req, res) => {
+    try {
+        await connectDB();
+        const { token } = req.params;
+        const { unsubscribe } = req.query; // Check if we should also unsubscribe from topics
+        
+        if (!token) return res.status(400).json({ error: "Token is required" });
+
+        const user = await User.findById(req.user._id);
+        if (!user) return res.status(404).json({ error: "User not found" });
+
+        // Remove token from user record
+        if (user.fcmTokens) {
+            user.fcmTokens = user.fcmTokens.filter(t => t.token !== token);
+            await user.save();
+        }
+
+        // Unsubscribe from main topics only if explicitly requested
+        if (unsubscribe === 'true') {
+            await fcmService.unsubscribeFromTopic(token, 'property_alerts');
+        }
+
+        res.json({ success: true, message: "FCM token unregistered" });
+    } catch (error) {
+        console.error('Unregister FCM token error:', error);
+        res.status(500).json({ error: "Internal server error" });
+    }
+});
 
 // Change password
 router.post("/change-password",

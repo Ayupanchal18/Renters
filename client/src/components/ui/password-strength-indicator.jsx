@@ -115,10 +115,6 @@ export function PasswordStrengthIndicator({
                             met={requirements.hasSpecialChar}
                             text="One special character"
                         />
-                        <RequirementItem 
-                            met={requirements.notCommon}
-                            text="Not a common password"
-                        />
                     </div>
                 </div>
             )}

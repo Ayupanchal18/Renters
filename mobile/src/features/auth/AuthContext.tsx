@@ -9,6 +9,11 @@ import {
   refreshAccessToken,
 } from "./services/authService";
 import { getAccessToken, clearTokens } from "./services/tokenStorage";
+import AsyncStorage from "@react-native-async-storage/async-storage";
+import { pushNotificationService } from "../notifications/services/pushNotificationService";
+import { socketService } from "../messages/services/socketService";
+
+const ONBOARDING_KEY = 'app:onboarding_done';
 
 /* ─── Context Shape ──────────────────────────────────────── */
 
@@ -18,12 +23,15 @@ interface AuthState {
   isAuthenticated: boolean;
   isGuest: boolean;
   isLoading: boolean;
+  hasSeenOnboarding: boolean;
+  completeOnboarding: () => void;
   login: (data: LoginRequest) => Promise<void>;
   register: (data: RegisterRequest) => Promise<void>;
   socialLogin: (provider: "google" | "facebook", payload: { code?: string; accessToken?: string; credential?: string }) => Promise<void>;
   logout: () => Promise<void>;
   continueAsGuest: () => void;
   updateSessionUser: (data: Partial<User>) => void;
+  setAuthData: (user: User, token: string) => void;
 }
 
 const AuthContext = createContext<AuthState | undefined>(undefined);
@@ -35,17 +43,39 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [token, setToken] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [isGuest, setIsGuest] = useState(false);
+  const [hasSeenOnboarding, setHasSeenOnboarding] = useState(false);
+
+  // Function to register push notifications
+  const setupPushNotifications = useCallback(async () => {
+    try {
+      const token = await pushNotificationService.registerForPushNotificationsAsync();
+      if (token) {
+        await pushNotificationService.syncTokenWithServer(token);
+        // Refresh user data to see the new token in state
+        const updatedUser = await fetchCurrentUser();
+        if (updatedUser) setUser(updatedUser);
+      }
+    } catch (error) {
+      console.warn("Failed to setup push notifications:", error);
+    }
+  }, []);
 
   // Restore session on cold start
   useEffect(() => {
     (async () => {
       try {
+        // Check onboarding flag first (fast read)
+        const onboardingDone = await AsyncStorage.getItem(ONBOARDING_KEY);
+        if (onboardingDone === 'true') setHasSeenOnboarding(true);
+
         const storedToken = await getAccessToken();
         if (storedToken) {
           setToken(storedToken);
           const currentUser = await fetchCurrentUser();
           if (currentUser) {
             setUser(currentUser);
+            // Setup notifications on cold start if authenticated
+            setupPushNotifications();
           } else {
             // Token invalid / expired beyond refresh — clear state
             await clearTokens();
@@ -81,12 +111,26 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     return () => clearInterval(interval);
   }, [user, token]);
 
+  // Manage socket connection lifecycle based on auth token
+  useEffect(() => {
+    if (token) {
+      socketService.connect(token);
+    } else {
+      socketService.disconnect();
+    }
+    return () => {
+      socketService.disconnect();
+    };
+  }, [token]);
+
   const login = useCallback(async (data: LoginRequest) => {
     try {
       const response = await loginUser(data);
       setUser(response.user);
       setToken(response.token);
       setIsGuest(false);
+      // Register for push notifications after login
+      setupPushNotifications();
     } catch (error) {
       console.error("Login failed:", error);
       throw error;
@@ -99,6 +143,8 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       setUser(response.user);
       setToken(response.token);
       setIsGuest(false);
+      // Register for push notifications after registration
+      setupPushNotifications();
     } catch (error: any) {
       if (error?.response?.status !== 409 && error?.response?.status !== 400) {
         console.error("Registration failed:", error);
@@ -113,6 +159,8 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       setUser(response.user);
       setToken(response.token);
       setIsGuest(false);
+      // Register for push notifications after social login
+      setupPushNotifications();
     } catch (error) {
       console.error("Social login failed:", error);
       throw error;
@@ -121,6 +169,8 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
   const logout = useCallback(async () => {
     try {
+      // Unregister push token before logout
+      await pushNotificationService.unregisterTokenFromServer().catch(() => {});
       await logoutUser();
     } catch (error) {
       console.warn("Logout API call failed:", error);
@@ -136,9 +186,21 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     setIsGuest(true);
   }, []);
 
+  const completeOnboarding = useCallback(() => {
+    setHasSeenOnboarding(true);
+    AsyncStorage.setItem(ONBOARDING_KEY, 'true').catch(() => {});
+  }, []);
+
   const updateSessionUser = useCallback((updates: Partial<User>) => {
     setUser((prev) => (prev ? { ...prev, ...updates } : null));
   }, []);
+
+  const setAuthData = useCallback((newUser: User, newToken: string) => {
+    setUser(newUser);
+    setToken(newToken);
+    setIsGuest(false);
+    setupPushNotifications();
+  }, [setupPushNotifications]);
 
   const value = useMemo<AuthState>(
     () => ({
@@ -147,14 +209,17 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       isAuthenticated: !!user && !!token,
       isGuest,
       isLoading,
+      hasSeenOnboarding,
+      completeOnboarding,
       login,
       register,
       socialLogin,
       logout,
       continueAsGuest,
       updateSessionUser,
+      setAuthData,
     }),
-    [user, token, isGuest, isLoading, login, register, socialLogin, logout, continueAsGuest, updateSessionUser]
+    [user, token, isGuest, isLoading, hasSeenOnboarding, completeOnboarding, login, register, socialLogin, logout, continueAsGuest, updateSessionUser, setAuthData]
   );
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;

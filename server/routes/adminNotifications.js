@@ -6,7 +6,7 @@ import { NotificationLog } from "../models/NotificationLog.js";
 import { User } from "../models/User.js";
 import { connectDB } from "../src/config/db.js";
 import { requireAdmin } from "../src/middleware/adminAuth.js";
-import { createAuditLog } from "../src/services/adminAuditService.js";
+import { createAuditLog, safeCreateAuditLog } from "../src/services/adminAuditService.js";
 
 const router = Router();
 
@@ -212,7 +212,7 @@ router.post("/send", requireAdmin, async (req, res) => {
         await notificationLog.save();
 
         // Create audit log
-        await createAuditLog({
+        await safeCreateAuditLog({
             adminId: req.user._id,
             action: 'CREATE',
             resourceType: 'notification',
@@ -367,7 +367,7 @@ router.post("/broadcast", requireAdmin, async (req, res) => {
         await notificationLog.save();
 
         // Create audit log
-        await createAuditLog({
+        await safeCreateAuditLog({
             adminId: req.user._id,
             action: 'CREATE',
             resourceType: 'notification',
@@ -485,7 +485,7 @@ router.post("/templates", requireAdmin, async (req, res) => {
         await template.save();
 
         // Create audit log
-        await createAuditLog({
+        await safeCreateAuditLog({
             adminId: req.user._id,
             action: 'CREATE',
             resourceType: 'notification',
@@ -592,7 +592,7 @@ router.put("/templates/:id", requireAdmin, async (req, res) => {
         ).lean();
 
         // Create audit log
-        await createAuditLog({
+        await safeCreateAuditLog({
             adminId: req.user._id,
             action: 'UPDATE',
             resourceType: 'notification',
@@ -644,7 +644,7 @@ router.delete("/templates/:id", requireAdmin, async (req, res) => {
         });
 
         // Create audit log
-        await createAuditLog({
+        await safeCreateAuditLog({
             adminId: req.user._id,
             action: 'DELETE',
             resourceType: 'notification',

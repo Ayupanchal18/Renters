@@ -27,10 +27,8 @@ const Input = React.forwardRef(
                         "file:border-0 file:bg-transparent file:text-sm file:font-medium file:text-foreground",
                         // Placeholder styles
                         "placeholder:text-muted-foreground",
-                        // Premium focus styles with ring and 2px offset using primary color
-                        "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/30 focus-visible:ring-offset-2 focus-visible:ring-offset-background",
-                        // Smooth transition on focus
-                        "transition-all duration-180 ease-smooth",
+                        // Premium focus styles — full primary ring, keyboard-only (focus-visible)
+                        "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2 focus-visible:ring-offset-background",
                         // Focus border enhancement
                         "focus-visible:border-primary",
                         // Disabled state
@@ -38,7 +36,7 @@ const Input = React.forwardRef(
                         // Responsive text
                         "md:text-sm",
                         // Default border (non-error state)
-                        !error && !success && "border-input",
+                        !error && !success && "border-border",
                         // Success state styling
                         success && !error && "border-green-500 focus-visible:ring-green-500/30 focus-visible:border-green-500",
                         // Error state styling with shake animation

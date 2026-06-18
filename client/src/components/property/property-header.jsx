@@ -9,7 +9,7 @@
 import React from 'react';
 import { Heart, Share2, MapPin, Calendar, CheckCircle, AlertCircle, Clock } from 'lucide-react';
 import { Badge } from '../ui/badge';
-import { PropertyDataValidator } from '../../utils/PropertyDataValidator';
+import { PropertyDataValidator } from '@shared/validation/property';
 import { fallbackDataGenerator } from '../../utils/FallbackDataGenerator';
 
 // Create validator instance

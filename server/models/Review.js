@@ -1,4 +1,5 @@
 import mongoose from "mongoose";
+import softDeletePlugin from "../src/plugins/softDeletePlugin.js";
 const { Schema } = mongoose;
 
 const ReviewSchema = new Schema(
@@ -75,6 +76,8 @@ ReviewSchema.index({ propertyId: 1, userId: 1 }, { unique: true });
 
 // Text index for searching comments
 ReviewSchema.index({ comment: 'text' });
+
+ReviewSchema.plugin(softDeletePlugin);
 
 export const Review =
     mongoose.models.Review || mongoose.model("Review", ReviewSchema);

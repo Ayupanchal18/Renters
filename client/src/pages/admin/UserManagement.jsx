@@ -13,8 +13,19 @@ import {
 import UserTable from '../../components/admin/UserTable';
 import UserFormModal from '../../components/admin/UserFormModal';
 import RoleChangeModal from '../../components/admin/RoleChangeModal';
+import BulkActionToolbar from '../../components/admin/BulkActionToolbar';
+import UserProfileDrawer from '../../components/admin/UserProfileDrawer';
 import { authenticatedFetch, getHeaders } from '../../lib/api';
 import { cn } from '../../lib/utils';
+import FrictionConfirmModal from '../../components/admin/FrictionConfirmModal';
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogDescription,
+  DialogFooter,
+} from '../../components/ui/dialog';
 import {
   Users,
   Plus,
@@ -22,7 +33,8 @@ import {
   RefreshCw,
   AlertCircle,
   Filter,
-  X
+  X,
+  CheckCircle
 } from 'lucide-react';
 
 /**
@@ -66,6 +78,27 @@ const UserManagement = () => {
   const [roleModalOpen, setRoleModalOpen] = useState(false);
   const [selectedUser, setSelectedUser] = useState(null);
   const [formMode, setFormMode] = useState('create'); // 'create' or 'edit'
+
+  // Bulk selection state
+  const [selectedIds, setSelectedIds] = useState([]);
+
+  // Profile drawer state
+  const [drawerUserId, setDrawerUserId] = useState(null);
+  const [drawerOpen, setDrawerOpen] = useState(false);
+
+  const handleViewProfile = (user) => {
+    setDrawerUserId(user._id);
+    setDrawerOpen(true);
+  };
+
+  // Action modal states
+  const [deleteModalOpen, setDeleteModalOpen] = useState(false);
+  const [resetPwdModalOpen, setResetPwdModalOpen] = useState(false);
+  const [blockModalOpen, setBlockModalOpen] = useState(false);
+  const [userForAction, setUserForAction] = useState(null);
+  const [actionLoading, setActionLoading] = useState(false);
+  const [tempPassword, setTempPassword] = useState('');
+  const [successModalOpen, setSuccessModalOpen] = useState(false);
 
   // Debounced search
   const [debouncedSearch, setDebouncedSearch] = useState('');
@@ -154,6 +187,7 @@ const UserManagement = () => {
     setStatusFilter('all');
     setSortBy('createdAt');
     setSortOrder('desc');
+    setSelectedIds([]);
   };
 
   const hasActiveFilters = search || roleFilter !== 'all' || statusFilter !== 'all';
@@ -188,9 +222,18 @@ const UserManagement = () => {
     fetchUsers(pagination.page);
   };
 
-  const handleStatusChange = async (userId, action, reason) => {
+  const handleStatusChange = async (user, action, reason) => {
+    const targetUser = typeof user === 'string' ? users.find(u => u._id === user) : user;
+    if (!targetUser) return;
+
+    if (action === 'block') {
+      setUserForAction(targetUser);
+      setBlockModalOpen(true);
+      return;
+    }
+
     try {
-      const response = await authenticatedFetch(`${API_BASE}/${userId}/status`, {
+      const response = await authenticatedFetch(`${API_BASE}/${targetUser._id}/status`, {
         method: 'PATCH',
         headers: getHeaders(),
         body: JSON.stringify({ action, reason })
@@ -200,6 +243,7 @@ const UserManagement = () => {
       
       if (data.success) {
         fetchUsers(pagination.page);
+        setSelectedIds([]); // Clear selection after status change
       } else {
         throw new Error(data.message || 'Failed to update user status');
       }
@@ -209,13 +253,40 @@ const UserManagement = () => {
     }
   };
 
-  const handleDeleteUser = async (userId) => {
-    if (!window.confirm('Are you sure you want to delete this user? This action cannot be undone.')) {
-      return;
-    }
-    
+  const executeBlockUser = async (reasonText) => {
+    setActionLoading(true);
     try {
-      const response = await authenticatedFetch(`${API_BASE}/${userId}`, {
+      const response = await authenticatedFetch(`${API_BASE}/${userForAction._id}/status`, {
+        method: 'PATCH',
+        headers: getHeaders(),
+        body: JSON.stringify({ action: 'block', reason: reasonText })
+      }, navigate);
+      
+      const data = await response.json();
+      if (data.success) {
+        setBlockModalOpen(false);
+        fetchUsers(pagination.page);
+        setSelectedIds([]);
+      } else {
+        throw new Error(data.message || 'Failed to block user');
+      }
+    } catch (err) {
+      console.error('Error blocking user:', err);
+      throw err;
+    } finally {
+      setActionLoading(false);
+    }
+  };
+
+  const handleDeleteUser = (user) => {
+    setUserForAction(user);
+    setDeleteModalOpen(true);
+  };
+
+  const executeDeleteUser = async () => {
+    setActionLoading(true);
+    try {
+      const response = await authenticatedFetch(`${API_BASE}/${userForAction._id}`, {
         method: 'DELETE',
         headers: getHeaders()
       }, navigate);
@@ -223,23 +294,29 @@ const UserManagement = () => {
       const data = await response.json();
       
       if (data.success) {
+        setDeleteModalOpen(false);
         fetchUsers(pagination.page);
+        setSelectedIds([]);
       } else {
         throw new Error(data.message || 'Failed to delete user');
       }
     } catch (err) {
       console.error('Error deleting user:', err);
-      setError(err.message);
+      throw err;
+    } finally {
+      setActionLoading(false);
     }
   };
 
-  const handleResetPassword = async (userId) => {
-    if (!window.confirm('Are you sure you want to reset this user\'s password?')) {
-      return;
-    }
-    
+  const handleResetPassword = (user) => {
+    setUserForAction(user);
+    setResetPwdModalOpen(true);
+  };
+
+  const executeResetPassword = async () => {
+    setActionLoading(true);
     try {
-      const response = await authenticatedFetch(`${API_BASE}/${userId}/reset-password`, {
+      const response = await authenticatedFetch(`${API_BASE}/${userForAction._id}/reset-password`, {
         method: 'POST',
         headers: getHeaders(),
         body: JSON.stringify({ sendEmail: true })
@@ -248,13 +325,71 @@ const UserManagement = () => {
       const data = await response.json();
       
       if (data.success) {
-        alert(`Password reset successfully. Temporary password: ${data.data.temporaryPassword}`);
+        setResetPwdModalOpen(false);
+        setTempPassword(data.data.temporaryPassword);
+        setSuccessModalOpen(true);
       } else {
         throw new Error(data.message || 'Failed to reset password');
       }
     } catch (err) {
       console.error('Error resetting password:', err);
-      setError(err.message);
+      throw err;
+    } finally {
+      setActionLoading(false);
+    }
+  };
+
+  // Bulk action handler
+  const handleBulkAction = async (actionKey, ids, reason) => {
+    try {
+      let url = `${API_BASE}/bulk`;
+      let method = 'PATCH';
+      let body = {};
+
+      switch (actionKey) {
+        case 'block':
+        case 'unblock':
+        case 'deactivate':
+          url = `${API_BASE}/bulk/status`;
+          body = { ids, action: actionKey };
+          break;
+        case 'delete':
+          method = 'DELETE';
+          url = `${API_BASE}/bulk`;
+          body = { ids };
+          break;
+        case 'export':
+          method = 'POST';
+          url = `${API_BASE}/bulk/export`;
+          body = { ids, format: 'csv' };
+          // Handle file download
+          const res = await authenticatedFetch(url, { method, headers: getHeaders(), body: JSON.stringify(body) }, navigate);
+          const blob = await res.blob();
+          const dlUrl = window.URL.createObjectURL(blob);
+          const a = document.createElement('a');
+          a.href = dlUrl;
+          a.download = 'users-export.csv';
+          a.click();
+          window.URL.revokeObjectURL(dlUrl);
+          setSelectedIds([]);
+          return;
+        default:
+          return;
+      }
+
+      const response = await authenticatedFetch(url, {
+        method,
+        headers: getHeaders(),
+        body: JSON.stringify(body)
+      }, navigate);
+
+      const data = await response.json();
+      if (data.success) {
+        fetchUsers(pagination.page);
+        setSelectedIds([]);
+      }
+    } catch (err) {
+      console.error('Bulk action error:', err);
     }
   };
 
@@ -394,9 +529,21 @@ const UserManagement = () => {
             onStatusChange={handleStatusChange}
             onDelete={handleDeleteUser}
             onResetPassword={handleResetPassword}
+            hasActiveFilters={hasActiveFilters}
+            onClearFilters={clearFilters}
+            selectedIds={selectedIds}
+            onSelectionChange={setSelectedIds}
           />
         </CardContent>
       </Card>
+
+      {/* Bulk Action Toolbar */}
+      <BulkActionToolbar
+        selectedIds={selectedIds}
+        entityType="users"
+        onAction={handleBulkAction}
+        onClear={() => setSelectedIds([])}
+      />
 
       {/* User Form Modal */}
       <UserFormModal
@@ -413,6 +560,91 @@ const UserManagement = () => {
         onOpenChange={setRoleModalOpen}
         user={selectedUser}
         onRoleChanged={handleRoleChanged}
+      />
+
+      {/* Custom Block Modal */}
+      <FrictionConfirmModal
+        open={blockModalOpen}
+        onOpenChange={setBlockModalOpen}
+        title="Block User Account"
+        description={`Are you sure you want to block ${userForAction?.name || 'this user'} (${userForAction?.email || ''})? They will be immediately signed out and restricted from logging in or using platform services.`}
+        confirmText="Block User"
+        variant="destructive"
+        requiresReason={true}
+        reasonPlaceholder="e.g. Terms violation, spam listings, multiple reports..."
+        onConfirm={executeBlockUser}
+        loading={actionLoading}
+      />
+
+      {/* Custom Delete Modal */}
+      <FrictionConfirmModal
+        open={deleteModalOpen}
+        onOpenChange={setDeleteModalOpen}
+        title="Delete User Account"
+        description={`Are you sure you want to delete ${userForAction?.name || 'this user'} (${userForAction?.email || ''})? This will anonymize their personal data and soft-delete the account. This action cannot be undone.`}
+        confirmText="Delete Account"
+        actionText="DELETE"
+        variant="destructive"
+        onConfirm={executeDeleteUser}
+        loading={actionLoading}
+      />
+
+      {/* Custom Reset Password Modal */}
+      <FrictionConfirmModal
+        open={resetPwdModalOpen}
+        onOpenChange={setResetPwdModalOpen}
+        title="Reset User Password"
+        description={`Are you sure you want to reset the password for ${userForAction?.name || 'this user'} (${userForAction?.email || ''})? A temporary password will be generated for them.`}
+        confirmText="Reset Password"
+        variant="warning"
+        onConfirm={executeResetPassword}
+        loading={actionLoading}
+      />
+
+      {/* Temporary Password Success Modal */}
+      <Dialog open={successModalOpen} onOpenChange={setSuccessModalOpen}>
+        <DialogContent className="sm:max-w-[400px]">
+          <DialogHeader>
+            <DialogTitle className="text-green-600 dark:text-green-400 flex items-center gap-2 font-bold">
+              <CheckCircle className="h-5 w-5" />
+              Password Reset Successful
+            </DialogTitle>
+            <DialogDescription className="pt-2 text-sm text-muted-foreground">
+              A temporary password has been successfully generated for {userForAction?.name || 'this user'}.
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-4 py-2">
+            <div className="bg-muted p-3 rounded-lg border border-border flex items-center justify-between">
+              <span className="font-mono font-bold text-lg tracking-wider text-foreground select-all">
+                {tempPassword}
+              </span>
+              <Button
+                size="sm"
+                variant="ghost"
+                onClick={() => {
+                  navigator.clipboard.writeText(tempPassword);
+                }}
+              >
+                Copy
+              </Button>
+            </div>
+            <p className="text-xs text-muted-foreground">
+              Please share this temporary password securely with the user. They will be prompted to change it upon their next login.
+            </p>
+          </div>
+          <DialogFooter>
+            <Button onClick={() => setSuccessModalOpen(false)}>
+              Close
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* User Profile Drawer */}
+      <UserProfileDrawer
+        userId={drawerUserId}
+        open={drawerOpen}
+        onClose={() => setDrawerOpen(false)}
       />
     </div>
   );

@@ -5,7 +5,7 @@ import { Amenity } from "../models/Amenity.js";
 import { Property } from "../models/Property.js";
 import { connectDB } from "../src/config/db.js";
 import { requireAdmin } from "../src/middleware/adminAuth.js";
-import { createAuditLog } from "../src/services/adminAuditService.js";
+import { createAuditLog, safeCreateAuditLog } from "../src/services/adminAuditService.js";
 
 const router = Router();
 
@@ -193,7 +193,7 @@ router.post("/", requireAdmin, async (req, res) => {
         await newCategory.save();
 
         // Create audit log
-        await createAuditLog({
+        await safeCreateAuditLog({
             adminId: req.user._id,
             action: 'CREATE',
             resourceType: 'category',
@@ -322,7 +322,7 @@ router.put("/:id", requireAdmin, async (req, res) => {
         ).lean();
 
         // Create audit log
-        await createAuditLog({
+        await safeCreateAuditLog({
             adminId: req.user._id,
             action: 'UPDATE',
             resourceType: 'category',
@@ -394,7 +394,7 @@ router.delete("/:id", requireAdmin, async (req, res) => {
         });
 
         // Create audit log
-        await createAuditLog({
+        await safeCreateAuditLog({
             adminId: req.user._id,
             action: 'DELETE',
             resourceType: 'category',
@@ -533,7 +533,7 @@ router.post("/amenities", requireAdmin, async (req, res) => {
         await newAmenity.save();
 
         // Create audit log
-        await createAuditLog({
+        await safeCreateAuditLog({
             adminId: req.user._id,
             action: 'CREATE',
             resourceType: 'category', // Using 'category' as amenities are related
@@ -652,7 +652,7 @@ router.put("/amenities/:id", requireAdmin, async (req, res) => {
         ).lean();
 
         // Create audit log
-        await createAuditLog({
+        await safeCreateAuditLog({
             adminId: req.user._id,
             action: 'UPDATE',
             resourceType: 'category',
@@ -710,7 +710,7 @@ router.delete("/amenities/:id", requireAdmin, async (req, res) => {
         });
 
         // Create audit log
-        await createAuditLog({
+        await safeCreateAuditLog({
             adminId: req.user._id,
             action: 'DELETE',
             resourceType: 'category',
@@ -806,7 +806,7 @@ router.post("/amenities/bulk", requireAdmin, async (req, res) => {
 
         // Create audit log for bulk operation
         if (results.created.length > 0) {
-            await createAuditLog({
+            await safeCreateAuditLog({
                 adminId: req.user._id,
                 action: 'CREATE',
                 resourceType: 'category',

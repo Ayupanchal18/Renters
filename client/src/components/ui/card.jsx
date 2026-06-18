@@ -15,8 +15,8 @@ const cardVariants = cva(
                 // Default: soft corners, layered shadows, theme-aware border (Req 7.3)
                 default: "bg-card border-neutral-200 dark:border-neutral-800 shadow-sm",
                 
-                // Glass: backdrop-filter blur(8px), semi-transparent (Req 7.5)
-                glass: "bg-white/6 dark:bg-white/6 backdrop-blur-lg border-white/10 shadow-lg",
+                // Glass: backdrop-filter blur(8px), semi-transparent, glow on hover (Req 7.5)
+                glass: "bg-white/6 dark:bg-white/6 backdrop-blur-lg border-white/10 shadow-lg transition-all duration-200 hover:shadow-rt-glow",
                 
                 // Elevated: larger shadow for prominent cards
                 elevated: "bg-card border-neutral-200 dark:border-neutral-800 shadow-lg",

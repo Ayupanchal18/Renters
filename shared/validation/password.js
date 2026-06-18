@@ -40,9 +40,8 @@ const PERSONAL_INFO_PATTERNS = [
 
 /**
  * Validate password strength and requirements
- * Simplified: just minimum 6 characters
  * @param {string} password - The password to validate
- * @param {Object} userInfo - Optional user information (unused, kept for API compatibility)
+ * @param {Object} userInfo - Optional user information
  * @returns {Object} Validation result with requirements, score, and feedback
  */
 export function validatePasswordStrength(password, userInfo = {}) {
@@ -57,30 +56,21 @@ export function validatePasswordStrength(password, userInfo = {}) {
         };
     }
 
-    // Simple requirement: minimum 6 characters
     const requirements = {
-        minLength: password.length >= 6
+        minLength: password.length >= 8,
+        hasUppercase: /[A-Z]/.test(password),
+        hasLowercase: /[a-z]/.test(password),
+        hasNumber: /\d/.test(password),
+        hasSpecialChar: /[^A-Za-z0-9]/.test(password),
+        notCommon: !isCommonPassword(password),
+        notPersonal: !containsPersonalInfo(password, userInfo)
     };
 
-    // Simple score based on length
-    let score = 0;
-    if (password.length >= 6) score = 50;
-    if (password.length >= 8) score = 70;
-    if (password.length >= 10) score = 85;
-    if (password.length >= 12) score = 100;
+    const score = calculatePasswordScore(password, requirements);
+    const strength = getStrengthLevel(score);
 
-    // Determine strength level based on length
-    let strength = 'weak';
-    if (password.length >= 12) strength = 'excellent';
-    else if (password.length >= 10) strength = 'strong';
-    else if (password.length >= 8) strength = 'good';
-    else if (password.length >= 6) strength = 'fair';
-
-    // Check if password meets requirement
-    const isValid = requirements.minLength;
-
-    // Generate error messages
-    const errors = isValid ? [] : ['Password must be at least 6 characters long'];
+    const errors = generateErrorMessages(requirements);
+    const isValid = errors.length === 0;
 
     return {
         isValid,
@@ -88,7 +78,7 @@ export function validatePasswordStrength(password, userInfo = {}) {
         strength,
         requirements,
         errors,
-        suggestions: [],
+        suggestions: generateSuggestions(password, requirements, score),
         feedback: {
             color: getStrengthColor(strength),
             message: getStrengthMessage(strength, score)
@@ -332,12 +322,6 @@ function generateErrorMessages(requirements) {
     if (!requirements.hasSpecialChar) {
         errors.push('Password must contain at least one special character');
     }
-    if (!requirements.notCommon) {
-        errors.push('Password is too common - please choose a more unique password');
-    }
-    if (!requirements.notPersonal) {
-        errors.push('Password should not contain personal information');
-    }
 
     return errors;
 }
@@ -382,19 +366,11 @@ function generateSuggestions(password, requirements, score) {
 
 /**
  * Check if password was used recently (for password history)
- * This would typically check against a server-side password history
  * @param {string} password - New password
  * @param {Array} passwordHistory - Array of previous password hashes
  * @returns {Promise<boolean>} True if password was used recently
  */
 export async function checkPasswordHistory(password, passwordHistory = []) {
-    // This is a placeholder - in a real implementation, you would:
-    // 1. Hash the new password
-    // 2. Compare against stored password hashes
-    // 3. Check server-side password history
-
-    // For now, return false (password not in history)
-    // This should be implemented server-side for security
     return false;
 }
 

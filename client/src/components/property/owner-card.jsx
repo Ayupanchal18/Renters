@@ -5,6 +5,7 @@ import { useMessages } from '../../hooks/useMessages';
 import { isAuthenticated } from '../../utils/auth';
 import { Button } from '../ui/button';
 import ContactChoiceDialog from './ContactChoiceDialog';
+import VerifiedBadge from '../common/VerifiedBadge';
 
 export default function OwnerCard({ owner, propertyId, propertyTitle }) {
     const [isCreatingConversation, setIsCreatingConversation] = useState(false);
@@ -17,7 +18,7 @@ export default function OwnerCard({ owner, propertyId, propertyTitle }) {
     const phone = owner?.phone;
     const email = owner?.email;
     const ownerType = owner?.ownerType || 'owner';
-    const isVerified = owner?.verificationStatus?.toLowerCase() === 'verified';
+    const isVerified = owner?.isVerified || owner?.verificationStatus?.toLowerCase() === 'verified';
     const ownerId = owner?.id || owner?._id;
 
     const formatPhone = (phone) => {
@@ -120,7 +121,7 @@ export default function OwnerCard({ owner, propertyId, propertyTitle }) {
                     <div className="flex items-center gap-2">
                         <p className="font-semibold text-foreground truncate">{name}</p>
                         {isVerified && (
-                            <ShieldCheck className="w-4 h-4 text-emerald-500 flex-shrink-0" />
+                            <VerifiedBadge size="sm" />
                         )}
                     </div>
                     <p className="text-sm text-muted-foreground">{ownerTypeInfo.label}</p>

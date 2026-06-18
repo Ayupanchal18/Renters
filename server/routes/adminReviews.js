@@ -4,7 +4,9 @@ import { Review } from "../models/Review.js";
 import { User } from "../models/User.js";
 import { connectDB } from "../src/config/db.js";
 import { requireAdmin } from "../src/middleware/adminAuth.js";
-import { createAuditLog } from "../src/services/adminAuditService.js";
+import { createAuditLog, safeCreateAuditLog } from "../src/services/adminAuditService.js";
+import { requirePermission } from "../src/middleware/permissionGuard.js";
+import { emitDashboardUpdate } from "../socket.js";
 
 const router = Router();
 
@@ -94,7 +96,7 @@ const buildReviewQuery = (filters) => {
  * GET /api/admin/reviews
  * List all reviews with pagination and filters
  */
-router.get("/", requireAdmin, async (req, res) => {
+router.get("/", requirePermission('reviews:read'), async (req, res) => {
     try {
         await connectDB();
 
@@ -163,7 +165,7 @@ router.get("/", requireAdmin, async (req, res) => {
  * GET /api/admin/reviews/:id
  * Get a specific review
  */
-router.get("/:id", requireAdmin, async (req, res) => {
+router.get("/:id", requirePermission('reviews:read'), async (req, res) => {
     try {
         await connectDB();
 
@@ -198,7 +200,7 @@ router.get("/:id", requireAdmin, async (req, res) => {
  * PATCH /api/admin/reviews/:id/approve
  * Approve a review to make it publicly visible
  */
-router.patch("/:id/approve", requireAdmin, async (req, res) => {
+router.patch("/:id/approve", requirePermission('reviews:moderate'), async (req, res) => {
     try {
         await connectDB();
 
@@ -237,7 +239,7 @@ router.patch("/:id/approve", requireAdmin, async (req, res) => {
             .lean();
 
         // Create audit log
-        await createAuditLog({
+        await safeCreateAuditLog({
             adminId: req.user._id,
             action: 'APPROVE',
             resourceType: 'review',
@@ -246,6 +248,8 @@ router.patch("/:id/approve", requireAdmin, async (req, res) => {
             previousValues: { status: previousStatus },
             req
         });
+
+        emitDashboardUpdate('review', { action: 'APPROVE', resourceId: req.params.id });
 
         res.json({
             success: true,
@@ -267,7 +271,7 @@ router.patch("/:id/approve", requireAdmin, async (req, res) => {
  * PATCH /api/admin/reviews/:id/reject
  * Reject a review and optionally notify the author
  */
-router.patch("/:id/reject", requireAdmin, async (req, res) => {
+router.patch("/:id/reject", requirePermission('reviews:moderate'), async (req, res) => {
     try {
         await connectDB();
 
@@ -321,7 +325,7 @@ router.patch("/:id/reject", requireAdmin, async (req, res) => {
             .lean();
 
         // Create audit log
-        await createAuditLog({
+        await safeCreateAuditLog({
             adminId: req.user._id,
             action: 'REJECT',
             resourceType: 'review',
@@ -331,6 +335,8 @@ router.patch("/:id/reject", requireAdmin, async (req, res) => {
             metadata: { notifyAuthor },
             req
         });
+
+        emitDashboardUpdate('review', { action: 'REJECT', resourceId: req.params.id });
 
         if (notifyAuthor && review.userId) {
             // Notification would be sent here
@@ -357,7 +363,7 @@ router.patch("/:id/reject", requireAdmin, async (req, res) => {
  * DELETE /api/admin/reviews/:id
  * Delete abusive content and log the action
  */
-router.delete("/:id", requireAdmin, async (req, res) => {
+router.delete("/:id", requirePermission('reviews:moderate'), async (req, res) => {
     try {
         await connectDB();
 
@@ -383,7 +389,7 @@ router.delete("/:id", requireAdmin, async (req, res) => {
         });
 
         // Create audit log with full review details for accountability
-        await createAuditLog({
+        await safeCreateAuditLog({
             adminId: req.user._id,
             action: 'DELETE',
             resourceType: 'review',
@@ -419,7 +425,7 @@ router.delete("/:id", requireAdmin, async (req, res) => {
  * POST /api/admin/reviews/:id/block-user
  * Block user for violations to prevent further review submissions
  */
-router.post("/:id/block-user", requireAdmin, async (req, res) => {
+router.post("/:id/block-user", requirePermission('users:write'), async (req, res) => {
     try {
         await connectDB();
 
@@ -486,7 +492,7 @@ router.post("/:id/block-user", requireAdmin, async (req, res) => {
         }
 
         // Create audit log for blocking user
-        await createAuditLog({
+        await safeCreateAuditLog({
             adminId: req.user._id,
             action: 'BLOCK',
             resourceType: 'user',
@@ -524,7 +530,7 @@ router.post("/:id/block-user", requireAdmin, async (req, res) => {
  * GET /api/admin/reviews/stats
  * Get review statistics
  */
-router.get("/stats/summary", requireAdmin, async (req, res) => {
+router.get("/stats/summary", requirePermission('reviews:read'), async (req, res) => {
     try {
         await connectDB();
 
@@ -611,7 +617,7 @@ router.get("/stats/summary", requireAdmin, async (req, res) => {
  * PATCH /api/admin/reviews/bulk/approve
  * Bulk approve multiple reviews
  */
-router.patch("/bulk/approve", requireAdmin, async (req, res) => {
+router.patch("/bulk/approve", requirePermission('reviews:bulk'), async (req, res) => {
     try {
         await connectDB();
 
@@ -622,6 +628,14 @@ router.patch("/bulk/approve", requireAdmin, async (req, res) => {
                 success: false,
                 error: "VALIDATION_ERROR",
                 message: "reviewIds must be a non-empty array"
+            });
+        }
+
+        if (reviewIds.length > 100) {
+            return res.status(400).json({
+                success: false,
+                error: "LIMIT_EXCEEDED",
+                message: "Bulk operations are limited to a maximum of 100 items at a time"
             });
         }
 
@@ -636,7 +650,7 @@ router.patch("/bulk/approve", requireAdmin, async (req, res) => {
         );
 
         // Create audit log
-        await createAuditLog({
+        await safeCreateAuditLog({
             adminId: req.user._id,
             action: 'APPROVE',
             resourceType: 'review',
@@ -644,6 +658,8 @@ router.patch("/bulk/approve", requireAdmin, async (req, res) => {
             metadata: { reviewIds, bulkOperation: true },
             req
         });
+
+        emitDashboardUpdate('review', { action: 'BULK_APPROVE', count: result.modifiedCount, ids: reviewIds });
 
         res.json({
             success: true,
@@ -668,7 +684,7 @@ router.patch("/bulk/approve", requireAdmin, async (req, res) => {
  * PATCH /api/admin/reviews/bulk/reject
  * Bulk reject multiple reviews
  */
-router.patch("/bulk/reject", requireAdmin, async (req, res) => {
+router.patch("/bulk/reject", requirePermission('reviews:bulk'), async (req, res) => {
     try {
         await connectDB();
 
@@ -679,6 +695,14 @@ router.patch("/bulk/reject", requireAdmin, async (req, res) => {
                 success: false,
                 error: "VALIDATION_ERROR",
                 message: "reviewIds must be a non-empty array"
+            });
+        }
+
+        if (reviewIds.length > 100) {
+            return res.status(400).json({
+                success: false,
+                error: "LIMIT_EXCEEDED",
+                message: "Bulk operations are limited to a maximum of 100 items at a time"
             });
         }
 
@@ -701,7 +725,7 @@ router.patch("/bulk/reject", requireAdmin, async (req, res) => {
         );
 
         // Create audit log
-        await createAuditLog({
+        await safeCreateAuditLog({
             adminId: req.user._id,
             action: 'REJECT',
             resourceType: 'review',
@@ -709,6 +733,8 @@ router.patch("/bulk/reject", requireAdmin, async (req, res) => {
             metadata: { reviewIds, bulkOperation: true },
             req
         });
+
+        emitDashboardUpdate('review', { action: 'BULK_REJECT', count: result.modifiedCount, ids: reviewIds });
 
         res.json({
             success: true,

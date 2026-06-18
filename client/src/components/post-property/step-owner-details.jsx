@@ -1,11 +1,26 @@
+import { useState } from "react";
 import { Input } from "../ui/input";
 import { Label } from "../ui/label";
 import { User } from 'lucide-react';
+import { OWNER_TYPES, OWNER_TYPE_LABELS } from '@shared/propertyTypes';
+import { validateFieldInline } from '@shared/validation/wizard';
 
 export default function StepOwnerDetails({ formData, setFormData, validationErrors }) {
+    const [inlineErrors, setInlineErrors] = useState({});
+
     const updateData = (updates) => {
         setFormData({ ...formData, ...updates });
     };
+
+    const handleBlur = (fieldName, value) => {
+        const error = validateFieldInline(fieldName, value, formData);
+        setInlineErrors((prev) => ({
+            ...prev,
+            [fieldName]: error,
+        }));
+    };
+
+    const getError = (field) => validationErrors[field] || inlineErrors[field];
 
     return (
         <div className="space-y-5 sm:space-y-6">
@@ -22,25 +37,36 @@ export default function StepOwnerDetails({ formData, setFormData, validationErro
                     placeholder="Your full name"
                     value={formData.ownerName}
                     onChange={(e) => updateData({ ownerName: e.target.value })}
-                    className={`text-sm sm:text-base ${validationErrors.ownerName ? "border-destructive" : ""}`}
+                    className={`text-sm sm:text-base ${getError('ownerName') ? "border-destructive" : ""}`}
                 />
-                {validationErrors.ownerName && (
-                    <p className="text-destructive text-xs sm:text-sm">{validationErrors.ownerName}</p>
+                {getError('ownerName') && (
+                    <p className="text-destructive text-xs sm:text-sm">{getError('ownerName')}</p>
                 )}
             </div>
 
             {/* Phone Number */}
             <div className="space-y-2">
                 <Label htmlFor="ownerPhone" className="text-foreground font-semibold text-sm sm:text-base">Phone Number *</Label>
-                <Input
-                    id="ownerPhone"
-                    placeholder="+91 98765 43210"
-                    value={formData.ownerPhone}
-                    onChange={(e) => updateData({ ownerPhone: e.target.value })}
-                    className={`text-sm sm:text-base ${validationErrors.ownerPhone ? "border-destructive" : ""}`}
-                />
-                {validationErrors.ownerPhone && (
-                    <p className="text-destructive text-xs sm:text-sm">{validationErrors.ownerPhone}</p>
+                <div className="flex gap-2">
+                    <span className="flex items-center justify-center px-3 bg-muted border border-input rounded-lg text-sm text-muted-foreground font-medium">
+                        +91
+                    </span>
+                    <Input
+                        id="ownerPhone"
+                        placeholder="98765 43210"
+                        value={formData.ownerPhone}
+                        onChange={(e) => {
+                            const val = e.target.value.replace(/\D/g, '').slice(0, 10);
+                            updateData({ ownerPhone: val });
+                        }}
+                        onBlur={(e) => handleBlur('ownerPhone', e.target.value)}
+                        inputMode="numeric"
+                        maxLength={10}
+                        className={`flex-1 text-sm sm:text-base ${getError('ownerPhone') ? "border-destructive" : ""}`}
+                    />
+                </div>
+                {getError('ownerPhone') && (
+                    <p className="text-destructive text-xs sm:text-sm">{getError('ownerPhone')}</p>
                 )}
             </div>
 
@@ -53,21 +79,22 @@ export default function StepOwnerDetails({ formData, setFormData, validationErro
                     placeholder="your.email@example.com"
                     value={formData.ownerEmail}
                     onChange={(e) => updateData({ ownerEmail: e.target.value })}
-                    className={`text-sm sm:text-base ${validationErrors.ownerEmail ? "border-destructive" : ""}`}
+                    onBlur={(e) => handleBlur('ownerEmail', e.target.value)}
+                    className={`text-sm sm:text-base ${getError('ownerEmail') ? "border-destructive" : ""}`}
                 />
-                {validationErrors.ownerEmail && (
-                    <p className="text-destructive text-xs sm:text-sm">{validationErrors.ownerEmail}</p>
+                {getError('ownerEmail') && (
+                    <p className="text-destructive text-xs sm:text-sm">{getError('ownerEmail')}</p>
                 )}
             </div>
 
-            {/* Owner or Broker */}
+            {/* Owner or Agent or Builder */}
             <div className="space-y-3">
                 <Label className="text-foreground font-semibold text-sm sm:text-base">
-                    Are you the Owner or Broker? *
+                    You are *
                 </Label>
 
-                <div className="grid grid-cols-2 gap-3">
-                    {["owner", "broker"].map((type) => (
+                <div className="grid grid-cols-3 gap-3">
+                    {OWNER_TYPES.map((type) => (
                         <label 
                             key={type} 
                             className={`flex items-center justify-center gap-2 p-3 rounded-lg border-2 cursor-pointer transition-all ${
@@ -83,13 +110,13 @@ export default function StepOwnerDetails({ formData, setFormData, validationErro
                                 onChange={(e) => updateData({ ownerType: e.target.value })}
                                 className="w-4 h-4 accent-primary"
                             />
-                            <span className="text-foreground capitalize font-medium text-sm sm:text-base">{type}</span>
+                            <span className="text-foreground font-medium text-xs sm:text-sm">{OWNER_TYPE_LABELS[type]}</span>
                         </label>
                     ))}
                 </div>
 
-                {validationErrors.ownerType && (
-                    <p className="text-destructive text-xs sm:text-sm">{validationErrors.ownerType}</p>
+                {getError('ownerType') && (
+                    <p className="text-destructive text-xs sm:text-sm">{getError('ownerType')}</p>
                 )}
             </div>
 

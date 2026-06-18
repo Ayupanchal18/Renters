@@ -5,9 +5,16 @@ import mongoose from "mongoose";
 import fs from "fs";
 import { connectDB } from "../src/config/db.js";
 import { authenticateToken } from "../src/middleware/security.js";
-import { propertyUpload, uploadPropertyPhotos } from "../src/middleware/cloudinaryUpload.js";
+import { propertyUpload, uploadPropertyPhotos, uploadPanoramaImages } from "../src/middleware/cloudinaryUpload.js";
 import { LISTING_TYPES } from "../../shared/propertyTypes.js";
 import listingLifecycleService from "../src/services/listingLifecycleService.js";
+import { AvailabilitySlot } from "../models/AvailabilitySlot.js";
+import { VisitBooking } from "../models/VisitBooking.js";
+import { Conversation } from "../models/Conversation.js";
+import { Notification } from "../models/Notification.js";
+import messageService from "../src/services/messageService.js";
+import messageNotificationService from "../src/services/messageNotificationService.js";
+import { getIO } from "../socket.js";
 
 const router = Router();
 
@@ -79,7 +86,10 @@ router.post("/buy", ...);
 */
 
 // Create property (backward compatible - defaults to rent)
-router.post("/", propertyUpload.array("photos", 10), async (req, res) => {
+router.post("/", propertyUpload.fields([
+    { name: "photos", maxCount: 15 },
+    { name: "panoramaImages", maxCount: 10 }
+]), async (req, res) => {
     try {
         const userId = req.headers["x-user-id"];
         if (!userId) return res.status(401).json({ error: "Unauthorized - provide x-user-id header (dev)" });
@@ -109,13 +119,58 @@ router.post("/", propertyUpload.array("photos", 10), async (req, res) => {
         const slug = await makeUniqueSlug(baseSlug);
         const listingNumber = makeListingNumber();
 
-        // Upload photos to Cloudinary instead of local storage
-        const photoPaths = await uploadPropertyPhotos(req.files);
+        // Process standard photos
+        const photos = req.files?.photos || [];
+        const photoPaths = await uploadPropertyPhotos(photos);
+
+        // Process panorama images
+        const panoramaFiles = req.files?.panoramaImages || [];
+        const panoramaPaths = await uploadPanoramaImages(panoramaFiles);
+
+        let panoramaImages = [];
+        if (panoramaFiles.length > 0) {
+            let labels = [];
+            if (body.panoramaLabels) {
+                try {
+                    labels = JSON.parse(body.panoramaLabels);
+                } catch (e) {
+                    labels = Array.isArray(body.panoramaLabels) ? body.panoramaLabels : [body.panoramaLabels];
+                }
+            }
+            panoramaImages = panoramaPaths.map((url, idx) => ({
+                url,
+                label: labels[idx] || ""
+            }));
+        }
+
+        // Validate URLs if present
+        if (body.virtualTourType === "matterport" && body.matterportUrl) {
+            try {
+                new URL(body.matterportUrl);
+            } catch (e) {
+                return res.status(400).json({ error: "Invalid Matterport URL format" });
+            }
+        }
+        if (body.virtualTourType === "video" && body.videoUrl) {
+            try {
+                new URL(body.videoUrl);
+            } catch (e) {
+                return res.status(400).json({ error: "Invalid Video URL format" });
+            }
+        }
+
+        const virtualTour = {
+            type: body.virtualTourType || "none",
+            matterportUrl: body.matterportUrl || "",
+            panoramaImages,
+            videoUrl: body.videoUrl || ""
+        };
 
         const doc = new Property({
             ...body,
             listingType: body.listingType || LISTING_TYPES.RENT,
             photos: photoPaths,
+            virtualTour,
             ownerId: user._id,
             ownerName,
             ownerPhone,
@@ -1206,7 +1261,7 @@ router.get("/:identifier", async (req, res) => {
                 _id: identifier,
                 isDeleted: false,
                 status: "active"
-            }).lean();
+            }).populate("ownerId", "name email phone isVerified").lean();
         }
 
         if (!property) {
@@ -1215,7 +1270,7 @@ router.get("/:identifier", async (req, res) => {
                 slug: identifier,
                 isDeleted: false,
                 status: "active"
-            }).lean();
+            }).populate("ownerId", "name email phone isVerified").lean();
         }
 
         if (!property) {
@@ -1359,6 +1414,634 @@ router.post("/get-property", async (req, res) => {
             success: false,
             error: "Server error",
             message: err.message
+        });
+    }
+});
+
+// ==================== AVAILABILITY & BOOKING MANAGEMENT ====================
+
+// Helper function to compute concrete slots from availability templates and overrides
+const computeAvailability = async (propertyId, ownerId, startFromDate, daysCount = 14) => {
+    const rules = await AvailabilitySlot.find({ propertyId, isActive: true }).lean();
+    const bookings = await VisitBooking.find({
+        propertyId,
+        status: { $in: ["pending", "confirmed"] }
+    }).lean();
+    const bookedTimes = new Set(bookings.map(b => b.slotStart.getTime()));
+
+    const computedSlots = [];
+    const now = new Date();
+
+    for (let i = 0; i < daysCount; i++) {
+        const currentDate = new Date(startFromDate);
+        currentDate.setDate(currentDate.getDate() + i);
+        currentDate.setHours(0, 0, 0, 0);
+
+        const overrides = rules.filter(r => 
+            r.type === "override" && 
+            new Date(r.specificDate).toDateString() === currentDate.toDateString()
+        );
+
+        let activeRules = [];
+        if (overrides.length > 0) {
+            activeRules = overrides.filter(o => o.isActive);
+        } else {
+            const dayOfWeek = currentDate.getDay();
+            activeRules = rules.filter(r => 
+                r.type === "recurring" && 
+                r.dayOfWeek === dayOfWeek && 
+                r.isActive
+            );
+        }
+
+        for (const rule of activeRules) {
+            const duration = rule.slotDurationMinutes || 30;
+            const [startH, startM] = rule.startTime.split(":").map(Number);
+            const [endH, endM] = rule.endTime.split(":").map(Number);
+
+            let current = new Date(currentDate);
+            current.setHours(startH, startM, 0, 0);
+
+            const end = new Date(currentDate);
+            end.setHours(endH, endM, 0, 0);
+
+            while (current.getTime() + duration * 60 * 1000 <= end.getTime()) {
+                const slotStart = new Date(current);
+                const slotEnd = new Date(current.getTime() + duration * 60 * 1000);
+
+                if (slotStart.getTime() > now.getTime()) {
+                    if (!bookedTimes.has(slotStart.getTime())) {
+                        computedSlots.push({
+                            slotStart,
+                            slotEnd,
+                            duration
+                        });
+                    }
+                }
+                current = new Date(current.getTime() + duration * 60 * 1000);
+            }
+        }
+    }
+
+    computedSlots.sort((a, b) => a.slotStart - b.slotStart);
+    return computedSlots;
+};
+
+// Get raw availability rules (owner only)
+router.get("/:id/availability/rules", authenticateToken, async (req, res) => {
+    try {
+        const { id } = req.params;
+        const property = await Property.findOne({ _id: id, isDeleted: false });
+        if (!property) {
+            return res.status(404).json({ success: false, error: "Property not found" });
+        }
+        if (property.ownerId.toString() !== req.user._id.toString()) {
+            return res.status(403).json({ success: false, error: "Forbidden - only the owner can retrieve raw availability rules" });
+        }
+        const rules = await AvailabilitySlot.find({ propertyId: property._id }).lean();
+        res.json({ success: true, rules });
+    } catch (err) {
+        console.error("GET /properties/:id/availability/rules error:", err);
+        res.status(500).json({ success: false, error: "Server error", message: err.message });
+    }
+});
+
+// Owner sets/updates availability rules
+router.post("/:id/availability", authenticateToken, async (req, res) => {
+    try {
+        const { id } = req.params;
+        const { slots = [] } = req.body;
+
+        const property = await Property.findOne({ _id: id, isDeleted: false });
+        if (!property) {
+            return res.status(404).json({ success: false, error: "Property not found" });
+        }
+
+        if (property.ownerId.toString() !== req.user._id.toString()) {
+            return res.status(403).json({ success: false, error: "Forbidden - only the owner can configure availability" });
+        }
+
+        for (const slot of slots) {
+            if (!slot.type || !["recurring", "override"].includes(slot.type)) {
+                return res.status(400).json({ success: false, error: "Invalid slot type" });
+            }
+            if (slot.type === "recurring" && (slot.dayOfWeek === undefined || slot.dayOfWeek < 0 || slot.dayOfWeek > 6)) {
+                return res.status(400).json({ success: false, error: "Recurring slots require a valid dayOfWeek (0-6)" });
+            }
+            if (slot.type === "override" && !slot.specificDate) {
+                return res.status(400).json({ success: false, error: "Override slots require specificDate" });
+            }
+            if (!slot.startTime || !slot.endTime) {
+                return res.status(400).json({ success: false, error: "startTime and endTime are required" });
+            }
+        }
+
+        await AvailabilitySlot.deleteMany({ propertyId: property._id });
+
+        const formattedSlots = slots.map(s => ({
+            ownerId: req.user._id,
+            propertyId: property._id,
+            type: s.type,
+            dayOfWeek: s.dayOfWeek,
+            specificDate: s.specificDate ? new Date(s.specificDate) : undefined,
+            startTime: s.startTime,
+            endTime: s.endTime,
+            slotDurationMinutes: s.slotDurationMinutes || 30,
+            isActive: s.isActive !== undefined ? s.isActive : true
+        }));
+
+        const docs = await AvailabilitySlot.insertMany(formattedSlots);
+
+        res.json({
+            success: true,
+            message: "Availability updated successfully",
+            slots: docs
+        });
+    } catch (err) {
+        console.error("POST /properties/:id/availability error:", err);
+        res.status(500).json({ success: false, error: "Server error", message: err.message });
+    }
+});
+
+// Get computed availability slots for next N days (default 14)
+router.get("/:id/availability", async (req, res) => {
+    try {
+        const { id } = req.params;
+        const days = Math.min(30, parseInt(req.query.days) || 14);
+
+        const property = await Property.findOne({ _id: id, isDeleted: false });
+        if (!property) {
+            return res.status(404).json({ success: false, error: "Property not found" });
+        }
+
+        const startFrom = new Date();
+        const computed = await computeAvailability(property._id, property.ownerId, startFrom, days);
+
+        res.json({
+            success: true,
+            slots: computed
+        });
+    } catch (err) {
+        console.error("GET /properties/:id/availability error:", err);
+        res.status(500).json({ success: false, error: "Server error", message: err.message });
+    }
+});
+
+// Tenant requests a visit booking slot
+router.post("/:id/bookings", authenticateToken, async (req, res) => {
+    try {
+        const { id } = req.params;
+        const { slotStart, slotEnd, notes } = req.body;
+
+        if (!slotStart || !slotEnd) {
+            return res.status(400).json({ success: false, error: "slotStart and slotEnd are required" });
+        }
+
+        const property = await Property.findOne({ _id: id, isDeleted: false });
+        if (!property) {
+            return res.status(404).json({ success: false, error: "Property not found" });
+        }
+
+        if (property.ownerId.toString() === req.user._id.toString()) {
+            return res.status(400).json({ success: false, error: "You cannot book a visit to your own property" });
+        }
+
+        const targetStart = new Date(slotStart);
+        const targetEnd = new Date(slotEnd);
+
+        if (targetStart.getTime() <= Date.now()) {
+            return res.status(400).json({ success: false, error: "Slots must be in the future" });
+        }
+
+        if (targetEnd.getTime() <= targetStart.getTime()) {
+            return res.status(400).json({ success: false, error: "slotEnd must be after slotStart" });
+        }
+
+        const existingBooking = await VisitBooking.findOne({
+            propertyId: property._id,
+            slotStart: targetStart,
+            status: { $in: ["pending", "confirmed"] }
+        });
+
+        if (existingBooking) {
+            return res.status(400).json({ success: false, error: "This slot is already booked" });
+        }
+
+        const computed = await computeAvailability(property._id, property.ownerId, targetStart, 1);
+        const isValid = computed.some(s => 
+            new Date(s.slotStart).getTime() === targetStart.getTime() && 
+            new Date(s.slotEnd).getTime() === targetEnd.getTime()
+        );
+
+        if (!isValid) {
+            return res.status(400).json({ success: false, error: "Requested slot does not align with owner availability" });
+        }
+
+        const booking = new VisitBooking({
+            propertyId: property._id,
+            ownerId: property.ownerId,
+            tenantId: req.user._id,
+            slotStart: targetStart,
+            slotEnd: targetEnd,
+            notes: notes || "",
+            status: "pending"
+        });
+
+        await booking.save();
+
+        let conversationId = null;
+        try {
+            const convResult = await messageService.getOrCreateConversation(
+                req.user._id.toString(),
+                property.ownerId.toString(),
+                property._id.toString()
+            );
+
+            if (convResult.success && convResult.conversation) {
+                conversationId = convResult.conversation._id;
+                const now = new Date();
+                const thumbnail = property.photos && property.photos[0] ? property.photos[0] : "";
+                
+                const bookingMsgText = `Visit request submitted for ${targetStart.toLocaleString()}`;
+
+                const message = {
+                    sender: req.user._id,
+                    text: bookingMsgText,
+                    type: "booking_request",
+                    booking: {
+                        bookingId: booking._id,
+                        propertyTitle: property.title,
+                        propertyThumbnail: thumbnail,
+                        slotStart: targetStart,
+                        slotEnd: targetEnd,
+                        status: "pending",
+                        notes: notes || ""
+                    },
+                    read: false,
+                    createdAt: now,
+                    updatedAt: now
+                };
+
+                const conv = await Conversation.findById(conversationId);
+                if (conv) {
+                    conv.messages.push(message);
+                    conv.lastMessage = {
+                        sender: req.user._id,
+                        text: `📅 Visit Request: ${property.title}`,
+                        createdAt: now
+                    };
+                    conv.lastActivityAt = now;
+
+                    const unreadCount = conv.unreadCount || new Map();
+                    const recipientIdStr = property.ownerId.toString();
+                    const currentCount = unreadCount.get(recipientIdStr) || 0;
+                    unreadCount.set(recipientIdStr, currentCount + 1);
+                    conv.unreadCount = unreadCount;
+
+                    await conv.save();
+
+                    const io = getIO();
+                    if (io) {
+                        const savedMsg = conv.messages[conv.messages.length - 1];
+                        const messageWithSender = {
+                            ...savedMsg.toObject(),
+                            sender: {
+                                _id: req.user._id,
+                                name: req.user.name || "Tenant",
+                                avatar: req.user.avatar
+                            }
+                        };
+                        io.to(`conv:${conv._id}`).emit("message.new", {
+                            conversationId: conv._id,
+                            message: messageWithSender
+                        });
+
+                        const notification = new Notification({
+                            recipient: property.ownerId,
+                            type: "system",
+                            title: "New Visit Request",
+                            message: `Tenant ${req.user.name || "someone"} requested a visit for ${property.title} on ${targetStart.toLocaleDateString()}`,
+                            data: {
+                                propertyId: property._id,
+                                senderId: req.user._id,
+                                conversationId: conv._id
+                            }
+                        });
+                        await notification.save();
+
+                        io.to(`user:${property.ownerId}`).emit("notification.new", {
+                            notification
+                        });
+
+                        const messageCountResult = await messageService.getUnreadMessageCount(property.ownerId);
+                        const mCount = messageCountResult.success ? messageCountResult.count : 0;
+                        const notificationCountResult = await messageNotificationService.getUnreadNotificationCount(property.ownerId);
+                        const nCount = notificationCountResult.success ? notificationCountResult.count : 0;
+
+                        io.to(`user:${property.ownerId}`).emit("unread.update", {
+                            messages: mCount,
+                            notifications: nCount
+                        });
+                    }
+                }
+            }
+        } catch (chatErr) {
+            console.error("Chat integration error for booking:", chatErr);
+        }
+
+        res.status(201).json({
+            success: true,
+            booking
+        });
+    } catch (err) {
+        console.error("POST /properties/:id/bookings error:", err);
+        res.status(500).json({ success: false, error: "Server error", message: err.message });
+    }
+});
+
+// In-memory cache for neighborhood details
+const neighborhoodCache = new Map();
+const NEIGHBORHOOD_CACHE_TTL = 24 * 60 * 60 * 1000; // 24 hours
+
+// Helper to calculate distance using Haversine formula
+function calculateDistance(lat1, lon1, lat2, lon2) {
+    const R = 6371e3; // Earth's radius in meters
+    const phi1 = (lat1 * Math.PI) / 180;
+    const phi2 = (lat2 * Math.PI) / 180;
+    const deltaPhi = ((lat2 - lat1) * Math.PI) / 180;
+    const deltaLambda = ((lon2 - lon1) * Math.PI) / 180;
+
+    const a =
+        Math.sin(deltaPhi / 2) * Math.sin(deltaPhi / 2) +
+        Math.cos(phi1) *
+            Math.cos(phi2) *
+            Math.sin(deltaLambda / 2) *
+            Math.sin(deltaLambda / 2);
+    const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+
+    return R * c; // returns distance in meters
+}
+
+// GET /api/properties/:id/neighborhood
+router.get("/:id/neighborhood", async (req, res) => {
+    try {
+        const { id } = req.params;
+        const property = await Property.findById(id).lean();
+
+        if (!property) {
+            return res.status(404).json({ success: false, error: "Property not found" });
+        }
+
+        // Coordinates check: [lng, lat]
+        const coords = property.location?.coordinates;
+        if (!coords || coords.length < 2 || (coords[0] === 0 && coords[1] === 0)) {
+            return res.json({
+                success: true,
+                available: false,
+                walkScore: 0,
+                transitScore: 0,
+                categories: {
+                    schools: [],
+                    hospitals: [],
+                    groceries: [],
+                    restaurants: [],
+                    parks: [],
+                    transit: []
+                }
+            });
+        }
+
+        const lng = coords[0];
+        const lat = coords[1];
+
+        // Cache key based on property ID and rounded coordinates (3 decimal places)
+        const cacheKey = `prop_${id}_${lat.toFixed(3)}_${lng.toFixed(3)}`;
+        const cachedEntry = neighborhoodCache.get(cacheKey);
+
+        if (cachedEntry && Date.now() - cachedEntry.timestamp < NEIGHBORHOOD_CACHE_TTL) {
+            console.log(`[Neighborhood] Serving cached results for property: ${id}`);
+            return res.json(cachedEntry.data);
+        }
+
+        // Multiple fallback Overpass endpoints
+        const OVERPASS_ENDPOINTS = [
+            "https://overpass-api.de/api/interpreter",
+            "https://overpass.kumi.systems/api/interpreter",
+            "https://maps.mail.ru/osm/tools/overpass/api/interpreter"
+        ];
+
+        const around = `(around:1500,${lat},${lng})`;
+        // Construct query to request node elements for all desired categories
+        const query = `[out:json][timeout:12];
+        (
+          node["amenity"~"school|college|university"]${around};
+          node["amenity"~"hospital|clinic|pharmacy"]${around};
+          node["amenity"="supermarket"]${around};
+          node["shop"~"supermarket|convenience"]${around};
+          node["amenity"~"restaurant|cafe|fast_food"]${around};
+          node["leisure"~"park|garden"]${around};
+          node["amenity"~"bus_station|bus_stop"]${around};
+          node["railway"="station"]${around};
+          node["station"="subway"]${around};
+        );
+        out body center 150;`;
+
+        let data = null;
+        let fetchError = null;
+
+        // Fetch with timeout helper
+        const fetchWithTimeout = async (url, options, timeoutMs = 10000) => {
+            const controller = new AbortController();
+            const timeoutId = setTimeout(() => controller.abort(), timeoutMs);
+            try {
+                return await fetch(url, { ...options, signal: controller.signal });
+            } finally {
+                clearTimeout(timeoutId);
+            }
+        };
+
+        // Query endpoints sequentially until one succeeds
+        for (const endpoint of OVERPASS_ENDPOINTS) {
+            try {
+                const response = await fetchWithTimeout(endpoint, {
+                    method: "POST",
+                    headers: { "Content-Type": "application/x-www-form-urlencoded" },
+                    body: `data=${encodeURIComponent(query)}`
+                }, 10000);
+
+                if (response.ok) {
+                    data = await response.json();
+                    break;
+                }
+            } catch (err) {
+                console.warn(`[Neighborhood] Failed querying Overpass endpoint: ${endpoint}`, err.message);
+                fetchError = err;
+            }
+        }
+
+        if (!data || !data.elements) {
+            console.error("[Neighborhood] All Overpass API queries failed:", fetchError?.message);
+            // Fallback gracefully
+            return res.json({
+                success: true,
+                available: false,
+                walkScore: 0,
+                transitScore: 0,
+                categories: {
+                    schools: [],
+                    hospitals: [],
+                    groceries: [],
+                    restaurants: [],
+                    parks: [],
+                    transit: []
+                }
+            });
+        }
+
+        const elements = data.elements;
+        const categories = {
+            schools: [],
+            hospitals: [],
+            groceries: [],
+            restaurants: [],
+            parks: [],
+            transit: []
+        };
+
+        // Category mapping
+        const getCategoryKey = (elem) => {
+            const tags = elem.tags || {};
+            if (tags.amenity) {
+                if (["school", "college", "university"].includes(tags.amenity)) return "schools";
+                if (["hospital", "clinic", "pharmacy"].includes(tags.amenity)) return "hospitals";
+                if (["restaurant", "cafe", "fast_food"].includes(tags.amenity)) return "restaurants";
+                if (["bus_station", "bus_stop"].includes(tags.amenity)) return "transit";
+                if (tags.amenity === "supermarket") return "groceries";
+            }
+            if (tags.shop && ["supermarket", "convenience"].includes(tags.shop)) return "groceries";
+            if (tags.leisure && ["park", "garden"].includes(tags.leisure)) return "parks";
+            if (tags.railway === "station") return "transit";
+            if (tags.station === "subway") return "transit";
+            return null;
+        };
+
+        const getAmenityLabel = (elem) => {
+            const tags = elem.tags || {};
+            if (tags.amenity) {
+                if (tags.amenity === "school") return "School";
+                if (tags.amenity === "college") return "College";
+                if (tags.amenity === "university") return "University";
+                if (tags.amenity === "hospital") return "Hospital";
+                if (tags.amenity === "clinic") return "Clinic";
+                if (tags.amenity === "pharmacy") return "Pharmacy";
+                if (tags.amenity === "restaurant") return "Restaurant";
+                if (tags.amenity === "cafe") return "Cafe";
+                if (tags.amenity === "fast_food") return "Fast Food";
+                if (tags.amenity === "bus_station") return "Bus Station";
+                if (tags.amenity === "bus_stop") return "Bus Stop";
+                if (tags.amenity === "supermarket") return "Supermarket";
+            }
+            if (tags.shop === "supermarket") return "Supermarket";
+            if (tags.shop === "convenience") return "Convenience Store";
+            if (tags.leisure === "park") return "Park";
+            if (tags.leisure === "garden") return "Garden";
+            if (tags.railway === "station") return "Train Station";
+            if (tags.station === "subway") return "Metro Station";
+            return "Amenity";
+        };
+
+        elements.forEach((elem) => {
+            const catKey = getCategoryKey(elem);
+            if (!catKey) return;
+
+            const elemLat = elem.lat || elem.center?.lat;
+            const elemLng = elem.lon || elem.center?.lon;
+            if (!elemLat || !elemLng) return;
+
+            const distance = Math.round(calculateDistance(lat, lng, elemLat, elemLng));
+            const tags = elem.tags || {};
+            const name = tags.name || `${getAmenityLabel(elem)}`;
+
+            categories[catKey].push({
+                name,
+                category: tags.amenity || tags.shop || tags.leisure || catKey,
+                distance,
+                lat: elemLat,
+                lng: elemLng
+            });
+        });
+
+        // Sort each category nearest first and limit to 5
+        Object.keys(categories).forEach((key) => {
+            categories[key].sort((a, b) => a.distance - b.distance);
+            categories[key] = categories[key].slice(0, 5);
+        });
+
+        // Compute scores
+        // Walkability Score (0-100) based on categories: schools, hospitals, groceries, restaurants, parks
+        let walkScore = 0;
+        let activeWalkCategoriesCount = 0;
+        const walkCategories = ["schools", "hospitals", "groceries", "restaurants", "parks"];
+
+        walkCategories.forEach((catKey) => {
+            const items = categories[catKey];
+            if (items.length > 0) {
+                activeWalkCategoriesCount++;
+                // Proximity calculations for first 3 items in the category
+                items.slice(0, 3).forEach((item) => {
+                    if (item.distance <= 500) walkScore += 8;
+                    else if (item.distance <= 1000) walkScore += 4;
+                    else if (item.distance <= 1500) walkScore += 1.5;
+                });
+            }
+        });
+        // Category diversity bonus: +8 points per unique category found (max 40)
+        walkScore += activeWalkCategoriesCount * 8;
+        walkScore = Math.min(Math.round(walkScore), 100);
+
+        // Transit Score (0-100) using only the transit category
+        let transitScore = 0;
+        const transitItems = categories.transit;
+        transitItems.forEach((item) => {
+            if (item.distance <= 500) transitScore += 25;
+            else if (item.distance <= 1000) transitScore += 12;
+            else if (item.distance <= 1500) transitScore += 5;
+        });
+        transitScore = Math.min(Math.round(transitScore), 100);
+
+        // Standard developer note: This OpenStreetMap/Overpass-based implementation can be swapped for Google Places/WalkScore APIs later
+        const responseData = {
+            success: true,
+            available: true,
+            walkScore,
+            transitScore,
+            categories,
+            provider: "openstreetmap_overpass" // Swappable with paid endpoints in future
+        };
+
+        // Cache results
+        neighborhoodCache.set(cacheKey, {
+            data: responseData,
+            timestamp: Date.now()
+        });
+
+        res.json(responseData);
+    } catch (err) {
+        console.error("GET /properties/:id/neighborhood error:", err);
+        // Fallback gracefully
+        res.json({
+            success: true,
+            available: false,
+            walkScore: 0,
+            transitScore: 0,
+            categories: {
+                schools: [],
+                hospitals: [],
+                groceries: [],
+                restaurants: [],
+                parks: [],
+                transit: []
+            }
         });
     }
 });
