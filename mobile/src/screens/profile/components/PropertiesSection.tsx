@@ -1,6 +1,6 @@
 import React, { useState, useCallback, useMemo } from "react";
 import { StyleSheet, Text, View, ScrollView, Pressable, Alert, ActivityIndicator, Image } from "react-native";
-import { Building2, Eye, MapPin, MoreVertical, ToggleLeft, ToggleRight, Trash2, Calendar, Users, TrendingUp, Plus, Home } from "lucide-react-native";
+import { Building2, Eye, MapPin, MoreVertical, ToggleLeft, ToggleRight, Trash2, Calendar, Users, TrendingUp, Plus, Home, Heart } from "lucide-react-native";
 import { useNavigation } from "@react-navigation/native";
 import { useTheme } from "../../../theme/useTheme";
 import { User } from "../../../types/types";
@@ -8,6 +8,7 @@ import { getAccessToken } from "../../../features/auth/services/tokenStorage";
 import { env } from "../../../config/env";
 import type { NativeStackNavigationProp } from "@react-navigation/native-stack";
 import type { RootStackParamList } from "../../../navigation/types";
+import { hslToHex, getOpacityColor } from "../../../utils/colors";
 
 type Property = {
   _id: string;
@@ -59,7 +60,9 @@ export default function PropertiesSection({ user }: Props) {
         throw new Error(data.message || data.error || 'Failed to fetch properties');
       }
 
-      setProperties(data.properties || []);
+      // Handle both flat and nested data.data shapes
+      const propertiesList = data.data?.properties || data.properties || [];
+      setProperties(propertiesList);
     } catch (error: any) {
       console.error('Error fetching properties:', error);
       setError(error.message);
@@ -172,7 +175,15 @@ export default function PropertiesSection({ user }: Props) {
     const daysListed = Math.floor((new Date().getTime() - new Date(property.createdAt).getTime()) / (1000 * 60 * 60 * 24)) || 0;
     
     return (
-      <View style={styles.propertyCard}>
+      <Pressable
+        style={styles.propertyCard}
+        onPress={() => {
+          navigation.navigate("PropertyDetail", {
+            identifier: property._id,
+            type: "rent"
+          });
+        }}
+      >
         <View style={styles.propertyHeader}>
           {property.photos && property.photos[0] ? (
             <Image
@@ -202,8 +213,8 @@ export default function PropertiesSection({ user }: Props) {
           </View>
           
           <View style={styles.propertyActions}>
-            <View style={[styles.statusBadge, { backgroundColor: `${getStatusColor(property.status)}20` }]}>
-              <Text style={[styles.statusText, { color: getStatusColor(property.status) }]}>
+            <View style={[styles.statusBadge, { backgroundColor: hslToHex(getOpacityColor(getStatusColor(property.status), 0.15)) }]}>
+              <Text style={[styles.statusText, { color: hslToHex(getStatusColor(property.status)) }]}>
                 {property.status}
               </Text>
             </View>
@@ -237,9 +248,9 @@ export default function PropertiesSection({ user }: Props) {
               }}
             >
               {operationLoading[property._id] ? (
-                <ActivityIndicator size="small" color={colors.textSecondary} />
+                <ActivityIndicator size="small" color={hslToHex(colors.textSecondary)} />
               ) : (
-                <MoreVertical size={16} color={colors.textSecondary} />
+                <MoreVertical size={16} color={hslToHex(colors.textSecondary)} />
               )}
             </Pressable>
           </View>
@@ -247,17 +258,17 @@ export default function PropertiesSection({ user }: Props) {
         
         <View style={styles.propertyStats}>
           <View style={styles.statItem}>
-            <Eye size={12} color={colors.primary} />
+            <Eye size={12} color={hslToHex(colors.primary)} />
             <Text style={styles.statText}>{property.views || 0}</Text>
           </View>
           
           <View style={styles.statItem}>
-            <Users size={12} color={colors.error} />
+            <Heart size={12} color={hslToHex(colors.error)} />
             <Text style={styles.statText}>{property.favoritesCount || 0}</Text>
           </View>
           
           <View style={styles.statItem}>
-            <Calendar size={12} color={colors.warning} />
+            <Calendar size={12} color={hslToHex(colors.warning)} />
             <Text style={styles.statText}>{daysListed}d</Text>
           </View>
           
@@ -277,7 +288,7 @@ export default function PropertiesSection({ user }: Props) {
             </Text>
           </View>
         )}
-      </View>
+      </Pressable>
     );
   });
 
@@ -497,14 +508,14 @@ const getStyles = (colors: any) => StyleSheet.create({
     flexDirection: "row",
     alignItems: "center",
     gap: 2,
-    backgroundColor: `${colors.success}20`,
+    backgroundColor: hslToHex(getOpacityColor(colors.success, 0.15)),
     paddingHorizontal: 6,
     paddingVertical: 2,
     borderRadius: 8,
   },
   hotText: {
     fontSize: 10,
-    color: colors.success,
+    color: hslToHex(colors.success),
     fontWeight: "600",
   },
   loadingOverlay: {
@@ -513,7 +524,7 @@ const getStyles = (colors: any) => StyleSheet.create({
     left: 0,
     right: 0,
     bottom: 0,
-    backgroundColor: `${colors.background}90`,
+    backgroundColor: hslToHex(getOpacityColor(colors.background, 0.9)),
     alignItems: "center",
     justifyContent: "center",
     flexDirection: "row",

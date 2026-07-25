@@ -358,8 +358,8 @@ export function PropertyMapView({
                 )}
             </div>
             
-            {/* Properties List Sidebar - Hidden on mobile, shown on lg and above */}
-            <div className="hidden lg:flex w-full lg:w-72 xl:w-80 flex-shrink-0 bg-card rounded-2xl border border-border overflow-hidden flex-col h-[250px] sm:h-[300px] lg:h-[calc(100vh-280px)] lg:min-h-[450px] lg:max-h-[650px]">
+            {/* Properties List Sidebar - Hidden */}
+            <div className="hidden w-full lg:w-72 xl:w-80 flex-shrink-0 bg-card rounded-2xl border border-border overflow-hidden flex-col h-[250px] sm:h-[300px] lg:h-[calc(100vh-280px)] lg:min-h-[450px] lg:max-h-[650px]">
                 <div className="p-3 sm:p-4 border-b border-border bg-muted/50 flex-shrink-0">
                     <h3 className="font-semibold text-foreground flex items-center gap-2 text-sm sm:text-base">
                         <Home className="w-4 h-4 text-primary" />

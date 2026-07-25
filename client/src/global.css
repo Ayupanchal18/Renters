@@ -2314,3 +2314,51 @@
 .property-popup .leaflet-popup-content {
   @apply m-0;
 }
+
+/* ====================================================================== */
+/* ---- PRINT BROCHURE & PDF EXPORT STYLES ----------------------------- */
+/* ====================================================================== */
+@media print {
+  /* Reset body and hide web layout chrome */
+  body, html {
+    background: #ffffff !important;
+    color: #0f172a !important;
+    margin: 0 !important;
+    padding: 0 !important;
+    overflow: visible !important;
+    -webkit-print-color-adjust: exact !important;
+    print-color-adjust: exact !important;
+  }
+
+  /* Hide web chrome components, calculators, interactive widgets & tools */
+  header, nav, footer, .navbar, .footer, .back-to-top, .no-print,
+  .mobile-contact-bar, button:not(.print-keep), iframe, .leaflet-container,
+  .calculator, .booking-widget, .mortgage-calculator, [data-print-hide] {
+    display: none !important;
+  }
+
+  /* Make PropertyPrintSheet visible and force full page width */
+  .print\:block {
+    display: block !important;
+    width: 100% !important;
+    margin: 0 !important;
+    padding: 16px !important;
+  }
+
+  /* Strict Page Break Rules - No Card / Image / Block Cut in Half */
+  .print-block, .break-inside-avoid, img, table, .grid {
+    break-inside: avoid !important;
+    page-break-inside: avoid !important;
+    -webkit-column-break-inside: avoid !important;
+  }
+
+  h1, h2, h3, h4, h5, h6 {
+    break-after: avoid !important;
+    page-break-after: avoid !important;
+  }
+
+  @page {
+    size: A4 portrait;
+    margin: 8mm 10mm;
+  }
+}

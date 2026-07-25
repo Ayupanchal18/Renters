@@ -9,6 +9,7 @@ import {
   Modal,
   ActivityIndicator,
   Platform,
+  Alert,
 } from "react-native";
 import { useNavigation } from "@react-navigation/native";
 import type { NativeStackNavigationProp } from "@react-navigation/native-stack";
@@ -16,6 +17,8 @@ import { Calendar, Clock, MessageSquare, AlertCircle, CheckCircle2, ChevronRight
 import { useTheme } from "../../theme/useTheme";
 import { useAuth } from "../../features/auth/AuthContext";
 import { bookingService, AvailabilitySlotResponse } from "../../features/bookings/services/bookingService";
+import { messageService } from "../../features/messages/services/messageService";
+import { hslToHex, getOpacityColor } from "../../utils/colors";
 import AnimatedPressable from "../ui/AnimatedPressable";
 import SkeletonLoader from "../ui/SkeletonLoader";
 import type { RootStackParamList } from "../../navigation/types";
@@ -41,6 +44,7 @@ export default function BookingWidget({ propertyId, ownerId, propertyTitle }: Bo
   const [notes, setNotes] = useState("");
   const [bookingSuccess, setBookingSuccess] = useState<AvailabilitySlotResponse | null>(null);
   const [bookingLoading, setBookingLoading] = useState(false);
+  const [messageLoading, setMessageLoading] = useState(false);
   const [isModalOpen, setIsModalOpen] = useState(false);
 
   // Fetch availability on mount
@@ -155,29 +159,53 @@ export default function BookingWidget({ propertyId, ownerId, propertyTitle }: Bo
     );
   }
 
+  const handleMessageOwner = async () => {
+    if (!isAuthenticated || isGuest) {
+      navigation.navigate("Login");
+      return;
+    }
+    
+    setMessageLoading(true);
+    try {
+      const result = await messageService.createConversation(ownerId, propertyId);
+      if (result.success) {
+        const conversationId = result.data?.conversation?._id || result.data?.conversation?.id || result.data?._id || result.data?.id;
+        navigation.navigate("Messages" as any, { conversationId });
+      } else {
+        Alert.alert("Error", result.message || "Failed to start conversation.");
+      }
+    } catch (error: any) {
+      console.error("Error creating conversation in BookingWidget:", error);
+      Alert.alert("Error", error.response?.data?.message || "Could not start a conversation.");
+    } finally {
+      setMessageLoading(false);
+    }
+  };
+
   if (error || !hasAnyAvailability) {
     return (
-      <View style={[styles.card, styles.centerAlign, { backgroundColor: colors.surface, borderColor: colors.border }]}>
-        <AlertCircle size={28} color={colors.textSecondary} style={{ marginBottom: 8, opacity: 0.6 }} />
-        <Text style={[styles.title, { color: colors.textPrimary }]}>Schedule a Visit</Text>
-        <Text style={[styles.subtitle, { color: colors.textSecondary }]}>
+      <View style={[styles.card, styles.centerAlign, { backgroundColor: hslToHex(colors.surface), borderColor: hslToHex(colors.border) }]}>
+        <AlertCircle size={28} color={hslToHex(colors.textSecondary)} style={{ marginBottom: 8, opacity: 0.6 }} />
+        <Text style={[styles.title, { color: hslToHex(colors.textPrimary) }]}>Schedule a Visit</Text>
+        <Text style={[styles.subtitle, { color: hslToHex(colors.textSecondary) }]}>
           No active scheduling rules set by the owner. You can contact them directly in chat to set up a walkthrough.
         </Text>
         <AnimatedPressable
-          style={[styles.actionButton, { backgroundColor: colors.primary }]}
-          onPress={() => {
-            if (isAuthenticated && !isGuest) {
-              navigation.navigate("Messages", { conversationId: "" });
-            } else {
-              navigation.navigate("Login");
-            }
-          }}
+          style={[styles.actionButton, { backgroundColor: hslToHex(colors.primary) }]}
+          disabled={messageLoading}
+          onPress={handleMessageOwner}
         >
           <View style={styles.buttonInner}>
-            <MessageSquare size={16} color="#ffffff" style={{ marginRight: 6 }} />
-            <Text style={styles.actionButtonText}>
-              {isAuthenticated && !isGuest ? "Message Owner" : "Login to Message"}
-            </Text>
+            {messageLoading ? (
+              <ActivityIndicator size="small" color="#ffffff" />
+            ) : (
+              <>
+                <MessageSquare size={16} color="#ffffff" style={{ marginRight: 6 }} />
+                <Text style={styles.actionButtonText}>
+                  {isAuthenticated && !isGuest ? "Message Owner" : "Login to Message"}
+                </Text>
+              </>
+            )}
           </View>
         </AnimatedPressable>
       </View>
@@ -194,9 +222,9 @@ export default function BookingWidget({ propertyId, ownerId, propertyTitle }: Bo
     });
 
     return (
-      <View style={[styles.card, styles.centerAlign, { backgroundColor: colors.surface, borderColor: colors.border }]}>
-        <View style={[styles.successIconWrapper, { backgroundColor: `${colors.success}15` }]}>
-          <CheckCircle2 size={32} color={colors.success} />
+      <View style={[styles.card, styles.centerAlign, { backgroundColor: hslToHex(colors.surface), borderColor: hslToHex(colors.border) }]}>
+        <View style={[styles.successIconWrapper, { backgroundColor: hslToHex(getOpacityColor(colors.success, 0.15)) }]}>
+          <CheckCircle2 size={32} color={hslToHex(colors.success)} />
         </View>
         <Text style={[styles.title, { color: colors.textPrimary }]}>Visit Requested!</Text>
         <Text style={[styles.successSubtitle, { color: colors.textSecondary }]}>
@@ -238,14 +266,14 @@ export default function BookingWidget({ propertyId, ownerId, propertyTitle }: Bo
                   styles.dateChip,
                   {
                     borderColor: isSelected
-                      ? colors.primary
+                      ? hslToHex(colors.primary)
                       : day.hasSlots
-                      ? colors.border
-                      : `${colors.border}30`,
+                      ? hslToHex(colors.border)
+                      : hslToHex(getOpacityColor(colors.border, 0.3)),
                     backgroundColor: isSelected
-                      ? `${colors.primary}12`
+                      ? hslToHex(getOpacityColor(colors.primary, 0.12))
                       : day.hasSlots
-                      ? colors.background
+                      ? hslToHex(colors.background)
                       : "transparent",
                     opacity: day.hasSlots ? 1 : 0.4,
                   },

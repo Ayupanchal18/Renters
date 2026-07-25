@@ -11,7 +11,7 @@ import {
   Alert,
   Linking,
 } from "react-native";
-import { SafeAreaView } from "react-native-safe-area-context";
+import { SafeAreaView, useSafeAreaInsets } from "react-native-safe-area-context";
 import { LinearGradient } from "expo-linear-gradient";
 import { BlurView } from "expo-blur";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
@@ -56,6 +56,7 @@ type Props = NativeStackScreenProps<RootStackParamList, "PropertyDetail">;
 export default function PropertyDetailScreen({ route, navigation }: Props) {
   const { colors, isDark } = useTheme();
   const styles = useMemo(() => getStyles(colors, isDark), [colors, isDark]);
+  const insets = useSafeAreaInsets();
   const { identifier, type } = route.params;
   const queryClient = useQueryClient();
   const { user, logout, isGuest } = useAuth();
@@ -241,8 +242,13 @@ export default function PropertyDetailScreen({ route, navigation }: Props) {
 
   const handleShare = async () => {
     try {
+      const webUrl = property.slug 
+        ? `https://renters.com/${isRent ? 'rent' : 'buy'}/${property.slug}`
+        : "https://renters.com";
       await Share.share({
-        message: `Check out this property: ${property.title} in ${property.city}. ${property.shortUrl || "Link available on app"}`,
+        title: property.title,
+        message: `Check out this property on Renters: ${property.title} (${formattedPrice}) in ${property.city}.\n\nView details & PDF brochure: ${webUrl}`,
+        url: webUrl
       });
     } catch (error) {
       console.error(error);
@@ -307,7 +313,7 @@ export default function PropertyDetailScreen({ route, navigation }: Props) {
   const relatedItems = relatedData?.items.filter(i => i._id !== property._id).slice(0, 4) || [];
 
   return (
-    <SafeAreaView style={styles.safeArea} edges={['top', 'bottom']}>
+    <SafeAreaView style={styles.safeArea} edges={['bottom']}>
       <ScrollView
         style={styles.screen}
         contentContainerStyle={styles.content}
@@ -316,7 +322,7 @@ export default function PropertyDetailScreen({ route, navigation }: Props) {
         {/* Hero Image Section with Overlay */}
         <View style={styles.heroSection}>
           {/* Fixed Header Overlay on top of Image */}
-          <View style={styles.headerActions}>
+          <View style={[styles.headerActions, { top: insets.top > 0 ? insets.top + 8 : 14 }]}>
             <Pressable onPress={() => navigation.goBack()} style={styles.iconBubble}>
               <ArrowLeft size={22} color="#FFFFFF" />
             </Pressable>

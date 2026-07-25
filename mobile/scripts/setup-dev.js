@@ -40,7 +40,7 @@ function getLocalIP() {
 }
 
 // 2. Setup ADB reverse if devices are connected
-function setupAdbReverse(port = 3000) {
+function setupAdbReverse(port = 8080) {
   try {
     const devicesOutput = execSync("adb devices", { encoding: "utf8" });
     const lines = devicesOutput.split("\n").map((line) => line.trim());
@@ -70,19 +70,18 @@ function run() {
   const localIp = getLocalIP();
   console.log(`💻 Host computer IP: ${localIp}`);
 
-  // Setup port reverse for port 3000 (Express API backend) and 8080 (Vite frontend server if needed)
-  const reverseSuccessful = setupAdbReverse(3000);
-  setupAdbReverse(8080);
+  // Setup port reverse for port 8080 (Vite frontend + Express backend)
+  const reverseSuccessful = setupAdbReverse(8080);
 
   // If adb reverse is successful (USB or emulator is active), we can use 'localhost'!
   // This is the cleanest setup as it bypasses Windows Firewall entirely.
   // Otherwise, fallback to the computer's actual Wi-Fi IP address for wireless/Expo Go testing.
   let apiUrl;
   if (reverseSuccessful) {
-    apiUrl = "http://localhost:3000";
+    apiUrl = "http://localhost:8080";
     console.log(`🚀 API Base URL set to: ${apiUrl} (via ADB port forwarding)`);
   } else {
-    apiUrl = `http://${localIp}:3000`;
+    apiUrl = `http://${localIp}:8080`;
     console.log(`🚀 API Base URL set to: ${apiUrl} (using Host Wi-Fi IP)`);
   }
 

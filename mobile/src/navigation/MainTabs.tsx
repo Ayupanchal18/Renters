@@ -10,11 +10,13 @@ import { BlurView } from "expo-blur";
 import { Home, Search, Heart, User, Banknote, Key, Bell, MessageSquare } from "lucide-react-native";
 import { useNavigation } from "@react-navigation/native";
 import AsyncStorage from "@react-native-async-storage/async-storage";
+import { hslToHex } from "../utils/colors";
 
 const Tab = createBottomTabNavigator();
 
 function TabIcon({ name, focused, type, colors }: { name: string; focused: boolean; type?: string; colors: any }) {
-  const color = focused ? (type === 'buy' ? colors.success : colors.primary) : colors.textSecondary;
+  const rawColor = focused ? (type === 'buy' ? colors.success : colors.primary) : colors.textSecondary;
+  const color = hslToHex(rawColor);
   const size = 22;
 
   switch (name) {

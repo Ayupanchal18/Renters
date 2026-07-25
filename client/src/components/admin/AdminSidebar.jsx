@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef, useLayoutEffect } from 'react';
 import { Link, useLocation } from 'react-router-dom';
 import { cn } from '../../lib/utils';
 import { Button } from '../ui/button';
@@ -24,7 +24,11 @@ import {
   Shield,
   Images,
   TrendingUp,
-  ShieldAlert
+  ShieldAlert,
+  Scale,
+  Mail,
+  FileCode,
+  Send
 } from 'lucide-react';
 
 
@@ -48,6 +52,8 @@ const navigationItems = [
   {
     title: 'Administration',
     items: [
+      { name: 'Legal & DPDP Inbox', href: '/admin/legal-requests', icon: Scale },
+      { name: 'Newsletter Leads', href: '/admin/subscribers', icon: Mail },
       { name: 'Reports', href: '/admin/reports', icon: FileBarChart },
       { name: 'Audit Logs', href: '/admin/audit-logs', icon: ClipboardList },
       { name: 'Roles & Permissions', href: '/admin/roles', icon: Shield },
@@ -76,6 +82,8 @@ const navigationItems = [
   {
     title: 'Communication',
     items: [
+      { name: 'Email Templates', href: '/admin/email-templates', icon: FileCode },
+      { name: 'HTML Broadcaster', href: '/admin/email-broadcaster', icon: Send },
       { name: 'Notifications', href: '/admin/notifications', icon: Bell },
       { name: 'Campaigns', href: '/admin/campaigns', icon: Megaphone },
     ]
@@ -92,6 +100,21 @@ const navigationItems = [
 const AdminSidebar = ({ onClose }) => {
   const location = useLocation();
   const [pendingCount, setPendingCount] = useState(0);
+  const navRef = useRef(null);
+
+  // Restore scroll position on route change
+  useLayoutEffect(() => {
+    const savedScroll = sessionStorage.getItem("admin_sidebar_scroll");
+    if (navRef.current && savedScroll !== null) {
+      navRef.current.scrollTop = parseInt(savedScroll, 10);
+    }
+  }, [location.pathname]);
+
+  const handleNavScroll = (e) => {
+    if (e.target) {
+      sessionStorage.setItem("admin_sidebar_scroll", e.target.scrollTop.toString());
+    }
+  };
 
   const isActive = (href) => {
     if (href === '/admin') {
@@ -151,7 +174,7 @@ const AdminSidebar = ({ onClose }) => {
       </div>
 
       {/* Navigation */}
-      <nav className="flex-1 overflow-y-auto py-4 px-3">
+      <nav ref={navRef} onScroll={handleNavScroll} className="flex-1 overflow-y-auto py-4 px-3">
         {/* Back to main site link */}
         <div className="mb-4">
           <Link to="/">

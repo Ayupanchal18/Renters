@@ -8,6 +8,7 @@ import { useTheme } from "../../theme/useTheme";
 import { MapPin, Heart, MessageSquare, ShieldCheck, Mail, Phone, Settings, ChevronRight, Activity, AlertCircle, CheckCircle, Moon, Sun, PlusCircle, Building2, Camera, Calendar } from "lucide-react-native";
 import { getAccessToken } from "../../features/auth/services/tokenStorage";
 import { env } from "../../config/env";
+import { hslToHex, getOpacityColor } from "../../utils/colors";
 
 import { useNavigation } from "@react-navigation/native";
 import type { NativeStackNavigationProp } from "@react-navigation/native-stack";
@@ -382,47 +383,47 @@ export default function ProfileScreen() {
         {/* Quick Actions */}
         <View style={styles.quickActions}>
           <Pressable style={styles.quickAction} onPress={() => navigation.navigate("Messages" as any)}>
-            <View style={[styles.quickActionIcon, { backgroundColor: `${colors.primary}20` }]}>
+            <View style={[styles.quickActionIcon, { backgroundColor: hslToHex(getOpacityColor(colors.primary, 0.15)) }]}>
               <MessageSquare size={20} color="#ffffff" />
             </View>
             <View style={{ flex: 1 }}>
               <Text style={styles.quickActionTitle}>Messages</Text>
               <Text style={styles.quickActionSub}>View your conversations</Text>
             </View>
-            <ChevronRight size={18} color={colors.textSecondary} />
+            <ChevronRight size={18} color={hslToHex(colors.textSecondary)} />
           </Pressable>
           <View style={[styles.divider]} />
           <Pressable style={styles.quickAction} onPress={() => navigation.navigate("Notifications" as any)}>
-            <View style={[styles.quickActionIcon, { backgroundColor: `${colors.primary}20` }]}>
+            <View style={[styles.quickActionIcon, { backgroundColor: hslToHex(getOpacityColor(colors.primary, 0.15)) }]}>
               <Activity size={20} color="#ffffff" />
             </View>
             <View style={{ flex: 1 }}>
               <Text style={styles.quickActionTitle}>Notifications</Text>
               <Text style={styles.quickActionSub}>Stay up to date</Text>
             </View>
-            <ChevronRight size={18} color={colors.textSecondary} />
+            <ChevronRight size={18} color={hslToHex(colors.textSecondary)} />
           </Pressable>
           <View style={[styles.divider]} />
           <Pressable style={styles.quickAction} onPress={() => navigation.navigate("MyVisits" as any)}>
-            <View style={[styles.quickActionIcon, { backgroundColor: `${colors.primary}20` }]}>
-              <Calendar size={20} color={colors.primary} />
+            <View style={[styles.quickActionIcon, { backgroundColor: hslToHex(getOpacityColor(colors.primary, 0.15)) }]}>
+              <Calendar size={20} color={hslToHex(colors.primary)} />
             </View>
             <View style={{ flex: 1 }}>
               <Text style={styles.quickActionTitle}>My Visits</Text>
               <Text style={styles.quickActionSub}>Track your viewing schedule</Text>
             </View>
-            <ChevronRight size={18} color={colors.textSecondary} />
+            <ChevronRight size={18} color={hslToHex(colors.textSecondary)} />
           </Pressable>
           <View style={[styles.divider]} />
           <Pressable style={styles.quickAction} onPress={() => navigation.navigate("IncomingVisits" as any)}>
-            <View style={[styles.quickActionIcon, { backgroundColor: `${colors.primary}20` }]}>
-              <Calendar size={20} color={colors.primary} />
+            <View style={[styles.quickActionIcon, { backgroundColor: hslToHex(getOpacityColor(colors.primary, 0.15)) }]}>
+              <Calendar size={20} color={hslToHex(colors.primary)} />
             </View>
             <View style={{ flex: 1 }}>
               <Text style={styles.quickActionTitle}>Incoming Visits</Text>
               <Text style={styles.quickActionSub}>Manage requests on your listings</Text>
             </View>
-            <ChevronRight size={18} color={colors.textSecondary} />
+            <ChevronRight size={18} color={hslToHex(colors.textSecondary)} />
           </Pressable>
 
         </View>

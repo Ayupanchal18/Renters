@@ -9,8 +9,8 @@ import {
   ActivityIndicator,
   Alert,
   Platform,
-  SafeAreaView,
 } from "react-native";
+import { SafeAreaView } from "react-native-safe-area-context";
 import type { NativeStackScreenProps } from "@react-navigation/native-stack";
 import DateTimePicker, { DateTimePickerEvent } from "@react-native-community/datetimepicker";
 import { Calendar, Clock, Plus, Trash2, Save, Eye, AlertTriangle, ArrowLeft } from "lucide-react-native";
@@ -21,6 +21,7 @@ import AnimatedPressable from "../../components/ui/AnimatedPressable";
 import Select, { SelectOption } from "../../components/ui/Select";
 import type { RootStackParamList } from "../../navigation/types";
 import { radius, spacing } from "@shared/theme/tokens";
+import { hslToHex, getOpacityColor } from "../../utils/colors";
 
 type Props = NativeStackScreenProps<RootStackParamList, "AvailabilityEditor">;
 
@@ -352,23 +353,23 @@ export default function AvailabilityEditorScreen({ route, navigation }: Props) {
 
   if (loadingData) {
     return (
-      <View style={[styles.center, { backgroundColor: colors.background }]}>
-        <ActivityIndicator size="large" color={colors.primary} />
-        <Text style={[styles.loadingText, { color: colors.textSecondary }]}>Loading settings...</Text>
+      <View style={[styles.center, { backgroundColor: hslToHex(colors.background) }]}>
+        <ActivityIndicator size="large" color={hslToHex(colors.primary)} />
+        <Text style={[styles.loadingText, { color: hslToHex(colors.textSecondary) }]}>Loading settings...</Text>
       </View>
     );
   }
 
   return (
-    <SafeAreaView style={[styles.safeArea, { backgroundColor: colors.background }]}>
+    <SafeAreaView style={[styles.safeArea, { backgroundColor: hslToHex(colors.background) }]} edges={["top", "bottom"]}>
       {/* Header Bar */}
-      <View style={[styles.headerBar, { backgroundColor: colors.surface, borderBottomColor: colors.border }]}>
+      <View style={[styles.headerBar, { backgroundColor: hslToHex(colors.surface), borderBottomColor: hslToHex(colors.border) }]}>
         <Pressable onPress={() => navigation.goBack()} style={styles.backBtn}>
-          <ArrowLeft size={20} color={colors.textPrimary} />
+          <ArrowLeft size={20} color={hslToHex(colors.textPrimary)} />
         </Pressable>
         <View style={styles.headerTitleContainer}>
-          <Text style={[styles.headerTitle, { color: colors.textPrimary }]}>Manage Visit Availability</Text>
-          <Text style={[styles.headerSub, { color: colors.textSecondary }]} numberOfLines={1}>
+          <Text style={[styles.headerTitle, { color: hslToHex(colors.textPrimary) }]}>Manage Visit Availability</Text>
+          <Text style={[styles.headerSub, { color: hslToHex(colors.textSecondary) }]} numberOfLines={1}>
             {propertyTitle}
           </Text>
         </View>
@@ -377,14 +378,14 @@ export default function AvailabilityEditorScreen({ route, navigation }: Props) {
       <ScrollView contentContainerStyle={styles.scrollContainer} showsVerticalScrollIndicator={false}>
         
         {/* Weekly Template */}
-        <View style={[styles.sectionCard, { backgroundColor: colors.surface, borderColor: colors.border }]}>
+        <View style={[styles.sectionCard, { backgroundColor: hslToHex(colors.surface), borderColor: hslToHex(colors.border) }]}>
           <View style={styles.sectionHeader}>
-            <View style={[styles.numberCircle, { backgroundColor: `${colors.primary}15` }]}>
-              <Text style={[styles.numberText, { color: colors.primary }]}>1</Text>
+            <View style={[styles.numberCircle, { backgroundColor: hslToHex(getOpacityColor(colors.primary, 0.15)) }]}>
+              <Text style={[styles.numberText, { color: hslToHex(colors.primary) }]}>1</Text>
             </View>
-            <Text style={[styles.sectionTitle, { color: colors.textPrimary }]}>Weekly Recurring Hours</Text>
+            <Text style={[styles.sectionTitle, { color: hslToHex(colors.textPrimary) }]}>Weekly Recurring Hours</Text>
           </View>
-          <Text style={[styles.sectionDescription, { color: colors.textSecondary }]}>
+          <Text style={[styles.sectionDescription, { color: hslToHex(colors.textSecondary) }]}>
             Set general days and times you are regularly available to host property viewings.
           </Text>
 
@@ -395,18 +396,18 @@ export default function AvailabilityEditorScreen({ route, navigation }: Props) {
                 style={[
                   styles.weeklyRow,
                   {
-                    borderColor: day.enabled ? `${colors.primary}30` : colors.border,
-                    backgroundColor: day.enabled ? `${colors.primary}05` : "transparent",
+                    borderColor: day.enabled ? hslToHex(getOpacityColor(colors.primary, 0.3)) : hslToHex(colors.border),
+                    backgroundColor: day.enabled ? hslToHex(getOpacityColor(colors.primary, 0.05)) : "transparent",
                   },
                 ]}
               >
                 <View style={styles.rowTop}>
-                  <Text style={[styles.dayName, { color: colors.textPrimary }]}>{day.label}</Text>
+                  <Text style={[styles.dayName, { color: hslToHex(colors.textPrimary) }]}>{day.label}</Text>
                   <Switch
                     value={day.enabled}
                     onValueChange={(val) => handleWeeklyCheckChange(day.dayOfWeek, val)}
-                    trackColor={{ false: colors.border, true: `${colors.primary}60` }}
-                    thumbColor={day.enabled ? colors.primary : colors.textSecondary}
+                    trackColor={{ false: hslToHex(colors.border), true: hslToHex(getOpacityColor(colors.primary, 0.6)) }}
+                    thumbColor={day.enabled ? hslToHex(colors.primary) : hslToHex(colors.textSecondary)}
                   />
                 </View>
 
@@ -415,18 +416,18 @@ export default function AvailabilityEditorScreen({ route, navigation }: Props) {
                     <View style={styles.timeInputsWrap}>
                       <Pressable
                         onPress={() => openTimePicker("weekly", "startTime", day.dayOfWeek)}
-                        style={[styles.timePickerButton, { backgroundColor: colors.input, borderColor: colors.border }]}
+                        style={[styles.timePickerButton, { backgroundColor: hslToHex(colors.input), borderColor: hslToHex(colors.border) }]}
                       >
-                        <Clock size={12} color={colors.textSecondary} style={{ marginRight: 4 }} />
-                        <Text style={[styles.timeText, { color: colors.textPrimary }]}>{day.startTime}</Text>
+                        <Clock size={12} color={hslToHex(colors.textSecondary)} style={{ marginRight: 4 }} />
+                        <Text style={[styles.timeText, { color: hslToHex(colors.textPrimary) }]}>{day.startTime}</Text>
                       </Pressable>
-                      <Text style={[styles.connectorText, { color: colors.textSecondary }]}>to</Text>
+                      <Text style={[styles.connectorText, { color: hslToHex(colors.textSecondary) }]}>to</Text>
                       <Pressable
                         onPress={() => openTimePicker("weekly", "endTime", day.dayOfWeek)}
-                        style={[styles.timePickerButton, { backgroundColor: colors.input, borderColor: colors.border }]}
+                        style={[styles.timePickerButton, { backgroundColor: hslToHex(colors.input), borderColor: hslToHex(colors.border) }]}
                       >
-                        <Clock size={12} color={colors.textSecondary} style={{ marginRight: 4 }} />
-                        <Text style={[styles.timeText, { color: colors.textPrimary }]}>{day.endTime}</Text>
+                        <Clock size={12} color={hslToHex(colors.textSecondary)} style={{ marginRight: 4 }} />
+                        <Text style={[styles.timeText, { color: hslToHex(colors.textPrimary) }]}>{day.endTime}</Text>
                       </Pressable>
                     </View>
 
@@ -446,69 +447,69 @@ export default function AvailabilityEditorScreen({ route, navigation }: Props) {
         </View>
 
         {/* Date Overrides */}
-        <View style={[styles.sectionCard, { backgroundColor: colors.surface, borderColor: colors.border }]}>
+        <View style={[styles.sectionCard, { backgroundColor: hslToHex(colors.surface), borderColor: hslToHex(colors.border) }]}>
           <View style={styles.sectionHeader}>
-            <View style={[styles.numberCircle, { backgroundColor: `${colors.primary}15` }]}>
-              <Text style={[styles.numberText, { color: colors.primary }]}>2</Text>
+            <View style={[styles.numberCircle, { backgroundColor: hslToHex(getOpacityColor(colors.primary, 0.15)) }]}>
+              <Text style={[styles.numberText, { color: hslToHex(colors.primary) }]}>2</Text>
             </View>
-            <Text style={[styles.sectionTitle, { color: colors.textPrimary }]}>Specific Date Overrides</Text>
+            <Text style={[styles.sectionTitle, { color: hslToHex(colors.textPrimary) }]}>Specific Date Overrides</Text>
           </View>
-          <Text style={[styles.sectionDescription, { color: colors.textSecondary }]}>
+          <Text style={[styles.sectionDescription, { color: hslToHex(colors.textSecondary) }]}>
             Block dates (holidays, private functions) or schedule separate viewing slots for specific days.
           </Text>
 
           {/* Form */}
-          <View style={[styles.overrideForm, { backgroundColor: colors.background, borderColor: colors.border }]}>
+          <View style={[styles.overrideForm, { backgroundColor: hslToHex(colors.background), borderColor: hslToHex(colors.border) }]}>
             <View style={styles.formRow}>
               <View style={{ flex: 1 }}>
-                <Text style={[styles.fieldLabel, { color: colors.textSecondary }]}>Select Date</Text>
+                <Text style={[styles.fieldLabel, { color: hslToHex(colors.textSecondary) }]}>Select Date</Text>
                 <Pressable
                   onPress={openDatePicker}
-                  style={[styles.dateSelectorBox, { backgroundColor: colors.surface, borderColor: colors.border }]}
+                  style={[styles.dateSelectorBox, { backgroundColor: hslToHex(colors.surface), borderColor: hslToHex(colors.border) }]}
                 >
-                  <Calendar size={14} color={colors.textSecondary} style={{ marginRight: 6 }} />
-                  <Text style={[styles.dateSelectorText, { color: overrideDate ? colors.textPrimary : colors.textSecondary }]}>
+                  <Calendar size={14} color={hslToHex(colors.textSecondary)} style={{ marginRight: 6 }} />
+                  <Text style={[styles.dateSelectorText, { color: overrideDate ? hslToHex(colors.textPrimary) : hslToHex(colors.textSecondary) }]}>
                     {overrideDate ? new Date(overrideDate).toLocaleDateString() : "YYYY-MM-DD"}
                   </Text>
                 </Pressable>
               </View>
               <View style={styles.formSwitchWrap}>
-                <Text style={[styles.fieldLabel, { color: colors.textSecondary }]}>Available?</Text>
+                <Text style={[styles.fieldLabel, { color: hslToHex(colors.textSecondary) }]}>Available?</Text>
                 <View style={styles.switchAlign}>
                   <Switch
                     value={overrideIsActive}
                     onValueChange={setOverrideIsActive}
-                    trackColor={{ false: colors.border, true: `${colors.primary}60` }}
-                    thumbColor={overrideIsActive ? colors.primary : colors.textSecondary}
+                    trackColor={{ false: hslToHex(colors.border), true: hslToHex(getOpacityColor(colors.primary, 0.6)) }}
+                    thumbColor={overrideIsActive ? hslToHex(colors.primary) : hslToHex(colors.textSecondary)}
                   />
                 </View>
               </View>
             </View>
 
             {overrideIsActive && (
-              <View style={[styles.formBottomFields, { borderTopColor: colors.border }]}>
+              <View style={[styles.formBottomFields, { borderTopColor: hslToHex(colors.border) }]}>
                 <View style={styles.formRow}>
                   <View style={{ flex: 1 }}>
-                    <Text style={[styles.fieldLabel, { color: colors.textSecondary }]}>Time Range</Text>
+                    <Text style={[styles.fieldLabel, { color: hslToHex(colors.textSecondary) }]}>Time Range</Text>
                     <View style={styles.timeInputsWrap}>
                       <Pressable
                         onPress={() => openTimePicker("override_form", "startTime")}
-                        style={[styles.timePickerButton, { backgroundColor: colors.surface, borderColor: colors.border }]}
+                        style={[styles.timePickerButton, { backgroundColor: hslToHex(colors.surface), borderColor: hslToHex(colors.border) }]}
                       >
-                        <Text style={[styles.timeText, { color: colors.textPrimary }]}>{overrideStartTime}</Text>
+                        <Text style={[styles.timeText, { color: hslToHex(colors.textPrimary) }]}>{overrideStartTime}</Text>
                       </Pressable>
-                      <Text style={[styles.connectorText, { color: colors.textSecondary }]}>to</Text>
+                      <Text style={[styles.connectorText, { color: hslToHex(colors.textSecondary) }]}>to</Text>
                       <Pressable
                         onPress={() => openTimePicker("override_form", "endTime")}
-                        style={[styles.timePickerButton, { backgroundColor: colors.surface, borderColor: colors.border }]}
+                        style={[styles.timePickerButton, { backgroundColor: hslToHex(colors.surface), borderColor: hslToHex(colors.border) }]}
                       >
-                        <Text style={[styles.timeText, { color: colors.textPrimary }]}>{overrideEndTime}</Text>
+                        <Text style={[styles.timeText, { color: hslToHex(colors.textPrimary) }]}>{overrideEndTime}</Text>
                       </Pressable>
                     </View>
                   </View>
 
                   <View style={{ width: 120 }}>
-                    <Text style={[styles.fieldLabel, { color: colors.textSecondary }]}>Duration</Text>
+                    <Text style={[styles.fieldLabel, { color: hslToHex(colors.textSecondary) }]}>Duration</Text>
                     <Select
                       placeholder="Duration"
                       value={String(overrideDuration)}
@@ -521,32 +522,32 @@ export default function AvailabilityEditorScreen({ route, navigation }: Props) {
             )}
 
             <AnimatedPressable
-              style={[styles.addButton, { backgroundColor: colors.input, borderColor: colors.border }]}
+              style={[styles.addButton, { backgroundColor: hslToHex(colors.input), borderColor: hslToHex(colors.border) }]}
               onPress={handleAddOverride}
             >
               <View style={styles.buttonInner}>
-                <Plus size={14} color={colors.textPrimary} style={{ marginRight: 4 }} />
-                <Text style={[styles.addButtonText, { color: colors.textPrimary }]}>Add Override</Text>
+                <Plus size={14} color={hslToHex(colors.textPrimary)} style={{ marginRight: 4 }} />
+                <Text style={[styles.addButtonText, { color: hslToHex(colors.textPrimary) }]}>Add Override</Text>
               </View>
             </AnimatedPressable>
           </View>
 
           {/* List of current overrides */}
           {overrides.length > 0 && (
-            <View style={[styles.overridesList, { borderColor: colors.border }]}>
+            <View style={[styles.overridesList, { borderColor: hslToHex(colors.border) }]}>
               {overrides.map((ov) => (
-                <View key={ov.id} style={[styles.overrideListItem, { borderBottomColor: colors.border }]}>
+                <View key={ov.id} style={[styles.overrideListItem, { borderBottomColor: hslToHex(colors.border) }]}>
                   <View style={styles.overrideInfo}>
-                    <View style={[styles.statusIndicator, { backgroundColor: ov.isActive ? colors.success : colors.error }]} />
+                    <View style={[styles.statusIndicator, { backgroundColor: ov.isActive ? hslToHex(colors.success) : hslToHex(colors.error) }]} />
                     <View>
-                      <Text style={[styles.overrideDateText, { color: colors.textPrimary }]}>
+                      <Text style={[styles.overrideDateText, { color: hslToHex(colors.textPrimary) }]}>
                         {new Date(ov.specificDate).toLocaleDateString("en-US", {
                           month: "short",
                           day: "numeric",
                           year: "numeric",
                         })}
                       </Text>
-                      <Text style={[styles.overrideTimeText, { color: colors.textSecondary }]}>
+                      <Text style={[styles.overrideTimeText, { color: hslToHex(colors.textSecondary) }]}>
                         {ov.isActive
                           ? `${ov.startTime} - ${ov.endTime} (${ov.slotDurationMinutes}m slots)`
                           : "Blocked Entire Day"}
@@ -554,7 +555,7 @@ export default function AvailabilityEditorScreen({ route, navigation }: Props) {
                     </View>
                   </View>
                   <Pressable onPress={() => handleRemoveOverride(ov.id)} style={styles.deleteButton}>
-                    <Trash2 size={16} color={colors.error} />
+                    <Trash2 size={16} color={hslToHex(colors.error)} />
                   </Pressable>
                 </View>
               ))}
@@ -563,34 +564,34 @@ export default function AvailabilityEditorScreen({ route, navigation }: Props) {
         </View>
 
         {/* Live Preview */}
-        <View style={[styles.sectionCard, { backgroundColor: colors.surface, borderColor: colors.border }]}>
+        <View style={[styles.sectionCard, { backgroundColor: hslToHex(colors.surface), borderColor: hslToHex(colors.border) }]}>
           <View style={styles.sectionHeader}>
-            <Eye size={18} color={colors.primary} style={{ marginRight: 8 }} />
-            <Text style={[styles.sectionTitle, { color: colors.textPrimary }]}>Live 7-Day Preview</Text>
+            <Eye size={18} color={hslToHex(colors.primary)} style={{ marginRight: 8 }} />
+            <Text style={[styles.sectionTitle, { color: hslToHex(colors.textPrimary) }]}>Live 7-Day Preview</Text>
           </View>
-          <Text style={[styles.sectionDescription, { color: colors.textSecondary }]}>
+          <Text style={[styles.sectionDescription, { color: hslToHex(colors.textSecondary) }]}>
             Preview computed time slots that prospective tenants can book on your properties.
           </Text>
 
           {loadingPreview ? (
             <View style={styles.previewCenter}>
-              <ActivityIndicator size="small" color={colors.primary} />
+              <ActivityIndicator size="small" color={hslToHex(colors.primary)} />
             </View>
           ) : groupedPreview.length > 0 ? (
             <View style={styles.previewList}>
               {groupedPreview.map(([dateStr, slots]) => (
                 <View key={dateStr} style={styles.previewDayGroup}>
-                  <Text style={[styles.previewDayHeader, { color: colors.textPrimary, borderBottomColor: colors.border }]}>
+                  <Text style={[styles.previewDayHeader, { color: hslToHex(colors.textPrimary), borderBottomColor: hslToHex(colors.border) }]}>
                     {dateStr}
                   </Text>
                   <View style={styles.previewSlotsGrid}>
                     {slots.map((s, idx) => (
                       <View
                         key={idx}
-                        style={[styles.previewSlotBadge, { backgroundColor: colors.input, borderColor: colors.border }]}
+                        style={[styles.previewSlotBadge, { backgroundColor: hslToHex(colors.input), borderColor: hslToHex(colors.border) }]}
                       >
-                        <Clock size={10} color={colors.primary} style={{ marginRight: 3 }} />
-                        <Text style={[styles.previewSlotText, { color: colors.textSecondary }]}>
+                        <Clock size={10} color={hslToHex(colors.primary)} style={{ marginRight: 3 }} />
+                        <Text style={[styles.previewSlotText, { color: hslToHex(colors.textSecondary) }]}>
                           {new Date(s.slotStart).toLocaleTimeString("en-US", {
                             hour: "2-digit",
                             minute: "2-digit",
@@ -604,10 +605,10 @@ export default function AvailabilityEditorScreen({ route, navigation }: Props) {
               ))}
             </View>
           ) : (
-            <View style={[styles.emptyPreviewBlock, { borderColor: colors.border }]}>
-              <AlertTriangle size={24} color={colors.warning} style={{ marginBottom: 6 }} />
-              <Text style={[styles.emptyPreviewTitle, { color: colors.textPrimary }]}>No Slots Computed</Text>
-              <Text style={[styles.emptyPreviewSubtitle, { color: colors.textSecondary }]}>
+            <View style={[styles.emptyPreviewBlock, { borderColor: hslToHex(colors.border) }]}>
+              <AlertTriangle size={24} color={hslToHex(colors.warning)} style={{ marginBottom: 6 }} />
+              <Text style={[styles.emptyPreviewTitle, { color: hslToHex(colors.textPrimary) }]}>No Slots Computed</Text>
+              <Text style={[styles.emptyPreviewSubtitle, { color: hslToHex(colors.textSecondary) }]}>
                 Ensure weekly rules are enabled or active override configurations are set.
               </Text>
             </View>
@@ -619,7 +620,7 @@ export default function AvailabilityEditorScreen({ route, navigation }: Props) {
       </ScrollView>
 
       {/* Floating Save Actions Bar */}
-      <View style={[styles.footerBar, { backgroundColor: colors.surface, borderTopColor: colors.border }]}>
+      <View style={[styles.footerBar, { backgroundColor: hslToHex(colors.surface), borderTopColor: hslToHex(colors.border) }]}>
         <AppButton onPress={handleSave} disabled={saving} style={styles.saveButton}>
           {saving ? (
             <ActivityIndicator size="small" color="#ffffff" />

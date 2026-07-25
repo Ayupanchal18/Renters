@@ -2,6 +2,8 @@ export type RootStackParamList = {
   // Onboarding (first launch only)
   Onboarding: undefined;
 
+  // Maintenance (shown when server is in maintenance mode)
+  Maintenance: undefined;
   // Auth screens
   Login: undefined;
   Register: undefined;

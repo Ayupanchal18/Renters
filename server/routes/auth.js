@@ -251,8 +251,6 @@ router.post("/login", (async (req, res) => {
             });
         }
 
-        console.log(`LOGIN: User found - ${user._id}, checking status...`);
-
         // Check if user is blocked
         if (user.isBlocked) {
             console.log(`LOGIN BLOCKED: User ${user._id} is blocked`);
@@ -278,7 +276,6 @@ router.post("/login", (async (req, res) => {
 
         // Compare password
         const hasPasswordHash = !!user.passwordHash;
-        console.log(`LOGIN: Checking password, hasPasswordHash=${hasPasswordHash}`);
 
         if (!user.passwordHash) {
             console.log(`LOGIN FAILED: User ${user._id} has no password hash`);

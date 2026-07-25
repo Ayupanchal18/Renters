@@ -3,6 +3,7 @@
 import { useState } from 'react'
 import { Mail, Phone, MapPin, Clock, Send } from 'lucide-react'
 import { Link } from 'react-router-dom'
+import { toast } from 'sonner'
 import Navbar from './../components/Navbar';
 import Footer from './../components/Footer';
 import SEOHead from '../components/seo/SEOHead';
@@ -26,20 +27,48 @@ export default function ContactPage() {
         }))
     }
 
-    const handleSubmit = (e) => {
-        e.preventDefault()
-        setSubmitted(true)
+    const [loading, setLoading] = useState(false)
 
-        setTimeout(() => {
-            setFormData({
-                name: '',
-                email: '',
-                phone: '',
-                category: 'general',
-                message: ''
-            })
-            setSubmitted(false)
-        }, 2000)
+    const handleSubmit = async (e) => {
+        e.preventDefault()
+        if (!formData.name || !formData.email || !formData.message) {
+            toast.error("Please fill in all required fields.")
+            return
+        }
+
+        setLoading(true)
+        try {
+            const res = await fetch("/api/legal/submit", {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({
+                    type: "contact_inquiry",
+                    applicantName: formData.name,
+                    applicantEmail: formData.email,
+                    applicantPhone: formData.phone || "",
+                    details: `[Inquiry Category: ${formData.category}] ${formData.message}`
+                })
+            });
+            const data = await res.json();
+            if (data.success) {
+                setSubmitted(true)
+                toast.success("Thank you! Your message has been received by our support team.")
+                setFormData({
+                    name: '',
+                    email: '',
+                    phone: '',
+                    category: 'general',
+                    message: ''
+                })
+            } else {
+                toast.error(data.message || "Failed to send message")
+            }
+        } catch (err) {
+            console.error("Contact submission error:", err);
+            toast.error("Network error sending message. Please try again.")
+        } finally {
+            setLoading(false)
+        }
     }
 
     return (

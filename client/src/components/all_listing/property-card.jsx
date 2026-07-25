@@ -11,11 +11,11 @@ import { useMessages } from "../../hooks/useMessages";
 import { getRelativeTimeString } from "@shared/utils/time";
 import { cn } from "../../lib/utils";
 
-export function PropertyCard({ 
-    property, 
-    viewMode, 
-    initialSaved = false, 
-    onWishlistChange, 
+export function PropertyCard({
+    property,
+    viewMode,
+    initialSaved = false,
+    onWishlistChange,
     priority = false,
     isHighlighted = false,
     isActive = false,
@@ -25,10 +25,10 @@ export function PropertyCard({
     const navigate = useNavigate();
     const { navigateWithState } = useNavigationStateContext();
     const { createConversation } = useMessages();
-    
+
     // Fix typo in data if present
     const cleanTitle = property.title?.replace(/emploees/gi, 'employees') || property.title;
-    
+
     // Calculate badges
     const isNew = property.createdAt && (new Date() - new Date(property.createdAt)) < (7 * 24 * 60 * 60 * 1000);
     const isHot = property.views > 50;
@@ -44,10 +44,10 @@ export function PropertyCard({
 
     const handleClick = (slug) => {
         // Navigate to correct route based on listing type
-        const route = property.listingType === 'buy' 
-            ? `/buy/${slug}` 
+        const route = property.listingType === 'buy'
+            ? `/buy/${slug}`
             : `/rent/${slug}`;
-        
+
         navigateWithState(route, {
             saveViewState: {
                 fromListings: true,
@@ -118,8 +118,8 @@ export function PropertyCard({
     // Handle share button click - copies link to clipboard
     const handleShare = (e) => {
         e.stopPropagation();
-        const route = property.listingType === 'buy' 
-            ? `/buy/${property.slug}` 
+        const route = property.listingType === 'buy'
+            ? `/buy/${property.slug}`
             : `/rent/${property.slug}`;
         const shareUrl = `${window.location.origin}${route}`;
 
@@ -190,6 +190,23 @@ export function PropertyCard({
         return str.charAt(0).toUpperCase() + str.slice(1).toLowerCase();
     };
 
+    // Helper function to split comma-separated amenities into an array of clean strings
+    const getNormalizedAmenities = (amenities) => {
+        if (!amenities) return [];
+        if (Array.isArray(amenities)) {
+            return amenities
+                .flatMap(item => typeof item === 'string' ? item.split(',') : item)
+                .map(item => typeof item === 'string' ? item.trim() : item)
+                .filter(Boolean);
+        }
+        if (typeof amenities === 'string') {
+            return amenities.split(',').map(s => s.trim()).filter(Boolean);
+        }
+        return [];
+    };
+
+    const formattedAmenities = getNormalizedAmenities(property.amenities);
+
     /* ------------------------- LIST VIEW ------------------------- */
     if (viewMode === "list") {
         return (
@@ -210,13 +227,13 @@ export function PropertyCard({
             >
                 <div className="flex flex-col sm:flex-row">
                     {/* Image Section */}
-                    <div className="relative w-full sm:w-44 md:w-52 lg:w-60 h-44 sm:h-auto sm:min-h-[180px] flex-shrink-0 overflow-hidden bg-muted">
+                    <div className="relative w-full sm:w-48 md:w-56 lg:w-60 h-48 sm:h-52 md:h-56 flex-shrink-0 overflow-hidden bg-muted">
                         <PropertyImage
                             property={property}
-                            className="w-full h-full object-cover transition-transform duration-300 group-hover:scale-105"
+                            className="w-full h-full object-cover object-center transition-transform duration-300 group-hover:scale-105"
                             priority={priority}
                         />
-                        
+
                         {/* Badges */}
                         <div className="absolute top-2.5 left-2.5 flex flex-wrap gap-1.5">
                             {property.verified && (
@@ -232,7 +249,7 @@ export function PropertyCard({
                                 </span>
                             )}
                         </div>
-                        
+
                         {/* New/Hot Badges (Right side) */}
                         <div className="absolute top-2.5 right-2.5 flex flex-wrap justify-end gap-1.5 pointer-events-none">
                             {isHot && (
@@ -248,18 +265,18 @@ export function PropertyCard({
                                 </span>
                             )}
                         </div>
-                        
+
                         {/* Virtual Tour badge - bottom left of image */}
                         {property.virtualTour?.type && property.virtualTour.type !== "none" && (
                             <div className="absolute bottom-2.5 left-2.5 pointer-events-none">
                                 <span className="inline-flex items-center gap-1 px-2 py-0.5 bg-indigo-600/90 backdrop-blur-sm text-white text-[10px] font-semibold rounded-full">
                                     <Globe className="w-2.5 h-2.5" />
                                     {property.virtualTour.type === "matterport" ? "3D Tour" :
-                                     property.virtualTour.type === "panorama" ? "360° View" : "Video Tour"}
+                                        property.virtualTour.type === "panorama" ? "360° View" : "Video Tour"}
                                 </span>
                             </div>
                         )}
-                        
+
                         {/* Mobile: Price overlay on image */}
                         <div className="sm:hidden absolute bottom-2.5 right-2.5 bg-white/95 dark:bg-card/95 backdrop-blur-sm px-3 py-1.5 rounded-xl shadow-lg flex items-center gap-1">
                             <span className="text-lg font-bold text-primary">{formatPrice(getPrice())}</span>
@@ -304,31 +321,37 @@ export function PropertyCard({
                             </div>
 
                             {/* Stats row */}
-                            <div className="flex items-center gap-4 text-sm text-muted-foreground mb-3">
-                                <span className="flex items-center gap-1.5">
-                                    <Bed className="w-4 h-4 text-primary/60" />
+                            <div className="flex items-center gap-3 text-xs text-muted-foreground mb-2.5 select-none">
+                                <div className="flex items-center gap-1.5">
+                                    <Bed className="w-4 h-4 text-primary/70 flex-shrink-0" />
                                     <span className="font-medium text-foreground">{property.bedrooms}</span>
-                                </span>
-                                <span className="flex items-center gap-1.5">
-                                    <Bath className="w-4 h-4 text-primary/60" />
+                                    <span>{property.bedrooms === 1 ? 'Bed' : 'Beds'}</span>
+                                </div>
+                                <div className="w-px h-3.5 bg-border flex-shrink-0" />
+                                <div className="flex items-center gap-1.5">
+                                    <Bath className="w-4 h-4 text-primary/70 flex-shrink-0" />
                                     <span className="font-medium text-foreground">{property.bathrooms}</span>
-                                </span>
-                                <span className="flex items-center gap-1.5">
-                                    <Home className="w-4 h-4 text-primary/60" />
-                                    <span className="font-medium text-foreground">{capitalizeFirst(property.propertyType)}</span>
-                                </span>
+                                    <span>{property.bathrooms === 1 ? 'Bath' : 'Baths'}</span>
+                                </div>
+                                <div className="w-px h-3.5 bg-border flex-shrink-0" />
+                                <div className="flex items-center gap-1.5 min-w-0">
+                                    <Home className="w-4 h-4 text-primary/70 flex-shrink-0" />
+                                    <span className="font-medium text-foreground truncate max-w-[140px]">
+                                        {capitalizeFirst(property.roomType || property.propertyType)}
+                                    </span>
+                                </div>
                             </div>
 
                             {/* Amenities */}
-                            {property.amenities?.length > 0 && (
+                            {formattedAmenities.length > 0 && (
                                 <div className="flex items-center flex-wrap gap-1.5 mb-3">
-                                    {property.amenities.slice(0, 4).map((amenity) => (
+                                    {formattedAmenities.slice(0, 4).map((amenity) => (
                                         <span key={amenity} className="text-xs bg-muted text-muted-foreground px-2.5 py-1 rounded-lg">
                                             {amenity}
                                         </span>
                                     ))}
-                                    {property.amenities.length > 4 && (
-                                        <span className="text-xs text-primary font-medium">+{property.amenities.length - 4} more</span>
+                                    {formattedAmenities.length > 4 && (
+                                        <span className="text-xs text-primary font-medium">+{formattedAmenities.length - 4} more</span>
                                     )}
                                 </div>
                             )}
@@ -347,7 +370,7 @@ export function PropertyCard({
                             >
                                 <Heart className={`w-4 h-4 ${isSaved ? "fill-current" : ""}`} />
                             </button>
-                            
+
                             <div className="flex items-center gap-2">
                                 <Button
                                     variant="outline"
@@ -393,10 +416,10 @@ export function PropertyCard({
             }}
         >
             {/* Image Section */}
-            <div className="relative h-52 overflow-hidden">
+            <div className="relative h-48 sm:h-52 overflow-hidden bg-muted">
                 <PropertyImage
                     property={property}
-                    className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-110"
+                    className="w-full h-full object-cover object-center transition-transform duration-500 group-hover:scale-110"
                     priority={priority}
                 />
 
@@ -421,7 +444,7 @@ export function PropertyCard({
 
                 {/* New/Hot Badges (Left below standard badges) */}
                 <div className="absolute top-10 left-3 flex flex-col gap-2 pointer-events-none">
-                     {isHot && (
+                    {isHot && (
                         <span className="inline-flex items-center gap-1 px-2 py-1 bg-rose-500/90 backdrop-blur-sm text-white text-xs font-semibold rounded-full shadow-sm animate-pulse w-fit">
                             <Flame className="w-3 h-3" />
                             Hot
@@ -441,7 +464,7 @@ export function PropertyCard({
                         <span className="inline-flex items-center gap-1 px-2 py-1 bg-indigo-600/90 backdrop-blur-sm text-white text-xs font-semibold rounded-full">
                             <Globe className="w-3 h-3" />
                             {property.virtualTour.type === "matterport" ? "3D Tour" :
-                             property.virtualTour.type === "panorama" ? "360° View" : "Video Tour"}
+                                property.virtualTour.type === "panorama" ? "360° View" : "Video Tour"}
                         </span>
                     </div>
                 )}

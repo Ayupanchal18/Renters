@@ -13,6 +13,7 @@ import { SocketProvider } from "./contexts/SocketContext";
 import { HelmetProvider } from "react-helmet-async";
 import { useWebVitals, WEB_VITALS_THRESHOLDS } from "./hooks/useWebVitals";
 import { setupTokenRefresh } from "./utils/auth";
+import MaintenanceGuard from "./components/common/MaintenanceGuard";
 
 // Critical path - load immediately (lightweight)
 import NotFound from "./pages/NotFound";
@@ -45,6 +46,13 @@ const Blog = lazy(() => import("./pages/Blog"));
 const BlogPost = lazy(() => import("./pages/BlogPost"));
 const Privacy = lazy(() => import("./pages/Privacy"));
 const Terms = lazy(() => import("./pages/Terms"));
+const DoNotSellMyInfo = lazy(() => import("./pages/policies/DoNotSellMyInfo"));
+const FairHousingPolicy = lazy(() => import("./pages/policies/FairHousingPolicy"));
+const DMCAPolicy = lazy(() => import("./pages/policies/DMCAPolicy"));
+const CookiePolicy = lazy(() => import("./pages/policies/CookiePolicy"));
+const AccessibilityStatement = lazy(() => import("./pages/policies/AccessibilityStatement"));
+const AvoidScams = lazy(() => import("./pages/policies/AvoidScams"));
+const Investors = lazy(() => import("./pages/policies/Investors"));
 const ComingSoon = lazy(() => import("./pages/ComingSoon"));
 const Maintenance = lazy(() => import("./pages/Maintenance"));
 const Notifications = lazy(() => import("./pages/Notifications"));
@@ -71,6 +79,10 @@ const ConversationModeration = lazy(() => import("./pages/admin/ConversationMode
 const RolePermissions = lazy(() => import("./pages/admin/RolePermissions"));
 const MediaLibrary = lazy(() => import("./pages/admin/MediaLibrary"));
 const Analytics = lazy(() => import("./pages/admin/Analytics"));
+const LegalRequests = lazy(() => import("./pages/admin/LegalRequests"));
+const NewsletterSubscribers = lazy(() => import("./pages/admin/NewsletterSubscribers"));
+const EmailTemplateManagement = lazy(() => import("./pages/admin/EmailTemplateManagement"));
+const CustomEmailBroadcaster = lazy(() => import("./pages/admin/CustomEmailBroadcaster"));
 
 // Minimal loading fallback for lazy routes
 function PageLoader() {
@@ -198,6 +210,7 @@ const App = () => {
                         v7_relativeSplatPath: true
                     }}
                 >
+                    <MaintenanceGuard>
                     <NavigationStateProvider>
                     <RouteErrorBoundary routeName="app">
                     <Suspense fallback={<PageLoader />}>
@@ -222,6 +235,13 @@ const App = () => {
                             <Route path="/blog/:slug" element={<PublicRouteWrapper routeName="blog-post"><BlogPost /></PublicRouteWrapper>} />
                             <Route path="/privacy-policy" element={<PublicRouteWrapper routeName="privacy"><Privacy /></PublicRouteWrapper>} />
                             <Route path="/terms" element={<PublicRouteWrapper routeName="terms"><Terms /></PublicRouteWrapper>} />
+                            <Route path="/do-not-sell-my-info" element={<PublicRouteWrapper routeName="do-not-sell-my-info"><DoNotSellMyInfo /></PublicRouteWrapper>} />
+                            <Route path="/fair-housing-policy" element={<PublicRouteWrapper routeName="fair-housing-policy"><FairHousingPolicy /></PublicRouteWrapper>} />
+                            <Route path="/dmca-policy" element={<PublicRouteWrapper routeName="dmca-policy"><DMCAPolicy /></PublicRouteWrapper>} />
+                            <Route path="/cookie-policy" element={<PublicRouteWrapper routeName="cookie-policy"><CookiePolicy /></PublicRouteWrapper>} />
+                            <Route path="/accessibility-statement" element={<PublicRouteWrapper routeName="accessibility-statement"><AccessibilityStatement /></PublicRouteWrapper>} />
+                            <Route path="/avoid-scams" element={<PublicRouteWrapper routeName="avoid-scams"><AvoidScams /></PublicRouteWrapper>} />
+                            <Route path="/investors" element={<PublicRouteWrapper routeName="investors"><Investors /></PublicRouteWrapper>} />
                             <Route path="/coming-soon" element={<PublicRouteWrapper routeName="coming-soon"><ComingSoon /></PublicRouteWrapper>} />
                             <Route path="/maintenance" element={<PublicRouteWrapper routeName="maintenance"><Maintenance /></PublicRouteWrapper>} />
 
@@ -255,6 +275,10 @@ const App = () => {
                             <Route path="/admin/roles" element={<AdminRouteWrapper><RolePermissions /></AdminRouteWrapper>} />
                             <Route path="/admin/media" element={<AdminRouteWrapper><MediaLibrary /></AdminRouteWrapper>} />
                             <Route path="/admin/analytics" element={<AdminRouteWrapper><Analytics /></AdminRouteWrapper>} />
+                            <Route path="/admin/legal-requests" element={<AdminRouteWrapper><LegalRequests /></AdminRouteWrapper>} />
+                            <Route path="/admin/subscribers" element={<AdminRouteWrapper><NewsletterSubscribers /></AdminRouteWrapper>} />
+                            <Route path="/admin/email-templates" element={<AdminRouteWrapper><EmailTemplateManagement /></AdminRouteWrapper>} />
+                            <Route path="/admin/email-broadcaster" element={<AdminRouteWrapper><CustomEmailBroadcaster /></AdminRouteWrapper>} />
 
                             {/* 404 - Always last */}
                             <Route path="*" element={<NotFound />} />
@@ -263,6 +287,7 @@ const App = () => {
                     </Suspense>
                     </RouteErrorBoundary>
                     </NavigationStateProvider>
+                    </MaintenanceGuard>
                 </BrowserRouter>
                 </ThemeLoadingState>
             </TooltipProvider>

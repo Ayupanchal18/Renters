@@ -188,7 +188,7 @@ export function BuyFilterSidebar({ filters, onFilterChange, hideHeader = false, 
     return (
         <aside 
             ref={sidebarRef}
-            className="w-full lg:w-80 overflow-hidden"
+            className="w-full overflow-hidden"
             role="complementary"
             aria-label="Buy property filters"
         >

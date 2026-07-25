@@ -3,55 +3,39 @@ import mongoose from "mongoose";
 import { connectDB } from "../server/src/config/db.js";
 import { Property } from "../server/models/Property.js";
 import { User } from "../server/models/User.js";
-import { Conversation } from "../server/models/Conversation.js";
 
 async function query() {
   await connectDB();
-  console.log("=== Querying database ===");
+  console.log("=== Querying database for admin ===");
 
-  // 1. Find properties
-  const properties = await Property.find({ title: /Premium PG/i });
-  console.log(`\nFound ${properties.length} properties matching "Premium PG":`);
-  for (const prop of properties) {
-    console.log(`- Property ID: ${prop._id}`);
-    console.log(`  Title: ${prop.title}`);
-    console.log(`  Owner ID (on property): ${prop.ownerId}`);
-    console.log(`  Owner Name (on property): ${prop.ownerName}`);
-    console.log(`  Owner Phone (on property): ${prop.ownerPhone}`);
+  // Find admin user
+  const adminUser = await User.findOne({ email: "admin@renters.com" }).lean();
+  if (adminUser) {
+    console.log(`\nFound Admin User:`);
+    console.log(`- _id: ${adminUser._id}`);
+    console.log(`- Email: ${adminUser.email}`);
+    console.log(`- Name: ${adminUser.name}`);
+    console.log(`- Role: ${adminUser.role}`);
 
-    // Check if owner user exists
-    const ownerUser = await User.findById(prop.ownerId);
-    if (ownerUser) {
-      console.log(`  Real Owner in DB: ID=${ownerUser._id}, Name=${ownerUser.name}, Email=${ownerUser.email}`);
-    } else {
-      console.log(`  ⚠️ Real Owner NOT FOUND in User collection for ID: ${prop.ownerId}`);
+    // Find properties owned by this adminUser
+    const properties = await Property.find({ ownerId: adminUser._id, isDeleted: false }).lean();
+    console.log(`\nProperties owned by Admin in DB (${properties.length}):`);
+    for (const prop of properties) {
+      console.log(`- ID: ${prop._id}`);
+      console.log(`  Title: ${prop.title}`);
+      console.log(`  OwnerID: ${prop.ownerId}`);
+      console.log(`  OwnerName: ${prop.ownerName}`);
+      console.log(`  OwnerEmail: ${prop.ownerEmail}`);
+      console.log(`  Status: ${prop.status}`);
+      console.log(`  isDeleted: ${prop.isDeleted}`);
     }
-
-    // Find conversations for this property
-    const conversations = await Conversation.find({ property: prop._id });
-    console.log(`  Conversations count: ${conversations.length}`);
-    for (const conv of conversations) {
-      console.log(`  * Conversation ID: ${conv._id}`);
-      console.log(`    Participants:`);
-      for (const p of conv.participants) {
-        const pUser = await User.findById(p);
-        console.log(`      - ID=${pUser?._id || p}, Name=${pUser?.name || 'Unknown'}, Email=${pUser?.email || 'Unknown'}`);
-      }
-    }
-  }
-
-  // 2. Find Jane Buyer
-  const jane = await User.findOne({ name: /Jane Buyer/i });
-  if (jane) {
-    console.log(`\nJane Buyer User Profile:`);
-    console.log(`- ID: ${jane._id}`);
-    console.log(`- Email: ${jane.email}`);
-    console.log(`- UserType: ${jane.userType}`);
   } else {
-    console.log(`\nJane Buyer user not found by name.`);
+    console.log("Admin user admin@renters.com not found!");
   }
 
   await mongoose.disconnect();
 }
 
 query().catch(console.error);
+
+

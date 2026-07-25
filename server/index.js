@@ -38,11 +38,7 @@ export default async function createServer(devMode = false) {
 
     const app = express();
     
-    // DEBUG: Log all incoming requests to check mobile connectivity
-    app.use((req, res, next) => {
-        console.log(`[SERVER DEBUG] ${req.method} ${req.url} - Origin: ${req.get('origin') || 'none'} - IP: ${req.ip}`);
-        next();
-    });
+
 
     // Create http server for both dev and production to support Socket.IO
     const httpServer = http.createServer(app);
@@ -160,7 +156,13 @@ export default async function createServer(devMode = false) {
 
     // Request logging middleware (after addRequestId so we have request IDs)
     app.use(createRequestLogger({
-        logRequestStart: process.env.LOG_REQUEST_START !== 'false',
+        // Disable request logging by default in development to keep terminal clean
+        logRequestStart: isDevelopment
+            ? process.env.LOG_REQUEST_START === 'true'
+            : process.env.LOG_REQUEST_START !== 'false',
+        logRequestComplete: isDevelopment
+            ? process.env.LOG_REQUEST_COMPLETE === 'true'
+            : process.env.LOG_REQUEST_COMPLETE !== 'false',
         slowRequestThreshold: parseInt(process.env.SLOW_REQUEST_THRESHOLD_MS, 10) || 1000,
         excludePaths: ['/api/ping', '/health', '/favicon.ico']
     }));
@@ -290,6 +292,11 @@ export default async function createServer(devMode = false) {
         app.use("/api/categories", (await safeImport("routes/publicCategories.js")).default);
         app.use("/api/locations", (await safeImport("routes/publicLocations.js")).default);
         app.use("/api/testimonials", (await safeImport("routes/publicTestimonials.js")).default);
+        app.use("/api/legal", (await safeImport("routes/legalRequests.js")).default);
+        app.use("/api/maintenance", (await safeImport("routes/publicMaintenance.js")).default);
+
+        const { checkMaintenanceMode } = await safeImport("src/middleware/maintenanceMiddleware.js");
+        app.use("/api", checkMaintenanceMode);
 
         // -------------------------
         //   ADMIN ROUTES
@@ -316,6 +323,7 @@ export default async function createServer(devMode = false) {
         app.use("/api/admin/media", (await safeImport("routes/adminMedia.js")).default);
         app.use("/api/admin/analytics", (await safeImport("routes/adminAnalytics.js")).default);
         app.use("/api/admin/vault", (await safeImport("routes/adminVault.js")).default);
+        app.use("/api/admin/email-templates", (await safeImport("routes/adminEmailTemplates.js")).default);
 
         app.use("/api/upload", (await safeImport("routes/upload.js")).default);
         app.use("/api/vault", (await safeImport("routes/vault.js")).default);

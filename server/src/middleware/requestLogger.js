@@ -21,14 +21,21 @@ import logger from '../services/loggerService.js';
  */
 export function createRequestLogger(options = {}) {
     const {
-        // Disable request start logging by default in development to reduce noise
+        // Disable request start/complete logging by default in development to reduce noise
         logRequestStart = process.env.LOG_REQUEST_START === 'true' || process.env.NODE_ENV === 'production',
+        logRequestComplete = process.env.LOG_REQUEST_COMPLETE === 'true' || process.env.NODE_ENV === 'production',
         logRequestBody = false,
         slowRequestThreshold = 1000,
         excludePaths = ['/api/ping', '/health', '/favicon.ico', '/api/messages', '/api/notifications']
     } = options;
 
     return (req, res, next) => {
+        // Skip non-backend routes (like static files and Vite assets under /src) to avoid noisy logging
+        const isBackendRoute = req.path.startsWith('/api') || req.path.startsWith('/health') || req.path === '/sitemap.xml';
+        if (!isBackendRoute) {
+            return next();
+        }
+
         // Skip excluded paths
         if (excludePaths.some(path => req.path.startsWith(path))) {
             return next();
@@ -78,6 +85,8 @@ export function createRequestLogger(options = {}) {
 
         // Log on response finish
         res.on('finish', () => {
+            if (!logRequestComplete) return;
+
             const endTime = process.hrtime.bigint();
             const durationNs = endTime - startTime;
             const durationMs = Number(durationNs) / 1_000_000;
@@ -112,6 +121,8 @@ export function createRequestLogger(options = {}) {
 
         // Log on response error
         res.on('error', (error) => {
+            if (!logRequestComplete) return;
+
             const endTime = process.hrtime.bigint();
             const durationNs = endTime - startTime;
             const durationMs = Number(durationNs) / 1_000_000;

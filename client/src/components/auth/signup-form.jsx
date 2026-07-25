@@ -545,7 +545,11 @@ export default function SignupForm() {
                                     }`}
                                 />
                                 <span className="text-sm text-muted-foreground">
-                                    I consent to the processing of my personal data for account creation and service delivery
+                                    I consent to the processing of my personal data under the{" "}
+                                    <Link to="/do-not-sell-my-info" className="font-medium text-primary hover:underline" target="_blank">
+                                        DPDP Act 2023 (256-Bit SSL Encrypted)
+                                    </Link>{" "}
+                                    for account creation and real estate search
                                     <span className="text-destructive ml-1">*</span>
                                 </span>
                             </label>

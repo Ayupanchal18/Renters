@@ -40,8 +40,7 @@ export default defineConfig({
   server: {
     host: true,
     port: 8080,
-    // Disable HMR to fix React context issues - use full page reload instead
-    hmr: false,
+    hmr: true,
     watch: {
       usePolling: true,
     },
@@ -62,7 +61,6 @@ export default defineConfig({
       handleHotUpdate({ file, server }) {
         if (file.includes('/pages/') || file.includes('/hooks/') || file.includes('/components/')) {
           server.ws.send({ type: 'full-reload' });
-          return [];
         }
       }
     }
@@ -80,8 +78,6 @@ export default defineConfig({
   },
   optimizeDeps: {
     include: ['react', 'react-dom', 'react-redux', '@reduxjs/toolkit', 'react-router-dom'],
-    // Force re-optimization to fix HMR issues
-    force: true,
     esbuildOptions: {
       loader: {
         '.js': 'jsx',
@@ -90,7 +86,7 @@ export default defineConfig({
   },
   esbuild: {
     loader: "jsx",
-    include: /src\/.*\.[jt]sx?$/,
+    include: /src[\\/].*\.[jt]sx?$/,
     exclude: [],
   },
 

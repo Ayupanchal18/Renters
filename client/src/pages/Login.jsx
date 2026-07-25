@@ -42,11 +42,24 @@ export default function Login() {
                 // Keep userId for backward compatibility with existing code
                 localStorage.setItem("userId", result.user.id);
                 
-                // Initialize socket connection after successful login (Requirement 4.2)
+                // Initialize socket connection after successful login
                 initializeSocket();
                 
-                // Redirect to intended destination or dashboard
-                navigate(from, { replace: true });
+                // Smart redirect based on admin role & maintenance status
+                if (result.user?.role === "admin") {
+                    navigate("/admin", { replace: true });
+                } else {
+                    try {
+                        const statusRes = await fetch("/api/maintenance/status").then(r => r.json());
+                        if (statusRes.success && statusRes.data?.enabled) {
+                            navigate("/maintenance", { state: { maintenanceInfo: statusRes.data }, replace: true });
+                        } else {
+                            navigate(from, { replace: true });
+                        }
+                    } catch (mErr) {
+                        navigate(from, { replace: true });
+                    }
+                }
             }
         } catch (err) {
             console.error('Login error:', err);

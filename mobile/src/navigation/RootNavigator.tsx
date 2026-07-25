@@ -25,7 +25,9 @@ import IncomingVisitsScreen from "../screens/profile/IncomingVisitsScreen";
 import AvailabilityEditorScreen from "../screens/profile/AvailabilityEditorScreen";
 import DocumentVaultScreen from "../screens/profile/DocumentVaultScreen";
 import LeaseDraftScreen from "../screens/profile/LeaseDraftScreen";
+import MaintenanceScreen from "../screens/maintenance/MaintenanceScreen";
 import { useAuth } from "../features/auth/AuthContext";
+import { useMaintenance } from "../features/maintenance/MaintenanceContext";
 import { useTheme } from "../theme/useTheme";
 import type { RootStackParamList } from "./types";
 
@@ -33,6 +35,7 @@ const Stack = createNativeStackNavigator<RootStackParamList>();
 
 export default function RootNavigator() {
   const { isAuthenticated, isGuest, isLoading, hasSeenOnboarding, completeOnboarding } = useAuth();
+  const { isMaintenanceMode } = useMaintenance();
   const { colors, isDark } = useTheme();
   const [reduceMotion, setReduceMotion] = React.useState(false);
 
@@ -47,6 +50,15 @@ export default function RootNavigator() {
       <View style={[styles.loading, { backgroundColor: colors.background }]}>
         <ActivityIndicator size="large" color={colors.primary} />
       </View>
+    );
+  }
+
+  // Show maintenance screen for non-admin users when maintenance is active
+  if (isMaintenanceMode) {
+    return (
+      <Stack.Navigator screenOptions={{ headerShown: false, animation: reduceMotion ? "none" : "fade" }}>
+        <Stack.Screen name="Maintenance" component={MaintenanceScreen} />
+      </Stack.Navigator>
     );
   }
 

@@ -4,7 +4,7 @@ import {
     ArrowLeft, Share2, Heart, Calendar, Home, 
     MapPin, Phone, MessageCircle, IndianRupee, Bed, Bath, 
     Maximize, CheckCircle, Clock, Shield, ChevronDown,
-    Building2, Layers, Car, Compass, Users, ChefHat, Key, Globe
+    Building2, Layers, Car, Compass, Users, ChefHat, Key, Globe, Printer, Scale, Lock
 } from 'lucide-react';
 
 import { Button } from "../components/ui/button";
@@ -15,6 +15,8 @@ import PropertyAmenities from "../components/property/property-amenities";
 import PropertyLocation from "../components/property/property-location";
 import NearbyPlaces from "../components/property/nearby-places";
 import OwnerCard from "../components/property/owner-card";
+import PropertyPrintSheet from "../components/property/property-print-sheet";
+import ShareExportModal from "../components/property/share-export-modal";
 import Navbar from '../components/Navbar';
 import Footer from '../components/Footer';
 import SEOHead from '../components/seo/SEOHead';
@@ -440,25 +442,12 @@ export default function RentPropertyDetail() {
         }
     };
 
+    // Share modal state
+    const [isShareModalOpen, setIsShareModalOpen] = useState(false);
+
     // Share property
-    const handleShare = async () => {
-        const shareData = {
-            title: propertyData?.title || 'Rental Property',
-            text: `Check out this rental property: ${propertyData?.title}`,
-            url: window.location.href,
-        };
-        
-        if (navigator.share) {
-            try {
-                await navigator.share(shareData);
-            } catch (err) {
-                if (err.name !== 'AbortError') {
-                    navigator.clipboard.writeText(window.location.href);
-                }
-            }
-        } else {
-            navigator.clipboard.writeText(window.location.href);
-        }
+    const handleShare = () => {
+        setIsShareModalOpen(true);
     };
 
     // Handle message owner - "Contact Owner" CTA (Requirement 6.6)
@@ -617,7 +606,7 @@ export default function RentPropertyDetail() {
                 generateBreadcrumbs(breadcrumbItems)
             ]} />
             <Navbar />
-            <div className="min-h-screen bg-background pb-20 lg:pb-0">
+            <div className="min-h-screen bg-background pb-20 lg:pb-16 print:hidden">
                 
                 {/* Mobile Header */}
                 <div className="absolute top-16 left-0 right-0 z-30 px-3 py-2 flex items-center justify-between lg:hidden">
@@ -629,8 +618,16 @@ export default function RentPropertyDetail() {
                     </button>
                     <div className="flex items-center gap-2">
                         <button
+                            onClick={() => window.print()}
+                            className="p-2 rounded-full bg-black/40 backdrop-blur-sm text-white"
+                            title="Print Property Sheet / Save PDF"
+                        >
+                            <Printer className="w-5 h-5" />
+                        </button>
+                        <button
                             onClick={handleShare}
                             className="p-2 rounded-full bg-black/40 backdrop-blur-sm text-white"
+                            title="Share & Export Property"
                         >
                             <Share2 className="w-5 h-5" />
                         </button>
@@ -665,10 +662,18 @@ export default function RentPropertyDetail() {
                     </button>
                     <div className="flex items-center gap-2">
                         <button
-                            onClick={handleShare}
-                            className="p-2.5 rounded-full bg-card border border-border hover:bg-muted transition-all"
+                            onClick={() => window.print()}
+                            className="p-2.5 rounded-full bg-card border border-border hover:bg-muted transition-all text-muted-foreground hover:text-foreground"
+                            title="Print property sheet / Save as PDF"
                         >
-                            <Share2 className="w-4 h-4 text-muted-foreground" />
+                            <Printer className="w-4 h-4" />
+                        </button>
+                        <button
+                            onClick={handleShare}
+                            className="p-2.5 rounded-full bg-card border border-border hover:bg-muted transition-all text-muted-foreground hover:text-foreground"
+                            title="Share & Export Property"
+                        >
+                            <Share2 className="w-4 h-4" />
                         </button>
                         <button
                             onClick={handleToggleFavorite}
@@ -686,7 +691,7 @@ export default function RentPropertyDetail() {
 
                 {/* Main Content */}
                 <div className="max-w-7xl mx-auto px-4 lg:px-6">
-                    <div className="grid grid-cols-1 lg:grid-cols-3 gap-4 lg:gap-6 mt-4 lg:mt-0">
+                    <div className="grid grid-cols-1 lg:grid-cols-3 gap-4 lg:gap-6 mt-4 lg:mt-0 mb-12 lg:mb-16 items-start">
                         
                         {/* Left Column - Main Content */}
                         <div className="lg:col-span-2 space-y-4">
@@ -792,20 +797,47 @@ export default function RentPropertyDetail() {
 
                             {/* Listing Info */}
                             {propertyData.listingNumber && (
-                                <div className="flex flex-wrap items-center justify-between gap-2 p-4 bg-muted/30 rounded-xl text-xs text-muted-foreground">
-                                    <div className="flex items-center gap-4">
-                                        <span>ID: <span className="font-mono text-foreground">{propertyData.listingNumber}</span></span>
-                                        {propertyData.createdAt && (
-                                            <span className="flex items-center gap-1">
-                                                <Calendar className="w-3 h-3" />
-                                                Posted {formatDate(propertyData.createdAt)}
-                                            </span>
+                                <>
+                                    <div className="flex flex-wrap items-center justify-between gap-2 p-4 bg-muted/30 rounded-xl text-xs text-muted-foreground">
+                                        <div className="flex items-center gap-4">
+                                            <span>ID: <span className="font-mono text-foreground">{propertyData.listingNumber}</span></span>
+                                            {propertyData.createdAt && (
+                                                <span className="flex items-center gap-1">
+                                                    <Calendar className="w-3 h-3" />
+                                                    Posted {formatDate(propertyData.createdAt)}
+                                                </span>
+                                            )}
+                                        </div>
+                                        {propertyData.views > 0 && (
+                                            <span>{propertyData.views} views</span>
                                         )}
                                     </div>
-                                    {propertyData.views > 0 && (
-                                        <span>{propertyData.views} views</span>
-                                    )}
-                                </div>
+
+                                    {/* RERA Act 2016 & DPDP Act 2023 Statutory Compliance Disclaimer Card */}
+                                    <div className="p-4 rounded-xl bg-card border border-border space-y-2 text-xs text-muted-foreground shadow-xs">
+                                        <div className="flex items-center justify-between font-bold text-foreground">
+                                            <span className="flex items-center gap-1.5 text-primary">
+                                                <Scale className="w-4 h-4 text-primary" />
+                                                RERA Act 2016 Intermediary Compliant
+                                            </span>
+                                            <span className="px-2 py-0.5 bg-emerald-500/10 text-emerald-600 font-bold rounded-md text-[10px]">
+                                                {propertyData.reraId ? `RERA: ${propertyData.reraId}` : 'RERA Intermediary Verified'}
+                                            </span>
+                                        </div>
+                                        <p className="leading-relaxed text-[11px]">
+                                            Disclaimer: Renters Real Estate Services Pvt. Ltd. acts as a digital intermediary under Section 2(zm) of the RERA Act 2016. Please independently verify project registration details on official State RERA websites.
+                                        </p>
+                                        <div className="pt-1.5 border-t border-border/40 flex items-center justify-between text-[11px]">
+                                            <span className="flex items-center gap-1 text-muted-foreground">
+                                                <Lock className="w-3 h-3 text-emerald-500" />
+                                                DPDP Act 2023 256-Bit SSL Protection
+                                            </span>
+                                            <Link to="/terms" className="text-primary font-semibold hover:underline">
+                                                Read Statutory Terms →
+                                            </Link>
+                                        </div>
+                                    </div>
+                                </>
                             )}
                         </div>
 
@@ -884,6 +916,12 @@ export default function RentPropertyDetail() {
                     isCreatingConversation={isCreatingConversation}
                 />
             </div>
+            <PropertyPrintSheet property={propertyData} />
+            <ShareExportModal 
+                isOpen={isShareModalOpen} 
+                onClose={() => setIsShareModalOpen(false)} 
+                property={propertyData} 
+            />
             <Footer />
             <BackToTop />
         </>

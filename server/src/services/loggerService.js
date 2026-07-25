@@ -247,6 +247,60 @@ const originalConsole = {
 };
 
 /**
+ * Check if a log entry is security-related or an error
+ * @param {string} level - Log level
+ * @param {string} message - Log message
+ * @param {Object} context - Log context
+ * @returns {boolean} - True if it should be logged
+ */
+function isSecurityOrError(level, message, context = {}) {
+    // Always log errors
+    if (level === 'error') {
+        return true;
+    }
+
+    // Check if message is a security event (precise keywords only)
+    if (typeof message === 'string') {
+        const msg = message.toUpperCase();
+        if (msg.includes('SECURITY ALERT') ||
+            msg.includes('SECURITY_ALERT') ||
+            msg.includes('AUDIT') ||
+            msg.includes('RATE LIMIT') ||
+            msg.includes('RATE_LIMIT') ||
+            msg.includes('LOGIN SUCCESS') ||
+            msg.includes('LOGIN FAILED') ||
+            msg.includes('LOGIN BLOCKED') ||
+            msg.includes('LOGIN RATE') ||
+            msg.includes('UNAUTHORIZED') ||
+            msg.includes('ACCESS DENIED') ||
+            msg.includes('CSRF') ||
+            msg.includes('XSS DETECTED') ||
+            msg.includes('INJECTION DETECTED') ||
+            msg.includes('ACCOUNT SUSPENDED') ||
+            msg.includes('ACCOUNT BLOCKED') ||
+            msg.includes('BRUTE FORCE')) {
+            return true;
+        }
+    }
+
+    // Check if context action is a security event
+    if (context && typeof context === 'object') {
+        const action = context.action;
+        if (typeof action === 'string') {
+            const a = action.toUpperCase();
+            if (a.startsWith('AUTH_') ||
+                a.startsWith('LOGIN_') ||
+                a.startsWith('SECURITY_') ||
+                a.startsWith('AUDIT_')) {
+                return true;
+            }
+        }
+    }
+
+    return false;
+}
+
+/**
  * Main logger object
  */
 const logger = {
@@ -257,6 +311,7 @@ const logger = {
      */
     debug(message, context = {}) {
         if (!shouldLog('debug')) return;
+        if (!isSecurityOrError('debug', message, context)) return;
         const entry = createLogEntry('debug', message, context);
         originalConsole.debug(formatLogEntry(entry));
     },
@@ -268,6 +323,7 @@ const logger = {
      */
     info(message, context = {}) {
         if (!shouldLog('info')) return;
+        if (!isSecurityOrError('info', message, context)) return;
         const entry = createLogEntry('info', message, context);
         originalConsole.info(formatLogEntry(entry));
     },
@@ -279,6 +335,7 @@ const logger = {
      */
     warn(message, context = {}) {
         if (!shouldLog('warn')) return;
+        if (!isSecurityOrError('warn', message, context)) return;
         const entry = createLogEntry('warn', message, context);
         originalConsole.warn(formatLogEntry(entry));
     },
@@ -355,59 +412,29 @@ const logger = {
 function wrapConsoleMethods() {
     if (!config.enableConsolePassthrough) return;
 
-    console.log = (...args) => {
-        if (config.enableStructuredLogs) {
-            const message = args.map(arg =>
-                typeof arg === 'object' ? JSON.stringify(filterSensitiveData(arg)) : String(arg)
-            ).join(' ');
-            logger.info(message);
-        } else {
-            originalConsole.log(...args);
-        }
-    };
+    // Completely silence console.log and console.info — they are noisy and never security-critical
+    console.log = () => {};
+    console.info = () => {};
+    console.debug = () => {};
 
-    console.info = (...args) => {
-        if (config.enableStructuredLogs) {
-            const message = args.map(arg =>
-                typeof arg === 'object' ? JSON.stringify(filterSensitiveData(arg)) : String(arg)
-            ).join(' ');
-            logger.info(message);
-        } else {
-            originalConsole.info(...args);
-        }
-    };
-
+    // For warnings: only pass through if security-related
     console.warn = (...args) => {
-        if (config.enableStructuredLogs) {
-            const message = args.map(arg =>
-                typeof arg === 'object' ? JSON.stringify(filterSensitiveData(arg)) : String(arg)
-            ).join(' ');
-            logger.warn(message);
-        } else {
-            originalConsole.warn(...args);
-        }
+        const message = args.map(arg =>
+            typeof arg === 'object' ? JSON.stringify(filterSensitiveData(arg)) : String(arg)
+        ).join(' ');
+        if (!isSecurityOrError('warn', message)) return;
+        const entry = createLogEntry('warn', message);
+        originalConsole.warn(formatLogEntry(entry));
     };
 
+    // For errors: always pass through, write directly to avoid double-encoding
     console.error = (...args) => {
-        if (config.enableStructuredLogs) {
-            const message = args.map(arg =>
-                typeof arg === 'object' ? JSON.stringify(filterSensitiveData(arg)) : String(arg)
-            ).join(' ');
-            logger.error(message);
-        } else {
-            originalConsole.error(...args);
-        }
-    };
-
-    console.debug = (...args) => {
-        if (config.enableStructuredLogs) {
-            const message = args.map(arg =>
-                typeof arg === 'object' ? JSON.stringify(filterSensitiveData(arg)) : String(arg)
-            ).join(' ');
-            logger.debug(message);
-        } else {
-            originalConsole.debug(...args);
-        }
+        const message = args.map(arg =>
+            arg instanceof Error ? `${arg.message}\n${arg.stack || ''}` :
+            typeof arg === 'object' ? JSON.stringify(filterSensitiveData(arg)) : String(arg)
+        ).join(' ');
+        const entry = createLogEntry('error', message);
+        originalConsole.error(formatLogEntry(entry));
     };
 }
 
@@ -438,5 +465,11 @@ export {
     originalConsole,
     LOG_LEVELS
 };
+
+// Automatically wrap console methods to filter logs globally at startup
+// Only silence console in production — in dev, Vite needs console.log for startup output
+if (process.env.NODE_ENV === 'production') {
+    wrapConsoleMethods();
+}
 
 export default logger;

@@ -5,6 +5,7 @@ import { NavigationContainer } from "@react-navigation/native";
 import { QueryClientProvider } from "@tanstack/react-query";
 import { queryClient } from "../state/queryClient";
 import { AuthProvider } from "../features/auth/AuthContext";
+import { MaintenanceProvider } from "../features/maintenance/MaintenanceContext";
 import RootNavigator from "../navigation/RootNavigator";
 import { ThemeProvider, useTheme } from "../theme/ThemeContext";
 import NetworkWarning from "../components/ui/NetworkWarning";
@@ -47,11 +48,13 @@ export default function RootApp() {
   return (
     <QueryClientProvider client={queryClient}>
       <AuthProvider>
-        <SafeAreaProvider>
-          <ThemeProvider>
-            <RootAppContent />
-          </ThemeProvider>
-        </SafeAreaProvider>
+        <MaintenanceProvider>
+          <SafeAreaProvider>
+            <ThemeProvider>
+              <RootAppContent />
+            </ThemeProvider>
+          </SafeAreaProvider>
+        </MaintenanceProvider>
       </AuthProvider>
     </QueryClientProvider>
   );

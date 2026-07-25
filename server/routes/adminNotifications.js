@@ -871,4 +871,125 @@ router.get("/stats", requireAdmin, async (req, res) => {
     }
 });
 
+/**
+ * POST /api/admin/notifications/send-test-email
+ * Send a test HTML email to the admin's email
+ */
+router.post("/send-test-email", requireAdmin, async (req, res) => {
+    try {
+        const { subject, htmlCode, recipientEmail } = req.body;
+        if (!subject || !htmlCode || !recipientEmail) {
+            return res.status(400).json({
+                success: false,
+                message: "Subject, HTML code, and recipient email are required."
+            });
+        }
+
+        const emailService = (await import("../src/services/emailService.js")).default;
+        
+        await emailService.sendEmail({
+            to: recipientEmail,
+            subject: `[TEST] ${subject}`,
+            html: htmlCode
+        });
+
+        res.json({
+            success: true,
+            message: `Test email sent successfully to ${recipientEmail}`
+        });
+    } catch (error) {
+        console.error("Send test email error:", error);
+        res.status(500).json({
+            success: false,
+            message: error.message || "Failed to send test email"
+        });
+    }
+});
+
+/**
+ * POST /api/admin/notifications/broadcast-html
+ * Broadcast custom HTML email to filtered users
+ */
+router.post("/broadcast-html", requireAdmin, async (req, res) => {
+    try {
+        const { subject, htmlCode, targetRole, city, activityFilter } = req.body;
+        if (!subject || !htmlCode) {
+            return res.status(400).json({
+                success: false,
+                message: "Subject and HTML code are required."
+            });
+        }
+
+        const emailService = (await import("../src/services/emailService.js")).default;
+        const { LegalRequest } = await import("../models/LegalRequest.js");
+
+        let recipientEmails = [];
+
+        if (targetRole === "newsletter_subscribers") {
+            const subs = await LegalRequest.find({ type: "newsletter_subscriber", status: { $ne: "rejected" } }).select("applicantEmail").lean();
+            recipientEmails = subs.map(s => s.applicantEmail);
+        } else {
+            const query = { status: "active" };
+            if (targetRole && targetRole !== "all") query.role = targetRole;
+            if (city) query.address = { $regex: city, $options: "i" };
+
+            const users = await User.find(query).select("email").lean();
+            recipientEmails = users.map(u => u.email).filter(Boolean);
+        }
+
+        // Deduplicate emails
+        const uniqueEmails = [...new Set(recipientEmails)];
+
+        if (uniqueEmails.length === 0) {
+            return res.status(400).json({
+                success: false,
+                message: "No matching target recipients found for selected filters."
+            });
+        }
+
+        // Send in background batch
+        let sentCount = 0;
+        let failedCount = 0;
+
+        for (const email of uniqueEmails) {
+            try {
+                await emailService.sendEmail({
+                    to: email,
+                    subject,
+                    html: htmlCode
+                });
+                sentCount++;
+            } catch (err) {
+                console.error(`Failed sending to ${email}:`, err);
+                failedCount++;
+            }
+        }
+
+        await safeCreateAuditLog({
+            actorId: req.user._id.toString(),
+            action: "HTML_EMAIL_BROADCAST_SENT",
+            targetId: req.user._id.toString(),
+            targetType: "NotificationBroadcast",
+            details: { subject, targetRole, city, sentCount, failedCount, totalRecipients: uniqueEmails.length },
+            ipAddress: req.ip || ""
+        });
+
+        res.json({
+            success: true,
+            message: `Broadcast completed. Sent: ${sentCount}, Failed: ${failedCount}`,
+            data: {
+                totalRecipients: uniqueEmails.length,
+                sentCount,
+                failedCount
+            }
+        });
+    } catch (error) {
+        console.error("HTML broadcast error:", error);
+        res.status(500).json({
+            success: false,
+            message: "Failed to process HTML broadcast"
+        });
+    }
+});
+
 export default router;

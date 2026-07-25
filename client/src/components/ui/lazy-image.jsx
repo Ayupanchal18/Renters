@@ -145,7 +145,7 @@ export function LazyImage({
         <img
           src={currentSrc}
           alt={effectiveAlt}
-          className={`w-full h-full object-cover transition-opacity duration-300 ${
+          className={`w-full h-full object-cover object-center transition-opacity duration-300 ${
             isLoaded ? 'opacity-100' : 'opacity-0'
           }`}
           onLoad={handleLoad}
@@ -207,8 +207,7 @@ export function PropertyImage({
   if (!primaryImage) {
     return (
       <div 
-        className={`bg-muted flex items-center justify-center ${className}`}
-        style={{ width, height }}
+        className={`bg-muted flex items-center justify-center w-full h-full ${className}`}
         role="img"
         aria-label="No property image available"
       >

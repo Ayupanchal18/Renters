@@ -60,17 +60,17 @@ export default function RentListings() {
     const [mobileMapOpen, setMobileMapOpen] = useState(false);
     const [hoveredListingId, setHoveredListingId] = useState(null);
     const [activeListingId, setActiveListingId] = useState(null);
-    
+
     // Check for search params in URL on initial load
     const urlQuery = searchParams.get('q') || '';
     const urlLocation = searchParams.get('loc') || '';
     const hasUrlSearch = !!(urlQuery || urlLocation);
-    
+
     const [isSearchMode, setIsSearchMode] = useState(!!location.state?.searchData || hasUrlSearch);
-    
+
     const initialLoadDone = useRef(false);
     const initialSearchTriggered = useRef(false);
-    
+
     // Capture initial search data on first render using a ref to prevent it from being lost
     const initialSearchDataRef = useRef(
         location.state?.searchData || (hasUrlSearch ? { q: urlQuery, location: urlLocation } : null)
@@ -185,7 +185,7 @@ export default function RentListings() {
             }
 
             const response = await propertyService.searchRentProperties(payload);
-            
+
             // Handle nested response structure
             const responseData = response.data?.data || response.data;
             const items = responseData.searchResultData || responseData.items || responseData.properties || responseData.results || [];
@@ -195,7 +195,7 @@ export default function RentListings() {
             } else {
                 setProperties(items);
             }
-            
+
             // Calculate hasMore based on response pagination
             const paginationData = response.data?.pagination || {};
             const responseTotal = paginationData.total || responseData.total || items.length;
@@ -203,7 +203,7 @@ export default function RentListings() {
             const pageSize = paginationData.pageSize || responseData.pageSize || pagination.pageSize;
             const totalPages = paginationData.totalPages || Math.ceil(responseTotal / pageSize);
             const calculatedHasMore = currentPage < totalPages;
-            
+
             setPagination(prev => ({
                 ...prev,
                 page: currentPage,
@@ -224,11 +224,11 @@ export default function RentListings() {
     // Handle search from hero section
     const handleHeroSearch = useCallback((payload) => {
         if (!payload) return;
-        
+
         const query = payload.q || payload.query || payload.searchQuery || "";
         const loc = payload.location || payload.city || "";
         const category = payload.category || payload.propertyType || "";
-        
+
         if (query || loc || category) {
             // Update URL with search params for persistence
             const newParams = new URLSearchParams(searchParams);
@@ -237,7 +237,7 @@ export default function RentListings() {
             if (loc) newParams.set('loc', loc);
             else newParams.delete('loc');
             setSearchParams(newParams, { replace: true });
-            
+
             setFilters(prev => ({ ...prev, location: loc }));
             searchRentProperties({ query, location: loc, category });
         } else {
@@ -246,7 +246,7 @@ export default function RentListings() {
             newParams.delete('q');
             newParams.delete('loc');
             setSearchParams(newParams, { replace: true });
-            
+
             setIsSearchMode(false);
             fetchRentProperties(1);
         }
@@ -306,7 +306,7 @@ export default function RentListings() {
 
     // Handle view mode change - persist to localStorage
     const handleViewModeChange = useCallback((newViewMode) => {
-        if (newViewMode === 'map') {
+        if (newViewMode === 'map' && typeof window !== 'undefined' && window.innerWidth < 1024) {
             setMobileMapOpen(true);
         } else {
             setViewMode(newViewMode);
@@ -327,7 +327,7 @@ export default function RentListings() {
 
     // Track if initial data load is complete
     const isInitialLoadComplete = useRef(false);
-    
+
     // Store the current search payload for re-fetching when filters change
     const currentSearchPayload = useRef(initialSearchData);
 
@@ -336,30 +336,30 @@ export default function RentListings() {
         const doInitialLoad = async () => {
             if (initialLoadDone.current) return;
             initialLoadDone.current = true;
-            
+
             fetchWishlistIds();
-            
+
             if (initialSearchData && !initialSearchTriggered.current) {
                 initialSearchTriggered.current = true;
                 setIsSearchMode(true);
-                
+
                 // Pre-fill location filter from search data
                 const searchLocation = initialSearchData.location || initialSearchData.city || "";
                 if (searchLocation) {
                     setFilters(prev => ({ ...prev, location: searchLocation }));
                 }
-                
+
                 await searchRentProperties(initialSearchData);
             } else if (!initialSearchData) {
                 await fetchRentProperties(1);
             }
-            
+
             // Mark initial load as complete after a small delay to ensure state is settled
             setTimeout(() => {
                 isInitialLoadComplete.current = true;
             }, 100);
         };
-        
+
         doInitialLoad();
     }, [fetchWishlistIds, fetchRentProperties, searchRentProperties, initialSearchData]);
 
@@ -368,25 +368,25 @@ export default function RentListings() {
     useEffect(() => {
         // Increment change count
         filterChangeCount.current += 1;
-        
+
         // Skip the first 2 runs - initial render and state settling
         if (filterChangeCount.current <= 2) {
             return;
         }
-        
+
         // Skip if initial load not complete
         if (!isInitialLoadComplete.current) return;
-        
+
         // Build search payload from current state
         const searchPayload = {
             location: filters.location || "",
             query: urlQuery || currentSearchPayload.current?.q || "",
             category: filters.propertyType || ""
         };
-        
+
         // Update stored payload
         currentSearchPayload.current = searchPayload;
-        
+
         // If in search mode or has location filter, re-search with current filters
         if (isSearchMode || filters.location) {
             searchRentProperties(searchPayload);
@@ -394,6 +394,10 @@ export default function RentListings() {
             fetchRentProperties(1);
         }
     }, [filters.propertyType, filters.priceRange, filters.bedrooms, filters.furnishing, filters.preferredTenants, filters.amenities, filters.verifiedOnly, sortBy]);
+
+    const gridCols = viewMode === "map"
+        ? "grid-cols-1 sm:grid-cols-2 lg:grid-cols-1 xl:grid-cols-2 2xl:grid-cols-2"
+        : "grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-3 xl:grid-cols-3 2xl:grid-cols-4";
 
     return (
         <div className="min-h-screen flex flex-col">
@@ -435,11 +439,11 @@ export default function RentListings() {
                     {mobileFiltersOpen && (
                         <>
                             {/* Backdrop */}
-                            <div 
+                            <div
                                 className="lg:hidden fixed inset-0 bg-black/60 backdrop-blur-sm z-[60] transition-opacity"
                                 onClick={() => setMobileFiltersOpen(false)}
                             />
-                            
+
                             {/* Drawer */}
                             <div className="lg:hidden fixed top-0 bottom-0 left-0 z-[70] w-full max-w-sm bg-background shadow-2xl overflow-hidden flex flex-col animate-in slide-in-from-left duration-300">
                                 {/* Drawer Header */}
@@ -462,17 +466,17 @@ export default function RentListings() {
                                         <X className="w-5 h-5 text-muted-foreground" />
                                     </button>
                                 </div>
-                                
+
                                 {/* Drawer Content */}
                                 <div className="flex-1 overflow-y-auto overscroll-contain">
-                                    <RentFilterSidebar 
-                                        filters={filters} 
+                                    <RentFilterSidebar
+                                        filters={filters}
                                         onFilterChange={handleFilterChange}
                                         hideHeader={true}
                                         compact={true}
                                     />
                                 </div>
-                                
+
                                 {/* Drawer Footer */}
                                 <div className="px-4 py-3 border-t border-border bg-card safe-area-bottom">
                                     <button
@@ -494,10 +498,10 @@ export default function RentListings() {
                             <div className="flex gap-6">
                                 {/* Desktop Filter Sidebar (xl+) */}
                                 <div className="hidden xl:block w-72 flex-shrink-0">
-                                    <div className="sticky top-[80px]">
-                                        <RentFilterSidebar 
-                                            filters={filters} 
-                                            onFilterChange={handleFilterChange} 
+                                    <div className="sticky top-[80px] max-h-[calc(100vh-100px)] overflow-y-auto pr-1">
+                                        <RentFilterSidebar
+                                            filters={filters}
+                                            onFilterChange={handleFilterChange}
                                         />
                                     </div>
                                 </div>
@@ -505,7 +509,7 @@ export default function RentListings() {
                                 {/* Listings List & Controls */}
                                 <div className="flex-1 min-w-0">
                                     <ViewControls
-                                        viewMode={viewMode === "map" ? "grid" : viewMode}
+                                        viewMode={viewMode}
                                         onViewChange={handleViewModeChange}
                                         sortBy={sortBy}
                                         onSortChange={handleSortChange}
@@ -518,7 +522,7 @@ export default function RentListings() {
                                     />
 
                                     <ListingsGrid
-                                        viewMode={viewMode === "map" ? "grid" : viewMode}
+                                        viewMode={viewMode}
                                         properties={properties}
                                         loading={isLoading}
                                         onClearFilters={() => handleFilterChange('clearAll')}
@@ -543,25 +547,12 @@ export default function RentListings() {
                                         hoveredListingId={hoveredListingId}
                                         onCardHover={setHoveredListingId}
                                         onMarkerClick={setActiveListingId}
+                                        gridCols={gridCols}
                                     />
                                 </div>
                             </div>
                         </div>
 
-                        {/* Sticky Desktop Map (lg+) */}
-                        <div className="hidden lg:block w-[40%] xl:w-[35%] flex-shrink-0">
-                            <div className="sticky top-[80px] h-[calc(100vh-100px)] min-h-[450px]">
-                                <PropertyMap
-                                    properties={properties}
-                                    loading={isLoading}
-                                    activeListingId={activeListingId}
-                                    hoveredListingId={hoveredListingId}
-                                    onMarkerClick={setActiveListingId}
-                                    onMarkerHover={setHoveredListingId}
-                                    className="h-full rounded-2xl border border-border"
-                                />
-                            </div>
-                        </div>
                     </div>
 
                     {/* Floating "View on Map" FAB (Mobile/Tablet below lg) */}

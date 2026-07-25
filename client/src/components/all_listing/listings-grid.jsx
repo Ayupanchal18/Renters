@@ -92,21 +92,21 @@ const EmptyState = memo(({ hasFilters, onClearFilters, customMessage, emptyTitle
                     <span className="text-lg">🏠</span>
                 </div>
             </div>
-            
+
             {/* Text */}
             <h3 className="text-xl font-semibold text-foreground mb-2">
                 {emptyTitle || (hasFilters ? "No matching homes found" : "No properties listed yet")}
             </h3>
             <p className="text-muted-foreground mb-6 leading-relaxed max-w-sm mx-auto">
-                {customMessage || (hasFilters 
+                {customMessage || (hasFilters
                     ? "We couldn't find any properties matching your current filters. Try removing some filters to see more options."
                     : "We haven't listed any properties in this category yet. Please check back soon or try a different search."
                 )}
             </p>
-            
+
             {/* Action */}
             {hasFilters && (
-                <Button 
+                <Button
                     onClick={onClearFilters}
                     className="bg-primary hover:bg-primary/90 text-primary-foreground rounded-xl px-6 h-11 font-medium"
                 >
@@ -120,10 +120,10 @@ const EmptyState = memo(({ hasFilters, onClearFilters, customMessage, emptyTitle
 
 EmptyState.displayName = "EmptyState";
 
-export function ListingsGrid({ 
-    viewMode, 
-    properties = [], 
-    loading, 
+export function ListingsGrid({
+    viewMode,
+    properties = [],
+    loading,
     onClearFilters,
     onLoadMore,
     hasMore = false,
@@ -177,8 +177,8 @@ export function ListingsGrid({
         return (
             <div className="relative pb-4">
                 <Suspense fallback={<MapLoadingFallback />}>
-                    <PropertyMapView 
-                        properties={properties} 
+                    <PropertyMapView
+                        properties={properties}
                         loading={loading}
                         hasMore={hasMore}
                         onLoadMore={onLoadMore}
@@ -187,6 +187,7 @@ export function ListingsGrid({
                         hoveredListingId={hoveredListingId}
                         onMarkerClick={onMarkerClick}
                         onMarkerHover={onMarkerHover}
+                        className="h-[600px] lg:h-[calc(100vh-220px)] min-h-[450px] w-full rounded-2xl border border-border"
                     />
                 </Suspense>
             </div>
@@ -219,22 +220,22 @@ export function ListingsGrid({
             {!loading && properties.length > 0 && (
                 <>
                     {viewMode === "grid" ? (
-                        <div 
+                        <div
                             className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-5"
                             role="grid"
                             aria-label="Property grid view"
                         >
                             {properties.map((property) => (
-                                <div 
-                                    key={property._id} 
+                                <div
+                                    key={property._id}
                                     role="gridcell"
                                     ref={el => {
                                         if (el) cardRefs.current[property._id] = el;
                                         else delete cardRefs.current[property._id];
                                     }}
                                 >
-                                    <MemoizedPropertyCard 
-                                        property={property} 
+                                    <MemoizedPropertyCard
+                                        property={property}
                                         viewMode="grid"
                                         initialSaved={wishlistIds.has(property._id)}
                                         onWishlistChange={onWishlistChange}
@@ -247,22 +248,22 @@ export function ListingsGrid({
                             ))}
                         </div>
                     ) : (
-                        <div 
+                        <div
                             className="space-y-4"
                             role="list"
                             aria-label="Property list view"
                         >
                             {properties.map((property) => (
-                                <div 
-                                    key={property._id} 
+                                <div
+                                    key={property._id}
                                     role="listitem"
                                     ref={el => {
                                         if (el) cardRefs.current[property._id] = el;
                                         else delete cardRefs.current[property._id];
                                     }}
                                 >
-                                    <MemoizedPropertyCard 
-                                        property={property} 
+                                    <MemoizedPropertyCard
+                                        property={property}
                                         viewMode="list"
                                         initialSaved={wishlistIds.has(property._id)}
                                         onWishlistChange={onWishlistChange}
@@ -337,8 +338,8 @@ export function ListingsGrid({
 
             {/* Empty State */}
             {!loading && properties.length === 0 && (
-                <EmptyState 
-                    hasFilters={hasFilters} 
+                <EmptyState
+                    hasFilters={hasFilters}
                     onClearFilters={onClearFilters}
                     customMessage={emptyStateMessage}
                     emptyTitle={emptyStateTitle}
