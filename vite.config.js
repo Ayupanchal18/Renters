@@ -20,32 +20,30 @@ export default defineConfig({
       output: {
         manualChunks(id) {
           if (id.includes('node_modules')) {
-            if (id.includes('react/') || id.includes('react-dom/') || id.includes('react-router-dom')) {
-              return 'react-vendor';
-            }
-            if (id.includes('@reduxjs') || id.includes('react-redux')) {
-              return 'redux-vendor';
+            // Keep React runtime, core ecosystem & React bindings unified to avoid context evaluation race conditions
+            if (
+              id.includes('react') ||
+              id.includes('react-dom') ||
+              id.includes('react-router') ||
+              id.includes('@reduxjs') ||
+              id.includes('@radix-ui')
+            ) {
+              return 'vendor-react';
             }
             if (id.includes('lucide-react')) {
               return 'icons-vendor';
             }
-            if (id.includes('leaflet') || id.includes('react-leaflet')) {
-              return 'map-vendor';
+            if (id.includes('@tiptap')) {
+              return 'editor-vendor';
             }
-            if (id.includes('@radix-ui')) {
-              return 'ui-vendor';
+            if (id.includes('@dnd-kit')) {
+              return 'dnd-vendor';
             }
             if (id.includes('@tanstack/react-query')) {
               return 'query-vendor';
             }
             if (id.includes('socket.io-client')) {
               return 'socket-vendor';
-            }
-            if (id.includes('@dnd-kit')) {
-              return 'dnd-vendor';
-            }
-            if (id.includes('@tiptap')) {
-              return 'editor-vendor';
             }
           }
         },
