@@ -109,6 +109,16 @@ const propertyService = {
      */
     searchBuyProperties: (filters = {}) => {
         return apiClient.post(PROPERTY_ENDPOINTS.SEARCH_BUY_PROPERTIES, filters);
+    },
+
+    /**
+     * Get similar properties for recommendations
+     * @param {string} identifier - Property slug or ID
+     * @param {Object} params - Query params (limit, etc.)
+     * @returns {Promise} API response with similar properties list
+     */
+    getSimilarProperties: (identifier, params = {}) => {
+        return apiClient.get(`${PROPERTY_ENDPOINTS.GET_SIMILAR_PROPERTIES}/${identifier}/similar`, { params });
     }
 };
 

@@ -212,7 +212,7 @@ export default function ImageCarousel({ images = [], propertyTitle = "Property" 
             {/* Modal */}
             {isModalOpen && hasValidImages && (
                 <div 
-                    className="fixed inset-0 z-50 bg-black/98 flex items-center justify-center p-4"
+                    className="fixed inset-0 z-[200] bg-black/98 flex items-center justify-center p-4"
                     onClick={(e) => {
                         // Close modal when clicking outside the image
                         if (e.target === e.currentTarget) {

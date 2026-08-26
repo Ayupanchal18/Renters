@@ -836,7 +836,7 @@ export default function Home() {
                                 <div className="flex flex-col sm:flex-row gap-3">
                                     <Button
                                         size="lg"
-                                        className="bg-background hover:bg-background/90 text-foreground font-semibold shadow-xl"
+                                        className="bg-white text-primary hover:bg-white/90 font-semibold shadow-xl bg-none"
                                         onClick={() => {
                                             setListingTypeContext(LISTING_TYPES.RENT);
                                             document.getElementById("search_box")?.scrollIntoView({ behavior: "smooth" });
@@ -872,7 +872,7 @@ export default function Home() {
                                 <div className="flex flex-col sm:flex-row gap-3">
                                     <Button
                                         size="lg"
-                                        className="bg-background hover:bg-background/90 text-foreground font-semibold shadow-xl"
+                                        className="bg-white text-primary hover:bg-white/90 font-semibold shadow-xl bg-none"
                                         onClick={() => {
                                             setListingTypeContext(LISTING_TYPES.BUY);
                                             document.getElementById("search_box")?.scrollIntoView({ behavior: "smooth" });

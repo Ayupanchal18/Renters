@@ -110,3 +110,22 @@ export async function fetchPropertyDetail(
   );
   return res.data.data!;
 }
+
+/**
+ * GET /api/properties/:identifier/similar
+ */
+export async function fetchSimilarProperties(
+  identifier: string,
+  limit = 8
+): Promise<Property[]> {
+  try {
+    const res = await apiClient.get<ApiResponse<{ items: Property[] }>>(
+      `/api/properties/${identifier}/similar`,
+      { params: { limit } }
+    );
+    return res.data.data?.items || [];
+  } catch (error) {
+    console.warn("fetchSimilarProperties failed:", error);
+    return [];
+  }
+}

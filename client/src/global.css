@@ -1566,15 +1566,13 @@
 /* -------- PROMPT 6: GLOBAL MOTION UTILITIES ---------------------------- */
 /* ====================================================================== */
 
-/* Page Enter — fade-in + slide up (applied on route change) */
+/* Page Enter — fade-in (applied on route change) - no transform to preserve position: fixed viewport anchoring */
 @keyframes page-enter {
   from {
     opacity: 0;
-    transform: translateY(8px);
   }
   to {
     opacity: 1;
-    transform: translateY(0);
   }
 }
 

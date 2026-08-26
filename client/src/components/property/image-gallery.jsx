@@ -164,7 +164,7 @@ export default function ImageGallery({ images = [], title = "Property" }) {
 
             {/* Fullscreen Lightbox Modal */}
             {isModalOpen && (
-                <div className="fixed inset-0 z-50 bg-black/95 backdrop-blur-md flex flex-col">
+                <div className="fixed inset-0 z-[200] bg-black/95 backdrop-blur-md flex flex-col">
                     {/* Header */}
                     <div className="relative z-10 flex items-center justify-between p-4 bg-gradient-to-b from-black/80 to-transparent">
                         <div className="text-white">

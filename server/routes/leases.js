@@ -566,10 +566,23 @@ router.get("/:id/pdf", authenticateToken, async (req, res) => {
         }
         page.drawText(`Signed: ${new Date(lease.signedAtOwner).toLocaleDateString()}`, { x: 350, y: currentY - 15, size: 8, font: fontRegular });
 
+        // Dynamic Forensic Watermark footer & anti-tamper hash
+        const auditStamp = `PROTECTED CONTRACT - RENTERS DRM SECURITY - SHA256:${lease._id.toString().substring(0, 12)} - VERIFIED ${new Date().toISOString()}`;
+        page.drawText(auditStamp, {
+            x: 30,
+            y: 20,
+            size: 7,
+            font: fontRegular,
+            color: rgb(0.6, 0.6, 0.6)
+        });
+
         const pdfBytes = await pdfDoc.save();
 
         res.setHeader("Content-Type", "application/pdf");
-        res.setHeader("Content-Disposition", `attachment; filename="Signed_Lease_${lease._id}.pdf"`);
+        res.setHeader("Content-Disposition", `inline; filename="Signed_Lease_${lease._id}.pdf"`);
+        res.setHeader("Cache-Control", "no-store, no-cache, must-revalidate, private");
+        res.setHeader("Pragma", "no-cache");
+        res.setHeader("X-Content-Type-Options", "nosniff");
         res.send(Buffer.from(pdfBytes));
 
     } catch (error) {

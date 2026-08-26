@@ -8,6 +8,8 @@ import { Badge } from "../ui/badge";
 import { Card, CardHeader, CardTitle, CardDescription, CardContent } from "../ui/card";
 import { getToken } from "../../utils/auth";
 import { showSuccessToast, showErrorToast } from "../../utils/toastNotifications";
+import ProtectedDocumentViewer from "./ProtectedDocumentViewer";
+import ContentProtectionBadge from "../common/ContentProtectionBadge";
 
 const DOCUMENT_TYPES = [
     { key: "id_proof", label: "Identity Proof", desc: "Passport, Driver's License, or National ID card", required: true },
@@ -23,6 +25,7 @@ export default function DocumentVault({ onStatusChange }) {
     const [uploading, setUploading] = useState({}); // type -> boolean
     const [uploadProgress, setUploadProgress] = useState({}); // type -> number
     const [deleting, setDeleting] = useState({}); // docId -> boolean
+    const [viewingDoc, setViewingDoc] = useState(null); // { url, filename, mimetype }
     const fileInputs = useRef({});
 
     // Fetch documents
@@ -159,7 +162,11 @@ export default function DocumentVault({ onStatusChange }) {
             if (!res.ok) throw new Error("Could not fetch file preview.");
             const blob = await res.blob();
             const blobUrl = URL.createObjectURL(blob);
-            window.open(blobUrl, "_blank");
+            setViewingDoc({
+                url: blobUrl,
+                filename: filename || "Vault Document",
+                mimetype: res.headers.get("content-type") || ""
+            });
         } catch (err) {
             showErrorToast(err.message || "Failed to view document");
         }
@@ -399,6 +406,16 @@ export default function DocumentVault({ onStatusChange }) {
                         Delete Non-Verified Data
                     </Button>
                 </div>
+
+                {/* Protected In-App Document Viewer Modal */}
+                {viewingDoc && (
+                    <ProtectedDocumentViewer
+                        fileUrl={viewingDoc.url}
+                        filename={viewingDoc.filename}
+                        mimetype={viewingDoc.mimetype}
+                        onClose={() => setViewingDoc(null)}
+                    />
+                )}
             </CardContent>
         </Card>
     );

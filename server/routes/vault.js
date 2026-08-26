@@ -222,6 +222,11 @@ router.get("/documents/:id/file", authenticateToken, async (req, res) => {
 
         res.setHeader("Content-Type", doc.mimetype || response.headers.get("content-type") || "application/octet-stream");
         res.setHeader("Content-Disposition", `inline; filename="${doc.filename}"`);
+        res.setHeader("Cache-Control", "no-store, no-cache, must-revalidate, private");
+        res.setHeader("Pragma", "no-cache");
+        res.setHeader("Expires", "0");
+        res.setHeader("X-Content-Type-Options", "nosniff");
+        res.setHeader("X-Download-Options", "noopen");
         
         const arrayBuffer = await response.arrayBuffer();
         const buffer = Buffer.from(arrayBuffer);

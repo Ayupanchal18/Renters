@@ -26,6 +26,7 @@ import AvailabilityEditorScreen from "../screens/profile/AvailabilityEditorScree
 import DocumentVaultScreen from "../screens/profile/DocumentVaultScreen";
 import LeaseDraftScreen from "../screens/profile/LeaseDraftScreen";
 import MaintenanceScreen from "../screens/maintenance/MaintenanceScreen";
+import AiAssistantModal from "../components/ai/AiAssistantModal";
 import { useAuth } from "../features/auth/AuthContext";
 import { useMaintenance } from "../features/maintenance/MaintenanceContext";
 import { useTheme } from "../theme/useTheme";
@@ -81,7 +82,8 @@ export default function RootNavigator() {
   }
 
   return (
-    <Stack.Navigator
+    <>
+      <Stack.Navigator
       screenOptions={{
         headerTitleStyle: { fontWeight: "700" as const, color: colors.textPrimary },
         headerStyle: { backgroundColor: colors.surface },
@@ -153,6 +155,8 @@ export default function RootNavigator() {
         </>
       )}
     </Stack.Navigator>
+    {hasAccess && <AiAssistantModal />}
+    </>
   );
 }
 

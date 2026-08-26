@@ -30,6 +30,7 @@ import { PropertyCard } from "../components/all_listing/property-card";
 import EmiCalculator from "../components/EmiCalculator";
 import BookingWidget from "../components/scheduling/BookingWidget";
 import NeighborhoodSection from "../components/neighborhood/NeighborhoodSection";
+import SimilarProperties from "../components/property/similar-properties";
 
 // Lazy-load virtual tour renderers (code-split)
 const MatterportEmbed = lazy(() => import("../components/tour/MatterportEmbed"));
@@ -219,7 +220,7 @@ function MobileContactBar({ property, onSiteVisit, onCall, isCreatingConversatio
     };
 
     return (
-        <div className="fixed bottom-0 left-0 right-0 z-40 bg-card/95 backdrop-blur-lg border-t border-border p-3 lg:hidden">
+        <div className="fixed bottom-0 left-0 right-0 z-50 bg-card/98 backdrop-blur-xl border-t border-border/80 shadow-2xl p-3 pb-[calc(0.75rem+env(safe-area-inset-bottom))] lg:hidden">
             <div className="flex items-center gap-3 max-w-lg mx-auto">
                 <div className="flex-1 min-w-0">
                     <div className="flex items-baseline gap-1">
@@ -814,11 +815,10 @@ export default function BuyPropertyDetail() {
                             {/* Neighborhood Insights */}
                             <NeighborhoodSection propertyId={propertyData._id} property={propertyData} />
 
-                            {/* Related Buy Properties (Requirement 6.5) */}
-                            <RelatedBuyProperties 
-                                currentPropertyId={propertyData._id}
-                                city={propertyData.city}
-                                category={propertyData.category}
+                            {/* Similar Buy Properties */}
+                            <SimilarProperties 
+                                currentProperty={propertyData}
+                                listingType="buy"
                             />
 
                             {/* Listing Info */}
@@ -932,14 +932,14 @@ export default function BuyPropertyDetail() {
                     </div>
                 </div>
 
-                {/* Mobile Sticky Contact Bar */}
-                <MobileContactBar 
-                    property={propertyData}
-                    onSiteVisit={handleSiteVisit}
-                    onCall={handleCall}
-                    isCreatingConversation={isCreatingConversation}
-                />
             </div>
+            {/* Mobile Sticky Contact Bar */}
+            <MobileContactBar 
+                property={propertyData}
+                onSiteVisit={handleSiteVisit}
+                onCall={handleCall}
+                isCreatingConversation={isCreatingConversation}
+            />
             <PropertyPrintSheet property={propertyData} />
             <ShareExportModal 
                 isOpen={isShareModalOpen} 

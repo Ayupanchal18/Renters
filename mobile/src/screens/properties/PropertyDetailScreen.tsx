@@ -45,6 +45,7 @@ import ScoreGauge from "./components/ScoreGauge";
 import AmenitiesList from "./components/AmenitiesList";
 import NeighborhoodMap from "./components/NeighborhoodMap";
 import SkeletonLoader from "../../components/ui/SkeletonLoader";
+import SimilarPropertiesSection from "./components/SimilarPropertiesSection";
 
 // Lazy-loaded Virtual Tour Components
 const MatterportEmbed = lazy(() => import("../../components/tour/MatterportEmbed"));
@@ -166,16 +167,6 @@ export default function PropertyDetailScreen({ route, navigation }: Props) {
   const isWishlisted = wishlistData?.some((item: any) => 
     item.property?._id === property?._id || item.property?.id === property?._id
   ) || false;
-
-  // Fetch related/similar properties
-  const { data: relatedData } = useQuery({
-    queryKey: ["related-properties", property?.city, property?.category],
-    queryFn: () => {
-      const fetchFn = type === 'buy' ? fetchBuyListings : fetchRentListings;
-      return fetchFn(1, 5, { city: property?.city, category: property?.category });
-    },
-    enabled: !!property,
-  });
 
   const wishlistMutation = useMutation({
     mutationFn: (action: 'add' | 'remove') => {
@@ -309,8 +300,6 @@ export default function PropertyDetailScreen({ route, navigation }: Props) {
     }
     return null;
   };
-
-  const relatedItems = relatedData?.items.filter(i => i._id !== property._id).slice(0, 4) || [];
 
   return (
     <SafeAreaView style={styles.safeArea} edges={['bottom']}>
@@ -652,25 +641,14 @@ export default function PropertyDetailScreen({ route, navigation }: Props) {
           </View>
         )}
 
-        {/* Similar Listings */}
-        {relatedItems.length > 0 && (
-          <View style={[styles.section, { paddingBottom: 20 }]}>
-            <Text style={styles.subHeading}>Similar Properties in {property.city}</Text>
-            <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{ gap: 16 }}>
-              {relatedItems.map(item => (
-                <View key={item._id} style={{ width: 280 }}>
-                  <PropertyCard 
-                    property={item} 
-                    onPress={() => navigation.push("PropertyDetail", {
-              identifier: item.slug || item._id,
-              type: item.listingType || type
-            })} 
-                  />
-                </View>
-              ))}
-            </ScrollView>
-          </View>
-        )}
+        {/* Similar Properties Component */}
+        <View style={styles.paddedSection}>
+          <SimilarPropertiesSection
+            property={property}
+            type={type}
+            navigation={navigation}
+          />
+        </View>
 
         {/* Padding for sticky footer */}
         <View style={{ height: 100 }} />

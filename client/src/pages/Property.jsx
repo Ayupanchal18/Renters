@@ -16,6 +16,7 @@ import PropertyAmenities from "../components/property/property-amenities";
 import PropertyLocation from "../components/property/property-location";
 import NearbyPlaces from "../components/property/nearby-places";
 import OwnerCard from "../components/property/owner-card";
+import SimilarProperties from "../components/property/similar-properties";
 import Navbar from '../components/Navbar';
 import Footer from '../components/Footer';
 import SEOHead from '../components/seo/SEOHead';
@@ -174,7 +175,7 @@ function MobileContactBar({ property, onMessage, onCall, isCreatingConversation 
     const isNegotiable = isBuyProperty ? property.negotiable : (property.negotiable || property.rentNegotiable);
 
     return (
-        <div className="fixed bottom-0 left-0 right-0 z-40 bg-card/95 backdrop-blur-lg border-t border-border p-3 lg:hidden">
+        <div className="fixed bottom-0 left-0 right-0 z-50 bg-card/98 backdrop-blur-xl border-t border-border/80 shadow-2xl p-3 pb-[calc(0.75rem+env(safe-area-inset-bottom))] lg:hidden">
             <div className="flex items-center gap-3 max-w-lg mx-auto">
                 <div className="flex-1 min-w-0">
                     <div className="flex items-baseline gap-1">
@@ -671,6 +672,12 @@ export default function PropertyPage() {
                             {/* Location */}
                             <PropertyLocation property={propertyData} />
 
+                            {/* Similar Properties */}
+                            <SimilarProperties 
+                                currentProperty={propertyData}
+                                listingType={propertyData.listingType || "rent"}
+                            />
+
                             {/* Listing Info */}
                             {propertyData.listingNumber && (
                                 <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2 p-4 bg-muted/30 rounded-xl text-xs text-muted-foreground">
@@ -743,14 +750,14 @@ export default function PropertyPage() {
                     </div>
                 </div>
 
-                {/* Mobile Sticky Contact Bar */}
-                <MobileContactBar 
-                    property={propertyData}
-                    onMessage={handleMessage}
-                    onCall={handleCall}
-                    isCreatingConversation={isCreatingConversation}
-                />
             </div>
+            {/* Mobile Sticky Contact Bar */}
+            <MobileContactBar 
+                property={propertyData}
+                onMessage={handleMessage}
+                onCall={handleCall}
+                isCreatingConversation={isCreatingConversation}
+            />
             {/* Footer with bottom padding on mobile to account for fixed contact bar */}
             <div className="pb-20 lg:pb-0">
                 <Footer />

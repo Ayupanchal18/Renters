@@ -40,7 +40,7 @@ function getLocalIP() {
 }
 
 // 2. Setup ADB reverse if devices are connected
-function setupAdbReverse(port = 8080) {
+function setupAdbReverse(ports = [8080, 8081]) {
   try {
     const devicesOutput = execSync("adb devices", { encoding: "utf8" });
     const lines = devicesOutput.split("\n").map((line) => line.trim());
@@ -50,9 +50,12 @@ function setupAdbReverse(port = 8080) {
 
     if (hasDevices.length > 0) {
       console.log(`📱 Connected Android device(s) found: ${hasDevices.join(", ")}`);
-      console.log(`🔄 Running 'adb reverse tcp:${port} tcp:${port}'...`);
-      execSync(`adb reverse tcp:${port} tcp:${port}`);
-      console.log(`✅ Port ${port} successfully reversed.`);
+      for (const port of ports) {
+        try {
+          execSync(`adb reverse tcp:${port} tcp:${port}`);
+          console.log(`✅ Port ${port} successfully reversed.`);
+        } catch (err) {}
+      }
       return true;
     } else {
       console.log("⚠️ No active Android devices/emulators connected via ADB.");
@@ -70,8 +73,8 @@ function run() {
   const localIp = getLocalIP();
   console.log(`💻 Host computer IP: ${localIp}`);
 
-  // Setup port reverse for port 8080 (Vite frontend + Express backend)
-  const reverseSuccessful = setupAdbReverse(8080);
+  // Setup port reverse for port 8080 (backend) and 8081 (Metro)
+  const reverseSuccessful = setupAdbReverse([8080, 8081]);
 
   // If adb reverse is successful (USB or emulator is active), we can use 'localhost'!
   // This is the cleanest setup as it bypasses Windows Firewall entirely.
@@ -94,16 +97,24 @@ function run() {
 
   const lines = envContent.split("\n");
   let urlUpdated = false;
-  const newLines = lines.map((line) => {
-    if (line.startsWith("EXPO_PUBLIC_API_BASE_URL=")) {
-      urlUpdated = true;
-      return `EXPO_PUBLIC_API_BASE_URL=${apiUrl}`;
-    }
-    return line;
-  });
+  let packagerHostUpdated = false;
+
+  const newLines = lines
+    .filter((line) => !line.startsWith("REACT_NATIVE_PACKAGER_HOSTNAME="))
+    .map((line) => {
+      if (line.startsWith("EXPO_PUBLIC_API_BASE_URL=")) {
+        urlUpdated = true;
+        return `EXPO_PUBLIC_API_BASE_URL=${apiUrl}`;
+      }
+      return line;
+    });
 
   if (!urlUpdated) {
     newLines.push(`EXPO_PUBLIC_API_BASE_URL=${apiUrl}`);
+  }
+
+  if (reverseSuccessful) {
+    newLines.push(`REACT_NATIVE_PACKAGER_HOSTNAME=localhost`);
   }
 
   fs.writeFileSync(envPath, newLines.join("\n").trim() + "\n", "utf8");

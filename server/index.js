@@ -281,6 +281,7 @@ export default async function createServer(devMode = false) {
         app.use("/api/verification", (await safeImport("routes/verification.js")).default);
         app.use("/api/properties/rent", (await safeImport("routes/rentProperties.js")).default);
         app.use("/api/properties/buy", (await safeImport("routes/buyProperties.js")).default);
+        app.use("/api/properties", (await safeImport("routes/similarProperties.js")).default);
         app.use("/api/properties", (await safeImport("routes/properties.js")).default);
         app.use("/api/bookings", (await safeImport("routes/bookings.js")).default);
         app.use("/api/users", (await safeImport("routes/users.js")).default);
@@ -328,6 +329,8 @@ export default async function createServer(devMode = false) {
         app.use("/api/upload", (await safeImport("routes/upload.js")).default);
         app.use("/api/vault", (await safeImport("routes/vault.js")).default);
         app.use("/api/leases", (await safeImport("routes/leases.js")).default);
+        app.use("/api/drm", (await safeImport("routes/drm.js")).default);
+        app.use("/api/ai", (await safeImport("routes/ai.js")).default);
         app.use("/api/audit", (await safeImport("routes/audit.js")).default);
         app.use("/api/privacy", (await safeImport("routes/privacy.js")).default);
         app.use("/api/delivery-preferences", (await safeImport("routes/deliveryPreferences.js")).default);

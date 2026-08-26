@@ -22,4 +22,21 @@ config.resolver.nodeModulesPaths = [
     path.resolve(projectRoot, "node_modules"),
 ];
 
+// Exclude native build directories and intermediate files from Metro watcher/resolver
+// to prevent ENOENT errors when Gradle compiles native modules concurrently.
+const blockListPatterns = [
+    /.*[\\/](android|ios)[\\/](build|\.cxx|\.transforms|\.gradle)[\\/].*/,
+    /.*[\\/]build[\\/]intermediates[\\/].*/,
+    /.*[\\/]\.gradle[\\/].*/,
+];
+
+if (Array.isArray(config.resolver.blockList)) {
+    config.resolver.blockList.push(...blockListPatterns);
+} else if (config.resolver.blockList) {
+    config.resolver.blockList = [config.resolver.blockList, ...blockListPatterns];
+} else {
+    config.resolver.blockList = blockListPatterns;
+}
+
 module.exports = config;
+

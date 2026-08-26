@@ -14,6 +14,7 @@ import { HelmetProvider } from "react-helmet-async";
 import { useWebVitals, WEB_VITALS_THRESHOLDS } from "./hooks/useWebVitals";
 import { setupTokenRefresh } from "./utils/auth";
 import MaintenanceGuard from "./components/common/MaintenanceGuard";
+import AiAssistantWidget from "./components/ai/AiAssistantWidget";
 
 // Critical path - load immediately (lightweight)
 import NotFound from "./pages/NotFound";
@@ -286,6 +287,7 @@ const App = () => {
                     </PageTransition>
                     </Suspense>
                     </RouteErrorBoundary>
+                    <AiAssistantWidget />
                     </NavigationStateProvider>
                     </MaintenanceGuard>
                 </BrowserRouter>

@@ -14,7 +14,10 @@ const PROPERTY_ENDPOINTS = {
     POST_BUY_PROPERTY: "/api/properties/buy",
     GET_BUY_PROPERTIES: "/api/properties/buy",
     GET_BUY_PROPERTY_BY_SLUG: "/api/properties/buy",
-    SEARCH_BUY_PROPERTIES: "/api/properties/buy/search"
+    SEARCH_BUY_PROPERTIES: "/api/properties/buy/search",
+
+    // Recommendations endpoint
+    GET_SIMILAR_PROPERTIES: "/api/properties"
 }
 
 

@@ -1,5 +1,7 @@
 import { useState } from "react";
 import { Play, ExternalLink, Youtube } from "lucide-react";
+import DrmVideoPlayer from "./DrmVideoPlayer";
+import ContentProtectionBadge from "../common/ContentProtectionBadge";
 
 /**
  * Convert a public video URL to an embeddable iframe src:
@@ -65,6 +67,11 @@ export default function VideoTourEmbed({ url, className = "" }) {
                 onKeyDown={(e) => e.key === "Enter" && setActivated(true)}
                 aria-label="Play video tour"
             >
+                {/* DRM Badge overlay */}
+                <div className="absolute top-3 left-3 z-20">
+                    <ContentProtectionBadge />
+                </div>
+
                 <div
                     className="absolute inset-0 opacity-30"
                     style={{
@@ -77,10 +84,10 @@ export default function VideoTourEmbed({ url, className = "" }) {
                         <Play className="w-7 h-7 fill-current ml-1" />
                     </div>
                     <div className="text-center">
-                        <p className="font-semibold text-sm">Play Video Tour</p>
+                        <p className="font-semibold text-sm">Play Encrypted Video Tour</p>
                         <p className="text-xs text-white/70 mt-0.5 flex items-center gap-1 justify-center">
                             {embed.brand === "YouTube" && <Youtube size={11} />}
-                            {embed.brand}
+                            {embed.brand} • Protected Stream
                         </p>
                     </div>
                 </div>
@@ -89,12 +96,17 @@ export default function VideoTourEmbed({ url, className = "" }) {
     }
 
     return (
-        <div
-            className={`relative rounded-xl overflow-hidden border border-border ${className}`}
-            style={{ aspectRatio: "16/9" }}
-        >
+        <div className={`relative ${className}`}>
             {embed.type === "iframe" ? (
-                <>
+                <div
+                    className="relative rounded-xl overflow-hidden border border-border"
+                    style={{ aspectRatio: "16/9" }}
+                >
+                    {/* DRM Badge */}
+                    <div className="absolute top-3 left-3 z-20">
+                        <ContentProtectionBadge />
+                    </div>
+
                     <iframe
                         src={embed.src}
                         title="Video Tour"
@@ -112,19 +124,12 @@ export default function VideoTourEmbed({ url, className = "" }) {
                     >
                         <ExternalLink size={14} />
                     </a>
-                </>
+                </div>
             ) : (
-                // Native <video> for direct file URLs
-                <video
-                    src={embed.src}
-                    controls
-                    autoPlay
-                    className="w-full h-full object-contain bg-black"
-                    aria-label="Video tour"
-                >
-                    Your browser does not support the video tag.
-                </video>
+                // Native DRM Video Player for direct file URLs
+                <DrmVideoPlayer src={embed.src} title="Protected Video Walkthrough" />
             )}
         </div>
     );
 }
+
