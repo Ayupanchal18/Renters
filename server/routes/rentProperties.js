@@ -14,9 +14,6 @@ import { LISTING_TYPES } from "../../shared/propertyTypes.js";
 import path from "path";
 import { fileURLToPath } from "url";
 
-const __dirname = path.dirname(fileURLToPath(import.meta.url));
-const debugFile = path.join(__dirname, "../../debug.log");
-
 const router = Router();
 
 /* ---------------------- HELPER FUNCTIONS ---------------------- */
@@ -232,7 +229,6 @@ router.post("/", propertyUpload.fields([
  * Get all rent properties with filtering
  */
 router.get("/", async (req, res) => {
-    fs.appendFileSync("d:/portfolio_Projects/Renters/debug.log", `HIT: rentProperties.js GET / at ${new Date().toISOString()}\n`);
     try {
         const page = Math.max(1, Number(req.query.page) || 1);
         const limit = Math.min(100, Number(req.query.limit) || 12);
@@ -316,9 +312,7 @@ router.get("/", async (req, res) => {
                 .lean();
         }
 
-        fs.appendFileSync(debugFile, `[RENT DEBUG] Querying with filter: ${JSON.stringify(filter)}\n`);
         const [items, total] = await Promise.all([query.exec(), Property.countDocuments(filter)]);
-        fs.appendFileSync(debugFile, `[RENT DEBUG] Found ${items.length} items, total: ${total}\n`);
 
         res.json({
             success: true,

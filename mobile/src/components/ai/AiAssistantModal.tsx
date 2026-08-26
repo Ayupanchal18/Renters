@@ -26,9 +26,13 @@ import {
   CheckCheck,
   MapPin,
   ChevronRight,
+  Lock,
+  LogIn,
+  UserPlus,
 } from "lucide-react-native";
 import { useTheme } from "../../theme/useTheme";
 import { apiClient } from "../../api/client";
+import { getAccessToken } from "../../features/auth/services/tokenStorage";
 import type { NativeStackNavigationProp } from "@react-navigation/native-stack";
 import type { RootStackParamList } from "../../navigation/types";
 
@@ -82,10 +86,14 @@ export default function AiAssistantModal() {
     },
   ]);
 
+  const [isAuthed, setIsAuthed] = useState<boolean>(true);
   const scrollViewRef = useRef<ScrollView>(null);
 
   useEffect(() => {
     if (modalVisible) {
+      getAccessToken().then((token) => {
+        setIsAuthed(!!token);
+      });
       setTimeout(() => {
         scrollViewRef.current?.scrollToEnd({ animated: true });
       }, 150);
@@ -222,184 +230,233 @@ export default function AiAssistantModal() {
               </View>
             </View>
 
-            {/* Messages Body */}
-            <ScrollView
-              ref={scrollViewRef}
-              style={styles.messagesList}
-              contentContainerStyle={{ paddingVertical: 12 }}
-            >
-              {/* Centered Date Badge */}
-              <View style={styles.dateHeaderContainer}>
-                <Text style={styles.dateHeaderText}>Today</Text>
-              </View>
-
-              {messages.map((msg, index) => (
-                <View key={msg.id} style={styles.messageBlock}>
-                  <View
-                    style={[
-                      styles.messageRow,
-                      msg.sender === "user" ? styles.userRow : styles.aiRow,
-                    ]}
-                  >
-                    {/* Bot Avatar Badge */}
-                    {msg.sender === "ai" && (
-                      <View style={styles.aiAvatarBadge}>
-                        <Building2 size={14} color="#1d4ed8" />
-                      </View>
-                    )}
-
-                    <View
-                      style={[
-                        styles.messageBubbleContainer,
-                        msg.sender === "user"
-                          ? styles.userBubbleContainer
-                          : styles.aiBubbleContainer,
-                      ]}
-                    >
-                      <View
-                        style={[
-                          styles.bubble,
-                          msg.sender === "user" ? styles.userBubble : styles.aiBubble,
-                        ]}
-                      >
-                        <Text
-                          style={[
-                            styles.messageText,
-                            msg.sender === "user" ? styles.userText : styles.aiText,
-                          ]}
-                        >
-                          {msg.text}
-                        </Text>
-
-                        {/* User Checkmarks & Timestamp inside blue bubble */}
-                        {msg.sender === "user" && (
-                          <View style={styles.userBubbleFooter}>
-                            <Text style={styles.userTimeText}>
-                              {msg.timestamp || "Just now"}
-                            </Text>
-                            <CheckCheck size={14} color="#bfdbfe" />
-                          </View>
-                        )}
-                      </View>
-
-                      {/* AI Timestamp below bubble */}
-                      {msg.sender === "ai" && (
-                        <Text style={styles.aiTimestampText}>
-                          {msg.timestamp || "Just now"}
-                        </Text>
-                      )}
-                    </View>
-                  </View>
-
-                  {/* 2x2 Quick Services Buttons under initial welcome message */}
-                  {index === 0 && (
-                    <View style={styles.quickGridContainer}>
-                      {QUICK_SERVICES.map((item, qIdx) => {
-                        const IconComponent = item.icon;
-                        return (
-                          <TouchableOpacity
-                            key={qIdx}
-                            activeOpacity={0.8}
-                            onPress={() => handleSend(item.prompt)}
-                            style={styles.quickGridButton}
-                          >
-                            <IconComponent size={15} color="#1d4ed8" />
-                            <Text style={styles.quickGridButtonText} numberOfLines={1}>
-                              {item.label}
-                            </Text>
-                          </TouchableOpacity>
-                        );
-                      })}
-                    </View>
-                  )}
-
-                  {/* Inline Property Recommendation Cards */}
-                  {msg.properties && msg.properties.length > 0 && (
-                    <View style={styles.cardsContainer}>
-                      {msg.properties.map((prop) => (
-                        <TouchableOpacity
-                          key={prop.id}
-                          activeOpacity={0.85}
-                          onPress={() => handlePropertyPress(prop)}
-                          style={styles.propertyCard}
-                        >
-                          <Image
-                            source={{ uri: prop.image }}
-                            style={styles.cardImage}
-                          />
-                          <View style={styles.cardInfo}>
-                            <Text style={styles.cardTitle} numberOfLines={1}>
-                              {prop.title}
-                            </Text>
-                            <View style={styles.locationRow}>
-                              <MapPin size={10} color="#1d4ed8" />
-                              <Text
-                                style={styles.cardLocation}
-                                numberOfLines={1}
-                              >
-                                {prop.location} •{" "}
-                                {prop.bedrooms ? `${prop.bedrooms}BHK` : prop.category}
-                              </Text>
-                            </View>
-                            <View style={styles.cardBottomRow}>
-                              <Text style={styles.cardPrice}>
-                                {prop.price}
-                              </Text>
-                              <View style={styles.viewBadge}>
-                                <Text style={styles.viewBadgeText}>View</Text>
-                                <ChevronRight size={10} color="#ffffff" />
-                              </View>
-                            </View>
-                          </View>
-                        </TouchableOpacity>
-                      ))}
-                    </View>
-                  )}
+            {/* Body - Auth Check */}
+            {!isAuthed ? (
+              <View style={{ flex: 1, padding: 24, alignItems: 'center', justifyContent: 'center' }}>
+                <View style={{ width: 64, height: 64, borderRadius: 32, backgroundColor: '#dbeafe', alignItems: 'center', justifyContent: 'center', marginBottom: 16 }}>
+                  <Lock size={32} color="#1d4ed8" />
                 </View>
-              ))}
+                <Text style={{ fontSize: 18, fontWeight: '700', color: colors.textPrimary, marginBottom: 8, textAlign: 'center' }}>
+                  Account Required
+                </Text>
+                <Text style={{ fontSize: 13, color: colors.textSecondary, textAlign: 'center', marginBottom: 24, lineHeight: 20 }}>
+                  Please log in or create an account to start chatting with Renters AI, search properties, and get instant rental advisories.
+                </Text>
+                <TouchableOpacity
+                  onPress={() => {
+                    setModalVisible(false);
+                    navigation.navigate("Login");
+                  }}
+                  style={{ width: '100%', height: 48, backgroundColor: '#1d4ed8', borderRadius: 12, alignItems: 'center', justifyContent: 'center', marginBottom: 12, flexDirection: 'row', gap: 8 }}
+                >
+                  <LogIn size={18} color="#ffffff" />
+                  <Text style={{ color: '#ffffff', fontWeight: '700', fontSize: 14 }}>Log In to Continue</Text>
+                </TouchableOpacity>
 
-              {loading && (
-                <View style={styles.loadingContainer}>
-                  <ActivityIndicator size="small" color="#1d4ed8" />
-                  <Text style={styles.loadingText}>
-                    Renters AI is thinking...
+                <TouchableOpacity
+                  onPress={() => {
+                    setModalVisible(false);
+                    navigation.navigate("Register");
+                  }}
+                  style={{ width: '100%', height: 48, backgroundColor: colors.surface, borderWidth: 1, borderColor: colors.border, borderRadius: 12, alignItems: 'center', justifyContent: 'center', flexDirection: 'row', gap: 8 }}
+                >
+                  <UserPlus size={18} color="#1d4ed8" />
+                  <Text style={{ color: colors.textPrimary, fontWeight: '600', fontSize: 14 }}>Create New Account</Text>
+                </TouchableOpacity>
+
+                <View style={[styles.poweredFooter, { marginTop: 24 }]}>
+                  <Sparkles size={11} color="#1d4ed8" />
+                  <Text style={styles.poweredFooterText}>
+                    Powered by Renters AI
                   </Text>
                 </View>
-              )}
-            </ScrollView>
-
-            {/* Input Bar & Footer */}
-            <View style={styles.inputSection}>
-              <View style={styles.inputPillContainer}>
-                <TextInput
-                  value={input}
-                  onChangeText={setInput}
-                  placeholder="Type your message..."
-                  placeholderTextColor="#94a3b8"
-                  style={styles.input}
-                  onSubmitEditing={() => handleSend()}
-                  returnKeyType="send"
-                />
-                <TouchableOpacity
-                  onPress={() => handleSend()}
-                  disabled={!input.trim() || loading}
-                  style={[
-                    styles.sendBtn,
-                    (!input.trim() || loading) && { opacity: 0.4 },
-                  ]}
+              </View>
+            ) : (
+              <>
+                {/* Messages Body */}
+                <ScrollView
+                  ref={scrollViewRef}
+                  style={styles.messagesList}
+                  contentContainerStyle={{ paddingVertical: 12 }}
                 >
-                  <Send size={15} color="#ffffff" />
-                </TouchableOpacity>
-              </View>
+                  {/* Centered Date Badge */}
+                  <View style={styles.dateHeaderContainer}>
+                    <Text style={styles.dateHeaderText}>Today</Text>
+                  </View>
 
-              {/* Sub-footer */}
-              <View style={styles.poweredFooter}>
-                <Sparkles size={11} color="#1d4ed8" />
-                <Text style={styles.poweredFooterText}>
-                  Powered by Renters AI
-                </Text>
-              </View>
-            </View>
+                  {messages.map((msg, index) => (
+                    <View key={msg.id} style={styles.messageBlock}>
+                      <View
+                        style={[
+                          styles.messageRow,
+                          msg.sender === "user" ? styles.userRow : styles.aiRow,
+                        ]}
+                      >
+                        {/* Bot Avatar Badge */}
+                        {msg.sender === "ai" && (
+                          <View style={styles.aiAvatarBadge}>
+                            <Building2 size={14} color="#1d4ed8" />
+                          </View>
+                        )}
+
+                        <View
+                          style={[
+                            styles.messageBubbleContainer,
+                            msg.sender === "user"
+                              ? styles.userBubbleContainer
+                              : styles.aiBubbleContainer,
+                          ]}
+                        >
+                          <View
+                            style={[
+                              styles.bubble,
+                              msg.sender === "user"
+                                ? styles.userBubble
+                                : styles.aiBubble,
+                            ]}
+                          >
+                            <Text
+                              style={[
+                                styles.messageText,
+                                msg.sender === "user"
+                                  ? styles.userText
+                                  : styles.aiText,
+                              ]}
+                            >
+                              {msg.text}
+                            </Text>
+
+                            {/* User Checkmarks & Timestamp inside blue bubble */}
+                            {msg.sender === "user" && (
+                              <View style={styles.userBubbleFooter}>
+                                <Text style={styles.userTimeText}>
+                                  {msg.timestamp || "Just now"}
+                                </Text>
+                                <CheckCheck size={14} color="#bfdbfe" />
+                              </View>
+                            )}
+                          </View>
+
+                          {/* AI Timestamp below bubble */}
+                          {msg.sender === "ai" && (
+                            <Text style={styles.aiTimestampText}>
+                              {msg.timestamp || "Just now"}
+                            </Text>
+                          )}
+                        </View>
+                      </View>
+
+                      {/* 2x2 Quick Services Buttons under initial welcome message */}
+                      {index === 0 && (
+                        <View style={styles.quickGridContainer}>
+                          {QUICK_SERVICES.map((item, qIdx) => {
+                            const IconComponent = item.icon;
+                            return (
+                              <TouchableOpacity
+                                key={qIdx}
+                                activeOpacity={0.8}
+                                onPress={() => handleSend(item.prompt)}
+                                style={styles.quickGridButton}
+                              >
+                                <IconComponent size={15} color="#1d4ed8" />
+                                <Text style={styles.quickGridButtonText} numberOfLines={1}>
+                                  {item.label}
+                                </Text>
+                              </TouchableOpacity>
+                            );
+                          })}
+                        </View>
+                      )}
+
+                      {/* Inline Property Recommendation Cards */}
+                      {msg.properties && msg.properties.length > 0 && (
+                        <View style={styles.cardsContainer}>
+                          {msg.properties.map((prop) => (
+                            <TouchableOpacity
+                              key={prop.id}
+                              activeOpacity={0.85}
+                              onPress={() => handlePropertyPress(prop)}
+                              style={styles.propertyCard}
+                            >
+                              <Image
+                                source={{ uri: prop.image }}
+                                style={styles.cardImage}
+                              />
+                              <View style={styles.cardInfo}>
+                                <Text style={styles.cardTitle} numberOfLines={1}>
+                                  {prop.title}
+                                </Text>
+                                <View style={styles.locationRow}>
+                                  <MapPin size={10} color="#1d4ed8" />
+                                  <Text
+                                    style={styles.cardLocation}
+                                    numberOfLines={1}
+                                  >
+                                    {prop.location} •{" "}
+                                    {prop.bedrooms ? `${prop.bedrooms}BHK` : prop.category}
+                                  </Text>
+                                </View>
+                                <View style={styles.cardBottomRow}>
+                                  <Text style={styles.cardPrice}>
+                                    {prop.price}
+                                  </Text>
+                                  <View style={styles.viewBadge}>
+                                    <Text style={styles.viewBadgeText}>View</Text>
+                                    <ChevronRight size={10} color="#ffffff" />
+                                  </View>
+                                </View>
+                              </View>
+                            </TouchableOpacity>
+                          ))}
+                        </View>
+                      )}
+                    </View>
+                  ))}
+
+                  {loading && (
+                    <View style={styles.loadingContainer}>
+                      <ActivityIndicator size="small" color="#1d4ed8" />
+                      <Text style={styles.loadingText}>
+                        Renters AI is thinking...
+                      </Text>
+                    </View>
+                  )}
+                </ScrollView>
+
+                {/* Input Bar & Footer */}
+                <View style={styles.inputSection}>
+                  <View style={styles.inputPillContainer}>
+                    <TextInput
+                      value={input}
+                      onChangeText={setInput}
+                      placeholder="Type your message..."
+                      placeholderTextColor="#94a3b8"
+                      style={styles.input}
+                      onSubmitEditing={() => handleSend()}
+                      returnKeyType="send"
+                    />
+                    <TouchableOpacity
+                      onPress={() => handleSend()}
+                      disabled={!input.trim() || loading}
+                      style={[
+                        styles.sendBtn,
+                        (!input.trim() || loading) && { opacity: 0.4 },
+                      ]}
+                    >
+                      <Send size={15} color="#ffffff" />
+                    </TouchableOpacity>
+                  </View>
+
+                  {/* Sub-footer */}
+                  <View style={styles.poweredFooter}>
+                    <Sparkles size={11} color="#1d4ed8" />
+                    <Text style={styles.poweredFooterText}>
+                      Powered by Renters AI
+                    </Text>
+                  </View>
+                </View>
+              </>
+            )}
           </KeyboardAvoidingView>
         </View>
       </Modal>

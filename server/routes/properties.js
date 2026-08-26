@@ -712,7 +712,6 @@ router.get("/buy/:slug", async (req, res) => {
 
 // GET all properties with basic filtering
 router.get("/", async (req, res) => {
-    fs.appendFileSync("d:/portfolio_Projects/Renters/debug.log", `HIT: properties.js GET / with ${req.originalUrl} at ${new Date().toISOString()}\n`);
     try {
         await connectDB();
 

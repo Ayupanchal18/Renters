@@ -31,8 +31,6 @@ import {
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
-const debugFile = path.join(__dirname, "../debug.log");
-fs.appendFileSync(debugFile, `[INDEX.JS] Loading at ${new Date().toISOString()}\n`);
 
 
 export default async function createServer(devMode = false) {

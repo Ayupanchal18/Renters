@@ -124,10 +124,6 @@ function expressPlugin() {
     apply: "serve",
 
     async configureServer(server) {
-      const fs = await import("fs");
-      const path = await import("path");
-      const debugFile = path.join(process.cwd(), "debug.log");
-      fs.appendFileSync(debugFile, `[VITE.CONFIG] configureServer running at ${new Date().toISOString()}\n`);
       try {
         // MUST be dynamic import
         const { default: createServer } = await import("./server/index.js");

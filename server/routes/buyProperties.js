@@ -14,9 +14,6 @@ import fs from "fs";
 import path from "path";
 import { fileURLToPath } from "url";
 
-const __dirname = path.dirname(fileURLToPath(import.meta.url));
-const debugFile = path.join(__dirname, "../../debug.log");
-
 const router = Router();
 
 /* ---------------------- HELPER FUNCTIONS ---------------------- */
@@ -315,9 +312,7 @@ router.get("/", async (req, res) => {
                 .lean();
         }
 
-        fs.appendFileSync(debugFile, `[BUY DEBUG] Querying with filter: ${JSON.stringify(filter)}\n`);
         const [items, total] = await Promise.all([query.exec(), Property.countDocuments(filter)]);
-        fs.appendFileSync(debugFile, `[BUY DEBUG] Found ${items.length} items, total: ${total}\n`);
 
         res.json({
             success: true,

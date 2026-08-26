@@ -1,10 +1,4 @@
 import mongoose from "mongoose";
-import fs from "fs";
-import path from "path";
-import { fileURLToPath } from "url";
-
-const __dirname = path.dirname(fileURLToPath(import.meta.url));
-const debugFile = path.join(__dirname, "../../../debug.log");
 import { setupQueryProfiling } from "../middleware/queryProfiler.js";
 
 /**
@@ -42,7 +36,6 @@ export async function connectDB() {
         if (!hasLoggedConnection) {
             const msg = `✅ MongoDB Connected Successfully to database: ${mongoose.connection.name} on host: ${mongoose.connection.host}`;
             console.log(msg);
-            fs.appendFileSync(debugFile, msg + "\n");
             hasLoggedConnection = true;
         }
 

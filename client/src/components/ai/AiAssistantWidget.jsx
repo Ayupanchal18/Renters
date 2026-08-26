@@ -2,10 +2,12 @@ import React, { useState, useRef, useEffect } from "react";
 import { 
     Sparkles, X, Send, Bot, User, RefreshCw, 
     MapPin, ChevronRight, MoreVertical, Paperclip, CheckCheck,
-    Building2, Briefcase, Folder, MessageSquareText, HelpCircle, ShieldCheck
+    Building2, Briefcase, Folder, MessageSquareText, HelpCircle, ShieldCheck,
+    Lock, LogIn, UserPlus
 } from "lucide-react";
 import { Button } from "../ui/button";
 import { Link } from "react-router-dom";
+import { isAuthenticated } from "../../utils/auth";
 
 const QUICK_SERVICES = [
     { icon: Building2, label: "Rent Listings", prompt: "Show available rental properties" },
@@ -154,158 +156,200 @@ export default function AiAssistantWidget() {
                         </div>
                     </div>
 
-                    {/* Messages Body with Date Header */}
-                    <div className="flex-1 p-3.5 sm:p-4 overflow-y-auto space-y-4 bg-slate-50/60 text-sm">
-                        
-                        {/* Centered Date Badge */}
-                        <div className="flex justify-center my-1">
-                            <span className="text-[11px] font-semibold text-slate-400 bg-white border border-slate-200/60 px-3 py-1 rounded-full shadow-2xs">
-                                Today
-                            </span>
-                        </div>
+                    {/* Body - Auth Check */}
+                    {!isAuthenticated() ? (
+                        <div className="flex-1 p-6 flex flex-col items-center justify-center text-center bg-slate-50/70">
+                            <div className="w-16 h-16 rounded-full bg-blue-100/80 border border-blue-200 text-blue-600 flex items-center justify-center mb-4 shadow-sm">
+                                <Lock className="w-8 h-8 text-blue-600" />
+                            </div>
+                            <h4 className="text-base font-bold text-slate-900 mb-1.5">
+                                Account Required
+                            </h4>
+                            <p className="text-xs text-slate-600 leading-relaxed max-w-xs mb-6">
+                                Please log in or create an account to start chatting with Renters AI, search properties, and get instant rental advisories.
+                            </p>
 
-                        {messages.map((msg, index) => (
-                            <div key={msg.id} className="space-y-3">
-                                <div
-                                    className={`flex items-start gap-2.5 ${
-                                        msg.sender === "user" ? "flex-row-reverse" : "flex-row"
-                                    }`}
+                            <div className="w-full space-y-2.5 px-2">
+                                <Link
+                                    to="/login"
+                                    onClick={() => setIsOpen(false)}
+                                    className="w-full py-2.5 px-4 bg-blue-600 hover:bg-blue-700 active:scale-98 text-white font-bold text-xs rounded-xl shadow-md flex items-center justify-center gap-2 transition-all"
                                 >
-                                    {/* Bot Avatar Icon */}
-                                    {msg.sender === "ai" && (
-                                        <div className="w-7 h-7 sm:w-8 sm:h-8 rounded-full bg-white border-2 border-blue-600 flex items-center justify-center text-blue-600 shadow-2xs flex-shrink-0 mt-0.5">
-                                            <Building2 className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
-                                        </div>
-                                    )}
+                                    <LogIn className="w-4 h-4" />
+                                    <span>Log In to Continue</span>
+                                </Link>
 
-                                    <div className={`flex flex-col ${msg.sender === "user" ? "items-end" : "items-start"} max-w-[85%] sm:max-w-[82%]`}>
-                                        {/* Message Bubble */}
-                                        <div
-                                            className={`px-3.5 sm:px-4 py-2.5 sm:py-3 rounded-2xl text-xs sm:text-sm leading-relaxed shadow-2xs ${
-                                                msg.sender === "user"
-                                                    ? "bg-blue-600 text-white rounded-tr-none"
-                                                    : "bg-white text-slate-800 border border-slate-200/80 rounded-tl-none"
-                                            }`}
-                                        >
-                                            <p className="whitespace-pre-wrap">{msg.text}</p>
-                                            
-                                            {/* User Message Footer inside blue bubble */}
-                                            {msg.sender === "user" && (
-                                                <div className="flex items-center justify-end gap-1 mt-1 text-[10px] text-blue-100/90 font-medium">
-                                                    <span>{msg.timestamp || "Just now"}</span>
-                                                    <CheckCheck className="w-3.5 h-3.5 text-blue-200" />
-                                                </div>
-                                            )}
-                                        </div>
+                                <Link
+                                    to="/signup"
+                                    onClick={() => setIsOpen(false)}
+                                    className="w-full py-2.5 px-4 bg-white hover:bg-slate-100 active:scale-98 text-slate-700 border border-slate-300 font-semibold text-xs rounded-xl shadow-2xs flex items-center justify-center gap-2 transition-all"
+                                >
+                                    <UserPlus className="w-4 h-4 text-blue-600" />
+                                    <span>Create New Account</span>
+                                </Link>
+                            </div>
 
-                                        {/* AI Timestamp below bubble */}
-                                        {msg.sender === "ai" && (
-                                            <span className="text-[10px] font-medium text-slate-400 mt-1 ml-1">
-                                                {msg.timestamp || "Just now"}
-                                            </span>
-                                        )}
-                                    </div>
+                            <div className="mt-8 flex items-center gap-1 text-[10px] text-slate-400 font-medium">
+                                <Sparkles className="w-3 h-3 text-blue-600 fill-blue-600" />
+                                <span>Powered by Renters AI</span>
+                            </div>
+                        </div>
+                    ) : (
+                        <>
+                            {/* Messages Body with Date Header */}
+                            <div className="flex-1 p-3.5 sm:p-4 overflow-y-auto space-y-4 bg-slate-50/60 text-sm">
+                                
+                                {/* Centered Date Badge */}
+                                <div className="flex justify-center my-1">
+                                    <span className="text-[11px] font-semibold text-slate-400 bg-white border border-slate-200/60 px-3 py-1 rounded-full shadow-2xs">
+                                        Today
+                                    </span>
                                 </div>
 
-                                {/* Show Quick Services Buttons under the initial welcome message */}
-                                {index === 0 && (
-                                    <div className="pl-0 sm:pl-9 grid grid-cols-2 gap-2 w-full">
-                                        {QUICK_SERVICES.map((item, qIdx) => {
-                                            const Icon = item.icon;
-                                            return (
-                                                <button
-                                                    key={qIdx}
-                                                    onClick={() => handleSend(item.prompt)}
-                                                    className="flex items-center gap-2 p-2 sm:p-2.5 bg-white border border-blue-500/80 text-blue-600 hover:bg-blue-50 rounded-xl text-xs font-semibold shadow-2xs transition-all text-left min-w-0"
-                                                >
-                                                    <Icon className="w-4 h-4 text-blue-600 flex-shrink-0" />
-                                                    <span className="truncate">{item.label}</span>
-                                                </button>
-                                            );
-                                        })}
-                                    </div>
-                                )}
-
-                                {/* Inline Property Cards */}
-                                {msg.properties && msg.properties.length > 0 && (
-                                    <div className="pl-0 sm:pl-9 space-y-2 mt-2 w-full">
-                                        {msg.properties.map((prop) => (
-                                            <div
-                                                key={prop.id}
-                                                className="p-2.5 rounded-xl bg-white border border-slate-200 hover:border-blue-500 shadow-2xs transition-all flex items-center gap-3 group min-w-0"
-                                            >
-                                                <img
-                                                    src={prop.image}
-                                                    alt={prop.title}
-                                                    className="w-13 h-13 sm:w-14 sm:h-14 rounded-lg object-cover flex-shrink-0"
-                                                />
-                                                <div className="flex-1 min-w-0">
-                                                    <h4 className="font-semibold text-slate-900 text-xs truncate group-hover:text-blue-600 transition-colors">
-                                                        {prop.title}
-                                                    </h4>
-                                                    <p className="text-[10px] text-slate-500 flex items-center gap-1 mt-0.5 truncate">
-                                                        <MapPin className="w-3 h-3 text-blue-600 flex-shrink-0" />
-                                                        <span className="truncate">{prop.location} • {prop.bedrooms ? `${prop.bedrooms}BHK` : prop.category}</span>
-                                                    </p>
-                                                    <div className="flex items-center justify-between mt-1">
-                                                        <span className="font-bold text-xs text-blue-600">
-                                                            {prop.price}
-                                                        </span>
-                                                        <Link
-                                                            to={prop.listingType === "rent" ? `/rent/${prop.slug || prop.id}` : `/buy/${prop.slug || prop.id}`}
-                                                            onClick={() => setIsOpen(false)}
-                                                            className="text-[10px] font-semibold text-white bg-blue-600 hover:bg-blue-700 px-2 py-0.5 rounded-md flex items-center gap-0.5 transition-colors flex-shrink-0"
-                                                        >
-                                                            View
-                                                            <ChevronRight className="w-3 h-3" />
-                                                        </Link>
-                                                    </div>
+                                {messages.map((msg, index) => (
+                                    <div key={msg.id} className="space-y-3">
+                                        <div
+                                            className={`flex items-start gap-2.5 ${
+                                                msg.sender === "user" ? "flex-row-reverse" : "flex-row"
+                                            }`}
+                                        >
+                                            {/* Bot Avatar Icon */}
+                                            {msg.sender === "ai" && (
+                                                <div className="w-7 h-7 sm:w-8 sm:h-8 rounded-full bg-white border-2 border-blue-600 flex items-center justify-center text-blue-600 shadow-2xs flex-shrink-0 mt-0.5">
+                                                    <Building2 className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
                                                 </div>
+                                            )}
+
+                                            <div className={`flex flex-col ${msg.sender === "user" ? "items-end" : "items-start"} max-w-[85%] sm:max-w-[82%]`}>
+                                                {/* Message Bubble */}
+                                                <div
+                                                    className={`px-3.5 sm:px-4 py-2.5 sm:py-3 rounded-2xl text-xs sm:text-sm leading-relaxed shadow-2xs ${
+                                                        msg.sender === "user"
+                                                            ? "bg-blue-600 text-white rounded-tr-none"
+                                                            : "bg-white text-slate-800 border border-slate-200/80 rounded-tl-none"
+                                                    }`}
+                                                >
+                                                    <p className="whitespace-pre-wrap">{msg.text}</p>
+                                                    
+                                                    {/* User Message Footer inside blue bubble */}
+                                                    {msg.sender === "user" && (
+                                                        <div className="flex items-center justify-end gap-1 mt-1 text-[10px] text-blue-100/90 font-medium">
+                                                            <span>{msg.timestamp || "Just now"}</span>
+                                                            <CheckCheck className="w-3.5 h-3.5 text-blue-200" />
+                                                        </div>
+                                                    )}
+                                                </div>
+
+                                                {/* AI Timestamp below bubble */}
+                                                {msg.sender === "ai" && (
+                                                    <span className="text-[10px] font-medium text-slate-400 mt-1 ml-1">
+                                                        {msg.timestamp || "Just now"}
+                                                    </span>
+                                                )}
                                             </div>
-                                        ))}
+                                        </div>
+
+                                        {/* Show Quick Services Buttons under the initial welcome message */}
+                                        {index === 0 && (
+                                            <div className="pl-0 sm:pl-9 grid grid-cols-2 gap-2 w-full">
+                                                {QUICK_SERVICES.map((item, qIdx) => {
+                                                    const Icon = item.icon;
+                                                    return (
+                                                        <button
+                                                            key={qIdx}
+                                                            onClick={() => handleSend(item.prompt)}
+                                                            className="flex items-center gap-2 p-2 sm:p-2.5 bg-white border border-blue-500/80 text-blue-600 hover:bg-blue-50 rounded-xl text-xs font-semibold shadow-2xs transition-all text-left min-w-0"
+                                                        >
+                                                            <Icon className="w-4 h-4 text-blue-600 flex-shrink-0" />
+                                                            <span className="truncate">{item.label}</span>
+                                                        </button>
+                                                    );
+                                                })}
+                                            </div>
+                                        )}
+
+                                        {/* Inline Property Cards */}
+                                        {msg.properties && msg.properties.length > 0 && (
+                                            <div className="pl-0 sm:pl-9 space-y-2 mt-2 w-full">
+                                                {msg.properties.map((prop) => (
+                                                    <div
+                                                        key={prop.id}
+                                                        className="p-2.5 rounded-xl bg-white border border-slate-200 hover:border-blue-500 shadow-2xs transition-all flex items-center gap-3 group min-w-0"
+                                                    >
+                                                        <img
+                                                            src={prop.image}
+                                                            alt={prop.title}
+                                                            className="w-13 h-13 sm:w-14 sm:h-14 rounded-lg object-cover flex-shrink-0"
+                                                        />
+                                                        <div className="flex-1 min-w-0">
+                                                            <h4 className="font-semibold text-slate-900 text-xs truncate group-hover:text-blue-600 transition-colors">
+                                                                {prop.title}
+                                                            </h4>
+                                                            <p className="text-[10px] text-slate-500 flex items-center gap-1 mt-0.5 truncate">
+                                                                <MapPin className="w-3 h-3 text-blue-600 flex-shrink-0" />
+                                                                <span className="truncate">{prop.location} • {prop.bedrooms ? `${prop.bedrooms}BHK` : prop.category}</span>
+                                                            </p>
+                                                            <div className="flex items-center justify-between mt-1">
+                                                                <span className="font-bold text-xs text-blue-600">
+                                                                    {prop.price}
+                                                                </span>
+                                                                <Link
+                                                                    to={prop.listingType === "rent" ? `/rent/${prop.slug || prop.id}` : `/buy/${prop.slug || prop.id}`}
+                                                                    onClick={() => setIsOpen(false)}
+                                                                    className="text-[10px] font-semibold text-white bg-blue-600 hover:bg-blue-700 px-2 py-0.5 rounded-md flex items-center gap-0.5 transition-colors flex-shrink-0"
+                                                                >
+                                                                    View
+                                                                    <ChevronRight className="w-3 h-3" />
+                                                                </Link>
+                                                            </div>
+                                                        </div>
+                                                    </div>
+                                                ))}
+                                            </div>
+                                        )}
+                                    </div>
+                                ))}
+
+                                {loading && (
+                                    <div className="flex items-center gap-2 text-slate-500 text-xs pl-0 sm:pl-9 bg-white border border-slate-200 p-2.5 rounded-2xl w-fit shadow-2xs">
+                                        <div className="w-2 h-2 rounded-full bg-blue-600 animate-bounce" />
+                                        <div className="w-2 h-2 rounded-full bg-blue-600 animate-bounce [animation-delay:0.2s]" />
+                                        <div className="w-2 h-2 rounded-full bg-blue-600 animate-bounce [animation-delay:0.4s]" />
+                                        <span className="font-medium text-slate-600 ml-1">Renters AI is thinking...</span>
                                     </div>
                                 )}
+                                <div ref={messagesEndRef} />
                             </div>
-                        ))}
 
-                        {loading && (
-                            <div className="flex items-center gap-2 text-slate-500 text-xs pl-0 sm:pl-9 bg-white border border-slate-200 p-2.5 rounded-2xl w-fit shadow-2xs">
-                                <div className="w-2 h-2 rounded-full bg-blue-600 animate-bounce" />
-                                <div className="w-2 h-2 rounded-full bg-blue-600 animate-bounce [animation-delay:0.2s]" />
-                                <div className="w-2 h-2 rounded-full bg-blue-600 animate-bounce [animation-delay:0.4s]" />
-                                <span className="font-medium text-slate-600 ml-1">Renters AI is thinking...</span>
+                            {/* Bottom Floating Input & Powered Footer */}
+                            <div className="p-3 bg-white border-t border-slate-100 flex flex-col gap-2">
+                                <div className="flex items-center gap-2 bg-white border border-slate-200 rounded-full px-4 py-1.5 shadow-sm transition-colors">
+                                    <input
+                                        type="text"
+                                        value={input}
+                                        onChange={(e) => setInput(e.target.value)}
+                                        onKeyDown={(e) => e.key === "Enter" && handleSend()}
+                                        placeholder="Type your message..."
+                                        className="flex-1 bg-transparent text-xs text-slate-800 placeholder-slate-400 outline-none border-none focus:outline-none focus:ring-0 focus:border-transparent focus-visible:outline-none focus-visible:ring-0 py-1.5"
+                                    />
+                                    <button
+                                        type="button"
+                                        onClick={() => handleSend()}
+                                        disabled={!input.trim() || loading}
+                                        className="w-8 h-8 rounded-full bg-blue-600 hover:bg-blue-700 disabled:opacity-40 text-white flex items-center justify-center transition-all shadow-sm flex-shrink-0"
+                                    >
+                                        <Send className="w-4 h-4" />
+                                    </button>
+                                </div>
+
+                                {/* Powered by Renters AI footer */}
+                                <div className="flex items-center justify-center gap-1 text-[10px] text-slate-400 font-medium pt-0.5">
+                                    <Sparkles className="w-3 h-3 text-blue-600 fill-blue-600" />
+                                    <span>Powered by Renters AI</span>
+                                </div>
                             </div>
-                        )}
-                        <div ref={messagesEndRef} />
-                    </div>
-
-                    {/* Bottom Floating Input & Powered Footer */}
-                    <div className="p-3 bg-white border-t border-slate-100 flex flex-col gap-2">
-                        <div className="flex items-center gap-2 bg-white border border-slate-200 rounded-full px-4 py-1.5 shadow-sm transition-colors">
-                            <input
-                                type="text"
-                                value={input}
-                                onChange={(e) => setInput(e.target.value)}
-                                onKeyDown={(e) => e.key === "Enter" && handleSend()}
-                                placeholder="Type your message..."
-                                className="flex-1 bg-transparent text-xs text-slate-800 placeholder-slate-400 outline-none border-none focus:outline-none focus:ring-0 focus:border-transparent focus-visible:outline-none focus-visible:ring-0 py-1.5"
-                            />
-                            <button
-                                type="button"
-                                onClick={() => handleSend()}
-                                disabled={!input.trim() || loading}
-                                className="w-8 h-8 rounded-full bg-blue-600 hover:bg-blue-700 disabled:opacity-40 text-white flex items-center justify-center transition-all shadow-sm flex-shrink-0"
-                            >
-                                <Send className="w-4 h-4" />
-                            </button>
-                        </div>
-
-                        {/* Powered by Renters AI footer */}
-                        <div className="flex items-center justify-center gap-1 text-[10px] text-slate-400 font-medium pt-0.5">
-                            <Sparkles className="w-3 h-3 text-blue-600 fill-blue-600" />
-                            <span>Powered by Renters AI</span>
-                        </div>
-                    </div>
+                        </>
+                    )}
                 </div>
             )}
 
