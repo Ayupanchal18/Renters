@@ -11,6 +11,8 @@ import { ThemeProvider, useTheme } from "../theme/ThemeContext";
 import NetworkWarning from "../components/ui/NetworkWarning";
 import * as Notifications from 'expo-notifications';
 
+import { initMobileAnalytics, trackMobileScreenView } from "../services/analytics";
+
 // Handle notifications when the app is in the foreground
 Notifications.setNotificationHandler({
   handleNotification: async () => ({
@@ -22,7 +24,13 @@ Notifications.setNotificationHandler({
 
 function RootAppContent() {
   const { colors, isDark } = useTheme();
-  
+  const routeNameRef = React.useRef<string | undefined>(undefined);
+  const navigationRef = React.useRef<any>(null);
+
+  React.useEffect(() => {
+    initMobileAnalytics();
+  }, []);
+
   const navTheme = {
     dark: isDark,
     colors: {
@@ -36,7 +44,26 @@ function RootAppContent() {
   };
 
   return (
-    <NavigationContainer theme={navTheme}>
+    <NavigationContainer
+      ref={navigationRef}
+      theme={navTheme}
+      onReady={() => {
+        const currentRouteName = navigationRef.current?.getCurrentRoute()?.name;
+        routeNameRef.current = currentRouteName;
+        if (currentRouteName) {
+          trackMobileScreenView(currentRouteName);
+        }
+      }}
+      onStateChange={() => {
+        const previousRouteName = routeNameRef.current;
+        const currentRouteName = navigationRef.current?.getCurrentRoute()?.name;
+
+        if (previousRouteName !== currentRouteName && currentRouteName) {
+          routeNameRef.current = currentRouteName;
+          trackMobileScreenView(currentRouteName);
+        }
+      }}
+    >
       <StatusBar style={isDark ? "light" : "dark"} />
       <NetworkWarning />
       <RootNavigator />
