@@ -5,8 +5,8 @@
  * 2. Microsoft Clarity
  */
 
-const GA_MEASUREMENT_ID = import.meta.env.VITE_GA_MEASUREMENT_ID;
-const CLARITY_PROJECT_ID = import.meta.env.VITE_CLARITY_PROJECT_ID;
+const GA_MEASUREMENT_ID = import.meta.env.VITE_GA_MEASUREMENT_ID || "G-R3HC6H1EVW";
+const CLARITY_PROJECT_ID = import.meta.env.VITE_CLARITY_PROJECT_ID || "y8kxrxakco";
 
 let isInitialized = false;
 
