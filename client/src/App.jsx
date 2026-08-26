@@ -15,6 +15,7 @@ import { useWebVitals, WEB_VITALS_THRESHOLDS } from "./hooks/useWebVitals";
 import { setupTokenRefresh } from "./utils/auth";
 import MaintenanceGuard from "./components/common/MaintenanceGuard";
 import AiAssistantWidget from "./components/ai/AiAssistantWidget";
+import AnalyticsTracker from "./components/common/AnalyticsTracker";
 
 // Critical path - load immediately (lightweight)
 import NotFound from "./pages/NotFound";
@@ -211,6 +212,7 @@ const App = () => {
                         v7_relativeSplatPath: true
                     }}
                 >
+                    <AnalyticsTracker />
                     <MaintenanceGuard>
                     <NavigationStateProvider>
                     <RouteErrorBoundary routeName="app">

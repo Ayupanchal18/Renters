@@ -1,0 +1,21 @@
+# Renters — Find Rooms, Flats, Houses & Halls
+
+> Renters is a platform for finding, renting, and buying verified residential and commercial properties.
+
+## Primary Directories & Services
+- Rent Listings: https://renters-l7dz.onrender.com/rent
+- Buy Listings: https://renters-l7dz.onrender.com/buy
+- Post Property: https://renters-l7dz.onrender.com/post-property
+- Contact & Support: https://renters-l7dz.onrender.com/contact
+- Frequently Asked Questions: https://renters-l7dz.onrender.com/faq
+
+## Platform Capabilities
+- Real-Time AI Property Assistant
+- Interactive Map & Neighborhood Analytics
+- Virtual Video Tours & 360 Degree Panoramas
+- Landlord & Property Owner Verification
+- DRM Content Protection & Instant Lead Messaging
+
+## Crawler Directives & Specifications
+- Sitemap: https://renters-l7dz.onrender.com/sitemap.xml
+- Robots.txt: https://renters-l7dz.onrender.com/robots.txt
