@@ -399,12 +399,20 @@ export default function RentListings() {
         ? "grid-cols-1 sm:grid-cols-2 lg:grid-cols-1 xl:grid-cols-2 2xl:grid-cols-2"
         : "grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-3 xl:grid-cols-3 2xl:grid-cols-4";
 
+    const seoTitle = filters.location
+        ? `${filters.propertyType ? `${filters.propertyType.charAt(0).toUpperCase() + filters.propertyType.slice(1)}s` : 'Properties'} for Rent in ${filters.location}`
+        : "Properties for Rent | Find Your Perfect Rental Home";
+
+    const seoDescription = filters.location
+        ? `Explore verified rental rooms, flats, and houses in ${filters.location} with flexible budgets and direct owner contacts on Renters.`
+        : "Browse verified rental properties including flats, houses, rooms, and PG accommodations. Find your ideal rental home with flexible filters for budget, BHK, and tenant preferences.";
+
     return (
         <div className="min-h-screen flex flex-col">
             <SEOHead
-                title="Properties for Rent | Find Your Perfect Rental Home"
-                description="Browse verified rental properties including flats, houses, rooms, and PG accommodations. Find your ideal rental home with flexible filters for budget, BHK, and tenant preferences."
-                url={typeof window !== 'undefined' ? `${window.location.origin}/rent-properties` : 'https://renters.com/rent-properties'}
+                title={seoTitle}
+                description={seoDescription}
+                url={typeof window !== 'undefined' ? `${window.location.origin}/rent-listings` : 'https://renters.com/rent-listings'}
                 type="website"
             />
             <Navbar />

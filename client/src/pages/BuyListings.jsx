@@ -410,12 +410,20 @@ export default function BuyListings() {
         ? "grid-cols-1 sm:grid-cols-2 lg:grid-cols-1 xl:grid-cols-2 2xl:grid-cols-2"
         : "grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-3 xl:grid-cols-3 2xl:grid-cols-4";
 
+    const seoTitle = filters.location
+        ? `${filters.propertyType ? `${filters.propertyType.charAt(0).toUpperCase() + filters.propertyType.slice(1)}s` : 'Properties'} for Sale in ${filters.location}`
+        : "Properties for Sale | Find Your Dream Home";
+
+    const seoDescription = filters.location
+        ? `Explore verified properties for sale in ${filters.location} including apartments, villas, and houses with verified ownership on Renters.`
+        : "Browse verified properties for sale including flats, houses, villas, and commercial spaces. Find your dream home with flexible filters for price, possession status, and loan availability.";
+
     return (
         <div className="min-h-screen flex flex-col">
             <SEOHead
-                title="Properties for Sale | Find Your Dream Home"
-                description="Browse verified properties for sale including flats, houses, villas, and commercial spaces. Find your dream home with flexible filters for price, possession status, and loan availability."
-                url={typeof window !== 'undefined' ? `${window.location.origin}/buy-properties` : 'https://renters.com/buy-properties'}
+                title={seoTitle}
+                description={seoDescription}
+                url={typeof window !== 'undefined' ? `${window.location.origin}/buy-listings` : 'https://renters.com/buy-listings'}
                 type="website"
             />
             <Navbar />

@@ -5,6 +5,7 @@ import { fileURLToPath } from "url";
 import express from "express";
 import cors from "cors";
 import cookieParser from "cookie-parser";
+import compression from "compression";
 import http from "http";
 import propertiesRouter from "./routes/properties.js";
 import { createAuditMiddleware } from "./src/middleware/auditLogger.js";
@@ -116,6 +117,9 @@ export default async function createServer(devMode = false) {
         exposedHeaders: ['X-Request-ID'],
         maxAge: 86400 // Cache preflight for 24 hours
     }));
+
+    // Gzip / Deflate compression for all responses > 1KB
+    app.use(compression({ threshold: 1024 }));
 
     // Cookie parser for httpOnly cookies (refresh tokens)
     app.use(cookieParser());
@@ -343,8 +347,8 @@ export default async function createServer(devMode = false) {
         app.use("/api/price-trends", (await safeImport("routes/priceTrendsRoutes.js")).default);
         // app.use("/api/properties", propertiesRouter); // Removed redundant registration
 
-        // SEO Routes - sitemap.xml for search engine crawlers
-        app.use("/sitemap.xml", (await safeImport("routes/sitemap.js")).default);
+        // SEO Routes - dynamic sitemap.xml for search engine crawlers
+        app.use("/", (await safeImport("routes/sitemap.js")).default);
 
     } catch (err) {
         console.warn("Failed to load routes:", err);
